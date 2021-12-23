@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,11 +15,9 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
@@ -87,6 +85,23 @@ public class OptionDlg extends BaseDlg
   }
 
 
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+     if( this.optionBtns != null ) {
+	for( JRadioButton rb : this.optionBtns ) {
+	  rb.removeActionListener( this );
+	}
+      }
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
 	/* --- private Konstruktoren --- */
 
   private OptionDlg(
@@ -122,10 +137,10 @@ public class OptionDlg extends BaseDlg
 	  pos = eol + 1;
 	} else {
 	  if( eol > pos ) {
-	    add( new JLabel( msg.substring( pos, eol ) ), gbc );
+	    add( GUIFactory.createLabel( msg.substring( pos, eol ) ), gbc );
 	    pos = eol + 1;
 	  } else {
-	    add( new JLabel( msg.substring( pos ) ), gbc );
+	    add( GUIFactory.createLabel( msg.substring( pos ) ), gbc );
 	    pos = len;
 	  }
 	  gbc.insets.top = 0;
@@ -142,7 +157,7 @@ public class OptionDlg extends BaseDlg
     this.optionBtns = null;
     if( options != null ) {
       if( options.length > 0 ) {
-	JPanel panelOpt = new JPanel( new GridBagLayout() );
+	JPanel panelOpt = GUIFactory.createPanel( new GridBagLayout() );
 	add( panelOpt, gbc );
 	gbc.gridy++;
 
@@ -163,30 +178,27 @@ public class OptionDlg extends BaseDlg
 	    optState = true;
 	    okState  = true;
 	  }
-	  JRadioButton btn = new JRadioButton( options[ i ], optState );
-	  grpOpt.add( btn );
-	  btn.addActionListener( this );
-	  this.optionBtns[ i ] = btn;
-	  panelOpt.add( btn, gbcOpt );
+	  JRadioButton rb = GUIFactory.createRadioButton(
+							options[ i ],
+							optState );
+	  grpOpt.add( rb );
+	  this.optionBtns[ i ] = rb;
+	  panelOpt.add( rb, gbcOpt );
 	  gbcOpt.gridy++;
 	}
       }
     }
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.insets.top = 10;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
+    this.btnOK = GUIFactory.createButtonOK();
     this.btnOK.setEnabled( okState );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -194,5 +206,15 @@ public class OptionDlg extends BaseDlg
     pack();
     setResizable( false );
     setParentCentered();
+
+
+    // Listener
+    if( this.optionBtns != null ) {
+      for( JRadioButton rb : this.optionBtns ) {
+	rb.addActionListener( this );
+      }
+    }
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
   }
 }

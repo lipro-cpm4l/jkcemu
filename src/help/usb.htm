@@ -1,14 +1,41 @@
 <html>
 <body>
- <h1>Emulation eines USB-Anschlusses</h1>
+ <h1>USB-Anschlusses</h1>
   F&uuml;r einige der von JKCEMU emulierten Computer wurden L&ouml;sungen
   zum Anschluss von USB-Ger&auml;ten entwickelt.
   Die meisten dieser L&ouml;sungen basieren auf einem Entwurf von
   Mario Leubner, der ein Vinculum-VDIP-Modul mit VDAP-Firmware verwendet.
-  JKCEMU emuliert dieses VDIP-Modul sowie ein
-  daran angeschlossenes USB-Massenspeicherger&auml;t.
+  JKCEMU emuliert dieses VDIP-Modul mit dieser Firmware
+  sowie ein daran angeschlossenes USB-Massenspeicherger&auml;t.
   Andere USB-Ger&auml;te werden nicht unterst&uuml;tzt.
  <br/><br/>
+  Ein VDIP-Modul (es gibt VDIP1 mit einem und VDIP2 mit zwei
+  physischen USB-Anschl&uuml;ssen) ist mit einem VNC1-Chip best&uuml;ckt.
+  Neuere Module verwenden einen VNC2-Chip und hei&szlig;en V2DIP.
+  Diese Module sind kompatibel zu VDIP1 und VDIP2.
+ <br/><br/>
+  <ul>
+   <li><a href="usb.htm#general">1. Allgemeines</a></li>
+   <li><a href="usb.htm#options">2. Optionen</a></li>
+   <li>
+    <a href="usb.htm#long_names">3. Unterst&uuml;tzung langer Dateinamen</a>
+   </li>
+   <li>
+    <a href="usb.htm#notes">4. Besonderheiten der USB-Emulation</a>
+    <ul>
+     <li>
+      <a href="usb.htm#vdap_commands">4.1. Unterst&uuml;tzte Kommandos</a>
+     </li>
+     <li>
+      <a href="usb.htm#vdap_err">4.2. Fehlermeldungen bei unterbundenen Schreibzugriffen</a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
+
+
+ <h2><a name="general">1. Allgemeines</a></h2>
   Der emulierte USB-Massenspeicher wird auf ein beliebiges Verzeichnis
   im Dateisystem des Emulatorrechners abgebildet.
   Damit kann auch dann ein USB-Speicherstick emuliert werden,
@@ -24,36 +51,27 @@
   Das Fenster <em>JKCEMU USB-Anschluss</em> rufen Sie im Hauptfenster
   mit dem Men&uuml;punkt <em>Extra</em> &rarr; <em>USB-Anschluss</em> auf.
  <br/><br/>
-  <b>Achtung!</b> Die VDAP-Firmware auf den Vinculum-VDIP-Modulen
-  unterst&uuml;tzt keine langen Dateinamen,
-  sondern nur welche im 8:3-Format.
-  Diese Einschr&auml;nkung gilt somit auch in der Emulation.
-  Allerdings gibt es trotzdem einen Unterschied:
-  Im Original werden nur FAT-formatierte USB-Massenspeicher
-  unterst&uuml;tzt.
-  Bei FAT gibt es f&uuml;r jeden langen Dateinamen auch einen kurzen
-  &Auml;quivalenznamen im 8:3-Format.
-  &Uuml;ber diese kurzen Namen sind alle Dateien auf dem Datentr&auml;ger
-  f&uuml;r die VDAP-Firmware sichtbar.
-  In der Emulation aber kann jedes beliebige Verzeichnis als
-  emulierter Speicherstick verwendet werden, unabh&auml;gig
-  vom Dateisystem.
-  Aus diesem Grund gibt es dort auch keine kurzen &Auml;quivalenznamen,
-  was zur Folge hat, dass das emulierte VDIP-Modul nur die Dateien
-  und Verzeichnisse sieht, die dem 8:3-Schema entsprechen.
-  Dateien und Verzeichnisse mit langen Namen werden ausgeblendet.
- <br/><br/>
 
 
- <h2>Optionen</h2>
+ <h2><a name="options">2. Optionen</a></h2>
   Im Fenster <em>JKCEMU USB-Anschluss</em> k&ouml;nnen Sie neben
-  dem Verzeichnis des emulierten USB-Speichersticks auch drei Optionen
+  dem Verzeichnis des emulierten USB-Speichersticks auch vier Optionen
   angeben:
   <ul>
+   <li>
+    <em>Lange Dateinamen auf 8.3-Format verk&uuml;rzen</em>
+    <br/>
+    Diese Option dient der Unterst&uuml;tzung von Dateien,
+    deren Namen nicht dem 8.3-Format entsprechen.
+    Weitere Informationen dazu finden Sie im Abschnitt
+    <a href="usb.htm#long_names">Unterst&uuml;tzung langer Dateinamen</a>.
+    <br/><br/>
+   </li>
    <li>
     <em>Schreibschutz (Nur-Lese-Modus)</em><br/>
     Ist diese Option eingeschaltet, werden s&auml;mtliche
     Schreiboperationen unterbunden.
+    <br/><br/>
    </li>
    <li>
     <em>Dateinamen klein schreiben</em><br/>
@@ -61,7 +79,8 @@
     neuer Dateien und Verzeichnisse.
     Standardm&auml;&szlig;ig werden diese mit gro&szlig; geschriebenen
     Namen angelegt, da das die Vinculum-VDIP-Module auch so tun.
-    Mit der Option k&ouml;nnen Sie das auf Kleinschreibung &auml;ndern.
+    Mit der Option k&ouml;nnen Sie auf Kleinschreibung unschalten.
+    <br/><br/>
    </li>
    <li>
     <em>Immer aktueller Zeitstempel bei Schreibzugriffen</em><br/>
@@ -70,29 +89,82 @@
     Der Zeitstempel muss beim &Ouml;ffnen einer Datei zum Schreiben
     oder beim Anlegen eines Verzeichnisses von der Anwendungs- bzw.
     Treibersoftware mitgeliefert werden oder, falls nicht,
-    dann wird der Standard-Zeitstempel 20.12.2004 00:00:00 verwendet.
+    dann wird der VDIP-Standard-Zeitstempel 20.12.2004 00:00:00 verwendet.
     Wenn nun aber im emulierten System gar keine Systemuhr l&auml;uft
-    oder sie f&uuml;hrt die falsche Zeit, weil sie z.B. per Hand
-    gesetzt werden muss und der Anwender keine Lust zur korrekten
-    Eingabe hatte, werden auch die Zeitstempel der letzten &Auml;nderung
-    falsch gesetzt.
+    oder sie f&uuml;hrt die falsche Zeit
+    (z.B. weil die Zeit per Hand gesetzt werden musste und
+    der Anwender keine Lust zur korrekten Eingabe hatte),
+    werden auch die Zeitstempel der letzten &Auml;nderung falsch gesetzt.
     Genau f&uuml;r diesen Fall gibt es die Option.
     Ist sie eingeschaltet, werden die von der Anwendungs- bzw.
     Treibersoftware mitgelieferten Zeitstempel ignoriert und
     der Zeitpunkt der letzten &Auml;nderung immer auf die aktuelle
     Zeit (Systemzeit des Emulatorrechners) gesetzt.
     Allerdings hat das auch den Nachteil, dass beim Kopieren einer Datei
-    auf dem USB-Speicher die neue Datei auch den aktuellen
-    Zeitstempel erh&auml;lt und nicht den der Quelldatei.
+    durch die im Emulator laufenden Software die neue Datei
+    den aktuellen Zeitstempel erh&auml;lt und nicht den der Quelldatei.
+    <br/><br/>
    </li>
   </ul>
  <br/>
 
 
- <h2>Besonderheiten/Einschr&auml;nkungen der USB-Emulation</h2>
+ <h2>
+  <a name="long_names">3. Unterst&uuml;tzung langer Dateinamen</a>
+ </h2>
+  Die VDAP-Firmware auf den Vinculum-VDIP-Modulen unterst&uuml;tzt
+  keine langen Dateinamen, sondern nur welche im 8.3-Format.
+  Diese Einschr&auml;nkung gilt somit auch in der Emulation.
+  Allerdings gibt es auf einem FAT-formatierten USB-Massenspeicher
+  (und nur diese werden von den originalen VDIP-Modulen unterst&uuml;tzt)
+  f&uuml;r jeden sogenannten &quot;langen&quot; Dateinamen,
+  der also nicht dem 8.3-Format entspricht,
+  auch einen kurzen &Auml;quivalenznamen im 8.3-Format.
+  &Uuml;ber diese kurzen Namen sind alle Dateien auf dem Datentr&auml;ger
+  f&uuml;r die VDAP-Firmware sichtbar.
+ <br/><br/>
+  MS&nbsp;Windows erzeugt beim Anlegen einer Datei,
+  deren Namen nicht dem 8.3-Format entspricht,
+  standardm&auml;&szlig;ig immer einen kurzen &Auml;quivalenznamen,
+  egal ob auf Festplatte, Diskette oder USB-Speicher.
+  F&uuml;r NTFS-formatierte Datentr&auml;ger l&auml;sst sich
+  dieses Verhalten jedoch systemweit abschalten.
+  Aus diesem Grund, aber auch aufgrund der Tatsache,
+  dass andere Betriebssysteme so etwas nicht bieten und dass
+  in der Emulation unabh&auml;gig von Datei- und Betriebssystem
+  jedes beliebige Verzeichnis als emulierter Speicherstick verwendet
+  werden kann, sind Dateien mit langen Namen in der VDIP-Emulation
+  erst einmal nicht sichtbar.
+ <br/><br/>
+  Mit der Option
+  <em>Lange Dateinamen auf 8.3-Format verk&uuml;rzen</em>
+  lassen sich auch Dateien mit langen Namen in der Emulation nutzen.
+  Auf MS&nbsp;Windows versucht JKCEMU, den kurzen &Auml;quivalenznamen
+  zu lesen und bei einem VDIP-DIR anzuzeigen.
+  Existiert ein solcher kurzer Name,
+  sind mit diesem alle Dateioperationen m&ouml;glich,
+  sowohl innerhalb als auch au&szlig;erhalb der VDIP-Emulation.
+  Kann jedoch kein kurzer &Auml;quivalenzname gelesen werden,
+  erzeugt JKCEMU beim ersten VDIP-DIR-Kommando in einem Verzeichnis
+  ggf. selbst eindeutige kurze Namen im 8.3-Format,
+  zeigt diese an und merkt sich diese auch.
+  Diese Dateinamen sind physisch nicht auf dem Datentr&auml;ger vorhanden,
+  sondern nur virtuell innerhalb der VDIP-Emulation.
+  Die im Emulator laufende Software kann mit diesen kurzen Namen
+  arbeiten und JKCEMU stellt die Verbindung zur jeweils zugeh&ouml;rigen
+  Datei her.
+ <br/><br/>
+  Auf anderen Betriebsystemen, z.B. Linux oder macOS,
+  k&ouml;nnen keine kurzeren &Auml;quivalenznamen gelesen werden.
+  Hier erzeugt JKCEMU immer selbst die kurzen 8.3-Namen,
+  sofern die Option eingeschaltet ist.
+ <br/><br/>
 
- <h3>Unterst&uuml;tzte Kommandos</h3>
-  JKCEMU simuliert alle Kommandos der VDAP-Firmware.
+
+ <h2><a name="notes">4. Besonderheiten der USB-Emulation</a></h2>
+
+ <h3><a name="vdap_commands">4.1. Unterst&uuml;tzte Kommandos</a></h3>
+  JKCEMU simuliert alle Kommandos der VDAP-Firmware Version&nbsp;2.69.
   Der Zugriff auf den emulierten USB-Massenspeicher ist aber nur
   &uuml;ber die Disk-Kommandos m&ouml;glich (Dateisystemebene).
   Eine Kommunikation auf Sektorebene (z.B. mit Debug-Kommandos)
@@ -110,11 +182,13 @@
   (Best&auml;tigung Data-Mode) niemals aktiv.
  <br/><br/>
 
- <h3>Fehlermeldungen bei unterbundenen Schreibzugriffen</h3>
+ <h3>
+  <a name="vdap_err">4.2. Fehlermeldungen bei unterbundenen Schreibzugriffen</a>
+ </h3>
   Wenn Schreibzugriffe aufgrund eines gesetzten Schreibschutzes
   unterbunden werden (z.B. weil man keine Schreibberechtigung auf das
   Verzeichnis hat oder weil man das Verzeichnis im JKCEMU nur mit
-  Schreibschutz ge&ouml;ffnet hat)
+  Schreibschutz ge&ouml;ffnet hat),
   erscheint die Fehlermeldung <em>Read Only</em> nur dann,
   wenn sie f&uuml;r das gerade ausgef&uuml;hrte VDAP-Kommando
   auch dokumentiert ist.
@@ -126,4 +200,3 @@
   nicht ganz dem wirklichen Grund des missgl&uuml;ckten Schreibzugriffs.
 </body>
 </html>
-

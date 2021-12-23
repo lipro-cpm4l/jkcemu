@@ -1,49 +1,48 @@
 <html>
 <body>
-  <h1>Kramer-MC: Assembler</h1>
-    Der Assembler erwartet standardm&auml;&szlig;ig
-    den zu &uuml;bersetzenden Quelltext im Textpuffer des
-    <a href="editor.htm">Editors</a>,
-    d.h., das Assemblerprogramm schreibt man mit dem
-    <a href="editor.htm">Editor</a>.
-    Da der Assembler etwa 8k RAM ben&ouml;tigt,
-    k&ouml;nnen aufgrund der Speicheraufteilung nur kurze Programme
-    bis maximal 1 KByte Objektcode erzeugt werden.
-  <br/><br/>
-    Ist als Listger&auml;t der Bildschirm zugewiesen (LT),
-    erscheint die Liste mit je 16 Zeilen.
-    Nach Eingabe eines Leerzeichens folgen die n&auml;chsten 16.
-  <br/><br/>
+ <h1>Kramer-MC: Assembler</h1>
+  Der Assembler erwartet standardm&auml;&szlig;ig
+  den zu &uuml;bersetzenden Quelltext im Textpuffer des
+  <a href="editor.htm">Editors</a>,
+  d.h., das Assemblerprogramm schreibt man mit dem
+  <a href="editor.htm">Editor</a>.
+  Da der Assembler etwa 8k RAM ben&ouml;tigt,
+  k&ouml;nnen aufgrund der Speicheraufteilung nur kurze Programme
+  bis maximal 1 KByte Objektcode erzeugt werden.
+ <br/><br/>
+  Ist als Listger&auml;t der Bildschirm zugewiesen (LT),
+  erscheint die Liste mit je 16 Zeilen.
+  Nach Eingabe eines Leerzeichens folgen die n&auml;chsten 16.
+ <br/><br/>
 
-  <h2>Pseudobefehle</h2>
-    <table border="1">
-      <tr><th>Pseudobefehl</th><th>Bedeutung</th></tr>
-      <tr><td>EQU</td><td>Wertzuweisung einmalig</td></tr>
-      <tr><td>DEF</td><td>Wertzuweisung mehrmalig</td></tr>
-      <tr><td>DB</td><td>Wertzuweisung f&uuml;r Bytes</td></tr>
-      <tr><td>DA</td><td>Wertzuweisung f&uuml;r Adressen</td></tr>
-      <tr><td>BER</td><td>Reservierung eines Speicherbereichs</td></tr>
-      <tr>
-	<td>ORG</td>
-	<td>Wertzuweisung f&uuml;r die Adresse des folgenden Programms</td>
-      </tr>
-      <tr><td>*</td><td>aktueller Adresswert</td></tr>
-      <tr><td>PN</td><td>Programmname, Anfang eines Programms</td></tr>
-      <tr><td>END</td><td>Ende eines Programms</td></tr>
-    </table>
-  <br/><br/>
+ <h2>Pseudobefehle</h2>
+  <table border="1">
+   <tr><th>Pseudobefehl</th><th>Bedeutung</th></tr>
+   <tr><td>EQU</td><td>Wertzuweisung einmalig</td></tr>
+   <tr><td>DEF</td><td>Wertzuweisung mehrmalig</td></tr>
+   <tr><td>DB</td><td>Wertzuweisung f&uuml;r Bytes</td></tr>
+   <tr><td>DA</td><td>Wertzuweisung f&uuml;r Adressen</td></tr>
+   <tr><td>BER</td><td>Reservierung eines Speicherbereichs</td></tr>
+   <tr>
+    <td>ORG</td>
+    <td>Wertzuweisung f&uuml;r die Adresse des folgenden Programms</td>
+   </tr>
+   <tr><td>*</td><td>aktueller Adresswert</td></tr>
+   <tr><td>PN</td><td>Programmname, Anfang eines Programms</td></tr>
+   <tr><td>END</td><td>Ende eines Programms</td></tr>
+  </table>
+ <br/><br/>
 
-  <h2>Fehlermeldungen</h2>
-    <table border="1">
-      <tr><td>20</td><td>Fehlerhafter Programmname</td></tr>
-      <tr><td>21</td><td>Markenfehler (zu lang, Syntax)</td></tr>
-      <tr><td>22</td><td>Marke doppelt</td></tr>
-      <tr><td>24</td><td>Fehlerhalte Mnemonik</td></tr>
-      <tr><td>25</td><td>Operandenfehler</td></tr>
-      <tr><td>27</td><td>Zeichenkette zu lang</td></tr>
-      <tr><td>28</td><td>Symboltabelle voll</td></tr>
-      <tr><td>29</td><td>Relativsprung zu weit</td></tr>
-    </table>
+ <h2>Fehlermeldungen</h2>
+  <table border="1">
+   <tr><td>20</td><td>Fehlerhafter Programmname</td></tr>
+   <tr><td>21</td><td>Markenfehler (zu lang, Syntax)</td></tr>
+   <tr><td>22</td><td>Marke doppelt</td></tr>
+   <tr><td>24</td><td>Fehlerhalte Mnemonik</td></tr>
+   <tr><td>25</td><td>Operandenfehler</td></tr>
+   <tr><td>27</td><td>Zeichenkette zu lang</td></tr>
+   <tr><td>28</td><td>Symboltabelle voll</td></tr>
+   <tr><td>29</td><td>Relativsprung zu weit</td></tr>
+  </table>
 </body>
 </html>
-

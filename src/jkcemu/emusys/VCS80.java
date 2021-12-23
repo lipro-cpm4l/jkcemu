@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,10 +11,8 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
@@ -22,10 +20,13 @@ import jkcemu.emusys.etc.VCS80KeyboardFld;
 import z80emu.Z80AddressListener;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
 
 
-public class VCS80 extends EmuSys implements Z80AddressListener
+public class VCS80 extends EmuSys implements
+					Z80AddressListener,
+					Z80MaxSpeedListener
 {
   public static final String SYSNAME     = "VCS80";
   public static final String PROP_PREFIX = "jkcemu.vcs80.";
@@ -108,6 +109,22 @@ public class VCS80 extends EmuSys implements Z80AddressListener
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    /*
+     * Der Takt fuer die Multiplexansteruerung der Anzeige
+     * soll 500 bis 1000 Hz betragen.
+     * Fuer die Laenge einer Halbschwingung wird hier CPU-Taktfrequenz
+     * durch 2 geteilt,
+     * was einen Takt fuer die Anzeige von 625 KHz ergibt.
+     */
+    this.dispHCycleTStates = cpu.getMaxSpeedKHz() / 2;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -120,7 +137,7 @@ public class VCS80 extends EmuSys implements Z80AddressListener
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public VCS80KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new VCS80KeyboardFld( this );
     return this.keyboardFld;
@@ -135,6 +152,8 @@ public class VCS80 extends EmuSys implements Z80AddressListener
     cpu.removeMaxSpeedListener( this );
     cpu.removeAddressListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    super.die();
   }
 
 
@@ -148,7 +167,7 @@ public class VCS80 extends EmuSys implements Z80AddressListener
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorRedDark;
@@ -226,7 +245,7 @@ public class VCS80 extends EmuSys implements Z80AddressListener
   {
     boolean rv = false;
     if( keyCode == KeyEvent.VK_ESCAPE ) {
-      this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+      this.emuThread.fireReset( false );
       rv = true;
     }
     return rv;
@@ -295,14 +314,6 @@ public class VCS80 extends EmuSys implements Z80AddressListener
     int rv = 0xFF;
 
     switch( port & 0x07 ) {	// A3 bis A7 ignorieren
-      case 4:
-	rv = this.pio.readControlB();
-	break;
-
-      case 5:
-	rv = this.pio.readControlA();
-	break;
-
       case 6:
 	rv = this.pio.readDataB();
 	break;
@@ -316,10 +327,10 @@ public class VCS80 extends EmuSys implements Z80AddressListener
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
@@ -328,6 +339,7 @@ public class VCS80 extends EmuSys implements Z80AddressListener
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
+    this.pio.reset( powerOn );
   }
 
 
@@ -379,22 +391,6 @@ public class VCS80 extends EmuSys implements Z80AddressListener
 
 
   @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-
-    /*
-     * Der Takt fuer die Multiplexansteruerung der Anzeige
-     * soll 500 bis 1000 Hz betragen.
-     * Fuer die Laenge einer Halbschwingung wird hier CPU-Taktfrequenz
-     * durch 2 geteilt,
-     * was einen Takt fuer die Anzeige von 625 KHz ergibt.
-     */
-    this.dispHCycleTStates = cpu.getMaxSpeedKHz() / 2;
-  }
-
-
-  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
@@ -410,7 +406,7 @@ public class VCS80 extends EmuSys implements Z80AddressListener
 	  // alte Spalte anzeigen
 	  boolean dirty = false;
 	  int     value = toDigitValue(
-				this.pio.fetchOutValuePortB( false ) & 0x7F );
+				this.pio.fetchOutValuePortB( 0xFF ) & 0x7F );
 	  synchronized( this.digitValues ) {
 	    int idx = this.colValue;
 	    if( idx >= 4 ) {

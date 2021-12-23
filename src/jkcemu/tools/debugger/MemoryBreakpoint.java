@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,26 @@
 
 package jkcemu.tools.debugger;
 
-import java.lang.*;
+import org.xml.sax.Attributes;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
 
 
-public class MemoryBreakpoint extends AbstractBreakpoint
+public class MemoryBreakpoint extends ImportableBreakpoint
 {
+  public static final String BP_TYPE = "memory";
+
+  private static final String ATTR_ADDR      = "addr";
+  private static final String ATTR_SIZE      = "size";
+  private static final String ATTR_ON_READ   = "on_read";
+  private static final String ATTR_ON_WRITE  = "on_write";
+  private static final String ATTR_CONDITION = "condition";
+  private static final String ATTR_MASK      = "mask";
+  private static final String ATTR_VALUE     = "value";
+
   // Laenge der einzelnen Befehle
   private static int[] instLen = {
 	1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,		// 0x00
@@ -81,52 +94,67 @@ public class MemoryBreakpoint extends AbstractBreakpoint
 
   public MemoryBreakpoint(
 		DebugFrm debugFrm,
+		String   name,
 		int      begAddr,
 		int      endAddr,
 		boolean  onRead,
 		boolean  onWrite,
 		int      mask,
 		String   cond,
-		int      value )
+		int      value ) throws InvalidParamException
   {
-    super( debugFrm );
-    this.begAddr = begAddr & 0xFFFF;
-    this.endAddr = (endAddr >= 0 ? (endAddr & 0xFFFF) : -1);
+    super( debugFrm, name );
     this.onRead  = onRead;
     this.onWrite = onWrite;
     this.mask    = mask & 0xFF;
-    this.cond    = cond;
+    this.cond    = checkCondition( cond );
     this.value   = value & 0xFF;
+    setAddresses( begAddr, endAddr );
+  }
 
-    StringBuilder buf = new StringBuilder();
-    buf.append( String.format( "%04X", this.begAddr ) );
-    if( this.endAddr >= 0 ) {
-      buf.append( String.format( "-%04X", this.endAddr ) );
-    }
-    buf.append( (char) ':' );
-    if( this.onRead ) {
-      buf.append( (char) 'R' );
-    }
-    if( this.onWrite ) {
-      buf.append( (char) 'W' );
-    }
-    if( this.cond != null ) {
-      if( this.mask != 0xFF ) {
-        buf.append(
-                String.format(
-                        ":(Wert&%02X)%s%02X",
-                        this.mask,
-                        this.cond,
-                        this.value ) );
-      } else {
-        buf.append(
-                String.format(
-                        ":Wert%s%02X",
-                        this.cond,
-                        this.value ) );
+
+  public static MemoryBreakpoint createByAttrs(
+					DebugFrm   debugFrm,
+					Attributes attrs )
+  {
+    MemoryBreakpoint bp = null;
+    if( attrs != null ) {
+      Integer addr = BreakpointVarLoader.readInteger(
+					attrs.getValue( ATTR_ADDR ) );
+      if( addr != null ) {
+	try {
+	  int    size  = getHex4Value( attrs, ATTR_SIZE );
+	  int    mask  = 0xFF;
+	  int    value = 0;
+	  String cond  = null;
+	  try {
+	    cond = checkCondition( attrs.getValue( ATTR_CONDITION ) );
+	    if( cond != null ) {
+	      mask  = getHex2Value( attrs, ATTR_MASK );
+	      value = getHex2Value( attrs, ATTR_VALUE );
+	    }
+	  }
+	  catch( InvalidParamException ex ) {}
+	  bp = new MemoryBreakpoint(
+			debugFrm,
+			checkName( attrs.getValue( ATTR_NAME ) ),
+			addr.intValue(),
+			size > 1 ? (addr + size - 1) : -1,
+			BreakpointVarLoader.getBooleanValue(
+							attrs,
+							ATTR_ON_READ ),
+			BreakpointVarLoader.getBooleanValue(
+							attrs,
+							ATTR_ON_WRITE ),
+			mask,
+			cond,
+			value );
+	}
+	catch( NumberFormatException ex ) {}
+	catch( InvalidParamException ex ) {}
       }
     }
-    setText( buf.toString() );
+    return bp;
   }
 
 
@@ -172,7 +200,56 @@ public class MemoryBreakpoint extends AbstractBreakpoint
   }
 
 
+  public void setAddresses( int begAddr, int endAddr )
+  {
+    this.begAddr = begAddr & 0xFFFF;
+    this.endAddr = (endAddr >= 0 ? (endAddr & 0xFFFF) : -1);
+
+    StringBuilder buf  = new StringBuilder();
+    String        name = getName();
+    if( name != null ) {
+      buf.append( name );
+      buf.append( ':' );
+    }
+    buf.append( String.format( "%04X", this.begAddr ) );
+    if( this.endAddr >= 0 ) {
+      buf.append( String.format( "-%04X", this.endAddr ) );
+    }
+    buf.append( ':' );
+    if( this.onRead ) {
+      buf.append( 'R' );
+    }
+    if( this.onWrite ) {
+      buf.append( 'W' );
+    }
+    if( this.cond != null ) {
+      if( this.mask != 0xFF ) {
+        buf.append(
+                String.format(
+                        ":(Wert&%02X)%s%02X",
+                        this.mask,
+                        this.cond,
+                        this.value ) );
+      } else {
+        buf.append(
+                String.format(
+                        ":Wert%s%02X",
+                        this.cond,
+                        this.value ) );
+      }
+    }
+    setText( buf.toString() );
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int getAddress()
+  {
+    return this.begAddr;
+  }
+
 
   @Override
   protected boolean matchesImpl( Z80CPU cpu, Z80InterruptSource iSource )
@@ -190,6 +267,30 @@ public class MemoryBreakpoint extends AbstractBreakpoint
       rv = matchesWrite( cpu, iSource, pc, op0, op1, op2, op3 );
     }
     return rv;
+  }
+
+
+  @Override
+  public void writeTo( Document doc, Node parent )
+  {
+    Element elem = createBreakpointElement( doc, BP_TYPE );
+    elem.setAttribute( ATTR_ADDR, toHex4( this.begAddr ) );
+    elem.setAttribute(
+		ATTR_SIZE,
+		toHex4( this.endAddr > this.begAddr ?
+				(this.endAddr - this.begAddr + 1)
+				: 1 ) );
+    elem.setAttribute( ATTR_ON_READ, Boolean.toString( this.onRead ) );
+    elem.setAttribute( ATTR_ON_WRITE, Boolean.toString( this.onWrite ) );
+    appendAttributesTo( elem );
+    if( this.cond != null ) {
+      if( !this.cond.isEmpty() ) {
+	elem.setAttribute( ATTR_CONDITION, this.cond );
+	elem.setAttribute( ATTR_MASK, toHex2( this.mask ) );
+	elem.setAttribute( ATTR_VALUE, toHex2( this.value ) );
+      }
+    }
+    parent.appendChild( elem );
   }
 
 

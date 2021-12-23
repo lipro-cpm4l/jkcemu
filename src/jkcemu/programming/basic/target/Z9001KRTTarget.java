@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
-import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.Z9001;
 import jkcemu.programming.basic.AsmCodeBuf;
@@ -34,6 +32,8 @@ public class Z9001KRTTarget extends Z9001Target
     setNamedValue( "LASTSCREEN", 1 );
   }
 
+
+	/* --- ueberschriebene Methoden --- */
 
   @Override
   public void appendBssTo( AsmCodeBuf buf )
@@ -71,9 +71,9 @@ public class Z9001KRTTarget extends Z9001Target
     if( this.needsScreenSizePixel ) {
       if( this.usesScreens ) {
 	buf.append( "X_HPIX:\tLD\tHL,00C0H\n"
-		+ "\tJR\tX_HWPIX1\n"
+		+ "\tJR\tX_HWPIX_1\n"
 		+ "X_WPIX:\tLD\tHL,0140H\n"
-		+ "X_HWPIX1:\n"
+		+ "X_HWPIX_1:\n"
 		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tDEC\tA\n"
 		+ "\tRET\tZ\n"
@@ -84,16 +84,6 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "X_WPIX:\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
       }
-    }
-  }
-
-
-  @Override
-  public void appendPreExitTo( AsmCodeBuf buf )
-  {
-    if( this.usesScreens ) {
-      buf.append( "\tLD\tL,00H\n"
-		+ "\tCALL\tXSCRN1\n" );
     }
   }
 
@@ -127,11 +117,21 @@ public class Z9001KRTTarget extends Z9001Target
 
 
   @Override
+  public void appendPreExitTo( AsmCodeBuf buf )
+  {
+    if( this.usesScreens ) {
+      buf.append( "\tLD\tL,00H\n"
+		+ "\tCALL\tX_SCREEN_1\n" );
+    }
+  }
+
+
+  @Override
   public void appendSwitchToTextScreenTo( AsmCodeBuf buf )
   {
     if( this.usesScreens ) {
       buf.append( "\tLD\tL,00H\n"
-		+ "\tCALL\tXSCRN1\n" );
+		+ "\tCALL\tX_SCREEN_1\n" );
     }
   }
 
@@ -157,13 +157,15 @@ public class Z9001KRTTarget extends Z9001Target
   {
     if( this.usesScreens ) {
       buf.append( "XCLS:\tLD\tA,(X_M_SCREEN)\n"
-		+ "\tCP\t01\n"
-		+ "\tJR\tZ,XCLS1\n"
+		+ "\tCP\t01H\n"
+		+ "\tJR\tZ,X_CLS_1\n"
 		+ "\tLD\tA,0CH\n"
 		+ "\tJR\tXOUTCH\n"
-		+ "XCLS1:\tDI\n"
+		+ "X_CLS_1:\n"
+		+ "\tDI\n"
 		+ "\tLD\tA,08H\n"
-		+ "XCLS2:\tOUT\t(0B8H),A\n"
+		+ "X_CLS_2:\n"
+		+ "\tOUT\t(0B8H),A\n"
 		+ "\tPUSH\tAF\n"
 		+ "\tXOR\tA\n"
 		+ "\tLD\tHL,0EC00H\n"
@@ -174,19 +176,17 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tPOP\tAF\n"
 		+ "\tINC\tA\n"
 		+ "\tCP\t10H\n"
-		+ "\tJR\tC,XCLS2\n"
+		+ "\tJR\tC,X_CLS_2\n"
 		+ "\tLD\tA,08\n"
 		+ "\tOUT\t(0B8H),A\n"		// Bank 0 einstellen
-		+ "\tEI\n" );
-      if( this.usesColors ) {
-	buf.append( "\tLD\tHL,0E800H\n"
+		+ "\tEI\n"
+		+ "\tLD\tHL,0E800H\n"
 		+ "\tLD\tA,(0027H)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tLD\tDE,0E801H\n"
 		+ "\tLD\tBC,03BFH\n"
-		+ "\tLDIR\n" );
-      }
-      buf.append( "\tRET\n" );
+		+ "\tLDIR\n"
+		+ "\tRET\n" );
     } else {
       buf.append( "XCLS:\tLD\tA,0CH\n"
 		+ "\tJR\tXOUTCH\n" );
@@ -202,6 +202,7 @@ public class Z9001KRTTarget extends Z9001Target
    *   DE: linke X-Koordinate, nicht kleiner 0
    *   HL: Y-Koordinate
    */
+  @Override
   public void appendXHLineTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XHLINE:\tBIT\t7,B\n"
@@ -209,7 +210,7 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tPUSH\tBC\n"
 		+ "\tPUSH\tDE\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tLD\tA,B\n"
 		+ "\tEXX\n"
 		+ "\tPOP\tHL\n"
@@ -217,18 +218,18 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tPOP\tBC\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE1:\n"
+		+ "X_HLINE_1:\n"
 		+ "\tOR\tD\n"
 		+ "\tLD\tD,A\n"
 		+ "\tSRL\tA\n"
-		+ "\tJR\tNC,XHLINE2\n"
+		+ "\tJR\tNC,X_HLINE_2\n"
 		+ "\tLD\tA,D\n"
 		+ "\tEXX\n"
 		+ "\tLD\tB,A\n"
-		+ "\tCALL\tXPSET_B\n" );
+		+ "\tCALL\tX_PSET_B\n" );
       if( this.usesColors ) {
 	/*
-	 * Bei Verwendung von Farben zeigt HL nach Aufruf von XPSET_B
+	 * Bei Verwendung von Farben zeigt HL nach Aufruf von X_PSET_B
 	 * nicht auf den Pixel- sondern den Farbspeicher
 	 * und muss deshalb korrigiert werden.
 	 */
@@ -238,16 +239,16 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tEXX\n"
 		+ "\tLD\tA,80H\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE2:\n"
+		+ "X_HLINE_2:\n"
 		+ "\tDEC\tBC\n"
 		+ "\tBIT\t7,B\n"
-		+ "\tJR\tZ,XHLINE1\n"
+		+ "\tJR\tZ,X_HLINE_1\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tEXX\n"
 		+ "\tLD\tB,A\n"
-		+ "\tJR\tXPSET_B\n" );
+		+ "\tJR\tX_PSET_B\n" );
     appendXPSetTo( buf, compiler );
   }
 
@@ -255,7 +256,7 @@ public class Z9001KRTTarget extends Z9001Target
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       buf.append( "XOUTCH:\tLD\tE,A\n" );
       if( this.usesScreens ) {
 	buf.append( "\tLD\tA,(X_M_SCREEN)\n"
@@ -264,7 +265,7 @@ public class Z9001KRTTarget extends Z9001Target
       }
       buf.append( "\tLD\tC,2\n"
 		+ "\tJP\t0005H\n" );
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -297,94 +298,94 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tE\n"
-		+ "\tJR\tZ,XPAINT_LEFT6\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_6\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tDEC\tDE\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tLD\tA,C\n"
 		+ "\tLD\t(X_M_PBANK),A\n"
 		+ "\tPOP\tDE\n"
-		+ "\tJR\tC,XPAINT_LEFT5\n"
+		+ "\tJR\tC,X_PAINT_LEFT_5\n"
 		+ "\tLD\tC,B\n"
-		+ "\tCALL\tXPAINT_RD_B\n"
-		+ "XPAINT_LEFT1:\n"
+		+ "\tCALL\tX_PAINT_RD_B\n"
+		+ "X_PAINT_LEFT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_LEFT2:\n"
+		+ "X_PAINT_LEFT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_LEFT4\n"
+		+ "\tJR\tNZ,X_PAINT_LEFT_4\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tDEC\tDE\n"
 		+ "\tSLA\tC\n"
-		+ "\tJR\tNC,XPAINT_LEFT2\n"
-		+ "\tCALL\tXPAINT_WR_B\n"
+		+ "\tJR\tNC,X_PAINT_LEFT_2\n"
+		+ "\tCALL\tX_PAINT_WR_B\n"
 		+ "\tDEC\tHL\n"
 		+ "\tBIT\t0,D\n"
-		+ "\tJR\tZ,XPAINT_LEFT3\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_3\n"
 		+ "\tLD\tA,E\n"
 		+ "\tINC\tA\n"
-		+ "\tJR\tZ,XPAINT_LEFT5\n"
-		+ "XPAINT_LEFT3:\n"
-		+ "\tCALL\tXPAINT_RD_B\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_5\n"
+		+ "X_PAINT_LEFT_3:\n"
+		+ "\tCALL\tX_PAINT_RD_B\n"
 		+ "\tLD\tC,01H\n"
-		+ "\tJR\tXPAINT_LEFT1\n"
-		+ "XPAINT_LEFT4:\n"
-		+ "\tCALL\tXPAINT_WR_B\n"
-		+ "XPAINT_LEFT5:\n"
+		+ "\tJR\tX_PAINT_LEFT_1\n"
+		+ "X_PAINT_LEFT_4:\n"
+		+ "\tCALL\tX_PAINT_WR_B\n"
+		+ "X_PAINT_LEFT_5:\n"
 		+ "\tINC\tDE\n"
-		+ "XPAINT_LEFT6:\n"
+		+ "X_PAINT_LEFT_6:\n"
 		+ "\tLD\t(PAINT_M_X1),DE\n"
 		+ "\tRET\n"
 		+ "XPAINT_RIGHT:\n"
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tDE\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,C\n"
 		+ "\tLD\t(X_M_PBANK),A\n"
 		+ "\tLD\tC,B\n"
-		+ "\tCALL\tXPAINT_RD_B\n"
+		+ "\tCALL\tX_PAINT_RD_B\n"
 		+ "\tLD\tA,C\n"
 		+ "\tAND\tB\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tJR\tXPAINT_RIGHT3\n"
-		+ "XPAINT_RIGHT1:\n"
+		+ "\tJR\tX_PAINT_RIGHT_3\n"
+		+ "X_PAINT_RIGHT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_RIGHT2:\n"
+		+ "X_PAINT_RIGHT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_RIGHT5\n"
-		+ "XPAINT_RIGHT3:\n"
+		+ "\tJR\tNZ,X_PAINT_RIGHT_5\n"
+		+ "X_PAINT_RIGHT_3:\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tINC\tDE\n"
 		+ "\tSRL\tC\n"
-		+ "\tJR\tNC,XPAINT_RIGHT2\n"
-		+ "\tCALL\tXPAINT_WR_B\n"
+		+ "\tJR\tNC,X_PAINT_RIGHT_2\n"
+		+ "\tCALL\tX_PAINT_WR_B\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tA,E\n"
 		+ "\tCP\t40H\n"
-		+ "\tJR\tNZ,XPAINT_RIGHT4\n"
+		+ "\tJR\tNZ,X_PAINT_RIGHT_4\n"
 		+ "\tLD\tA,D\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPAINT_RIGHT6\n"
-		+ "XPAINT_RIGHT4:\n"
-		+ "\tCALL\tXPAINT_RD_B\n"
+		+ "\tJR\tZ,X_PAINT_RIGHT_6\n"
+		+ "X_PAINT_RIGHT_4:\n"
+		+ "\tCALL\tX_PAINT_RD_B\n"
 		+ "\tLD\tC,80H\n"
-		+ "\tJR\tXPAINT_RIGHT1\n"
-		+ "XPAINT_RIGHT5:\n"
-		+ "\tCALL\tXPAINT_WR_B\n"
-		+ "XPAINT_RIGHT6:\n"
+		+ "\tJR\tX_PAINT_RIGHT_1\n"
+		+ "X_PAINT_RIGHT_5:\n"
+		+ "\tCALL\tX_PAINT_WR_B\n"
+		+ "X_PAINT_RIGHT_6:\n"
 		+ "\tDEC\tDE\n"
 		+ "\tLD\t(PAINT_M_X2),DE\n"
 		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n"
-		+ "XPAINT_RD_B:\n"
+		+ "X_PAINT_RD_B:\n"
 		+ "\tDI\n"
 		+ "\tLD\tA,(X_M_PBANK)\n"
 		+ "\tOUT\t(0B8H),A\n"
@@ -393,7 +394,7 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tOUT\t(0B8H),A\n"
 		+ "\tEI\n"
 		+ "\tRET\n"
-		+ "XPAINT_WR_B:\n"
+		+ "X_PAINT_WR_B:\n"
 		+ "\tDI\n"
 		+ "\tLD\tA,(X_M_PBANK)\n"
 		+ "\tOUT\t(0B8H),A\n"
@@ -422,14 +423,15 @@ public class Z9001KRTTarget extends Z9001Target
    *   HL >= 0: Farbcode des Pixels
    *   HL=-1:   Pixel exisitiert nicht
    */
+  @Override
   public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( this.usesScreens ) {
       buf.append( "XPOINT:\tLD\tA,(X_M_SCREEN)\n"
                 + "\tCP\t01H\n"
-                + "\tJR\tNZ,XPOINT2\n"
-		+ "\tCALL\tX_PST1\n"
-                + "\tJR\tC,XPOINT2\n"
+                + "\tJR\tNZ,X_POINT_2\n"
+		+ "\tCALL\tX_PINFO_1\n"
+                + "\tJR\tC,X_POINT_2\n"
       // Pixel lesen 
 		+ "\tDI\n"
 		+ "\tLD\tA,C\n"
@@ -446,18 +448,18 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tOR\tA\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\tE,07H\n"
-		+ "\tJR\tZ,XPOINT1\n"
+		+ "\tJR\tZ,X_POINT_1\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tLD\tE,0FH\n"
-		+ "XPOINT1:\n"
+		+ "X_POINT_1:\n"
 		+ "\tAND\tE\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XPOINT2:\n"
+		+ "X_POINT_2:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
       appendPixUtilTo( buf, compiler );
@@ -477,10 +479,10 @@ public class Z9001KRTTarget extends Z9001Target
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tJR\tXPSET1\n" );
+      buf.append( "\tJR\tX_PSET_1\n" );
     } else {
       buf.append( "\tDI\n"
 		+ "\tLD\tA,C\n"
@@ -488,7 +490,7 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tLD\tA,B\n"
 		+ "\tCPL\n"
 		+ "\tAND\t(HL)\n"
-		+ "\tJR\tXPSET_WR_A\n" );
+		+ "\tJR\tX_PSET_WR_A\n" );
     }
     appendXPSetTo( buf, compiler );
   }
@@ -504,15 +506,15 @@ public class Z9001KRTTarget extends Z9001Target
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
-		+ "XPSET_B:\n" );
+		+ "X_PSET_B:\n" );
       if( this.usesX_M_PEN ) {
 	buf.append( "\tLD\tA,(X_M_PEN)\n"
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET2\n"            // Stift 1 (Normal)
+                + "\tJR\tZ,X_PSET_2\n"		// Stift 1 (Normal)
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET1\n"            // Stift 2 (Loeschen)
+                + "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
                 + "\tDEC\tA\n"
                 + "\tRET\tNZ\n"
 		+ "\tDI\n"			// Stift 3 (XOR-Mode)
@@ -520,21 +522,23 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tOUT\t(0B8H),A\n"
 		+ "\tLD\tA,B\n"
 		+ "\tXOR\t(HL)\n"
-		+ "\tJR\tXPSET_WR_A\n"
-		+ "XPSET1:\tDI\n"		// Pixel loeschen
+		+ "\tJR\tX_PSET_WR_A\n"
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tDI\n"
 		+ "\tLD\tA,C\n"
 		+ "\tOUT\t(0B8H),A\n"
 		+ "\tLD\tA,B\n"
 		+ "\tCPL\n"
 		+ "\tAND\t(HL)\n"
-		+ "\tJR\tXPSET_WR_A\n" );
+		+ "\tJR\tX_PSET_WR_A\n" );
       }
-      buf.append( "XPSET2:\tDI\n"		// Pixel setzen
+      buf.append( "X_PSET_2:\n"
+		+ "\tDI\n"			// Pixel setzen
 		+ "\tLD\tA,C\n"
 		+ "\tOUT\t(0B8H),A\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\t(HL)\n"
-		+ "XPSET_WR_A:\n"
+		+ "X_PSET_WR_A:\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tLD\tA,08H\n"
 		+ "\tOUT\t(0B8H),A\n"
@@ -565,10 +569,11 @@ public class Z9001KRTTarget extends Z9001Target
   public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( this.usesScreens ) {
-      buf.append( "XPTEST:\tLD\tA,(X_M_SCREEN)\n"
+      buf.append( "XPTEST:\n"
+		+ "\tLD\tA,(X_M_SCREEN)\n"
                 + "\tCP\t01H\n"
                 + "\tJR\tNZ,XPTST1\n"
-		+ "\tCALL\tX_PST1\n"
+		+ "\tCALL\tX_PINFO_1\n"
                 + "\tJR\tC,XPTST1\n"
 		+ "\tDI\n"
 		+ "\tLD\tA,C\n"
@@ -607,33 +612,39 @@ public class Z9001KRTTarget extends Z9001Target
       buf.append( "XSCREEN:\n"
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XSCRN2\n"
-		+ "XSCRN1:\tLD\tA,(X_M_SCREEN)\n"
+		+ "\tJR\tNZ,X_SCREEN_2\n"
+		+ "X_SCREEN_1:\n"
+		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\tL\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XSCRN3\n"
+		+ "\tJR\tZ,X_SCREEN_3\n"
 		+ "\tCP\t01H\n"
-		+ "\tJR\tZ,XSCRN4\n"
-		+ "XSCRN2:\tSCF\n"
+		+ "\tJR\tZ,X_SCREEN_4\n"
+		+ "X_SCREEN_2:\n"
+		+ "\tSCF\n"
 		+ "\tRET\n"
-		+ "XSCRN3:\tLD\tDE,0800H\n"	// KRT -> STD
-		+ "\tJR\tXSCRN5\n"
-		+ "XSCRN4:\tLD\tC,29\n"		// Cursor abschalten
+		+ "X_SCREEN_3:\n"
+		+ "\tLD\tDE,0800H\n"		// KRT -> STD
+		+ "\tJR\tX_SCREEN_5\n"
+		+ "X_SCREEN_4:\n"
+		+ "\tLD\tC,29\n"		// Cursor abschalten
 		+ "\tCALL\t0005H\n"
 		+ "\tLD\tDE,0008H\n"		// STD -> KRT
     // SCREEN-Nr. setzen und Systemzellen umkopieren
-		+ "XSCRN5:\tLD\t(X_M_SCREEN),A\n"
+		+ "X_SCREEN_5:\n"
+		+ "\tLD\t(X_M_SCREEN),A\n"
 		+ "\tLD\tBC,40B8H\n"
 		+ "\tLD\tHL,0EFC0H\n"
 		+ "\tDI\n"
-		+ "XSCRN6:\tOUT\t(C),D\n"
+		+ "X_SCREEN_6:\n"
+		+ "\tOUT\t(C),D\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tOUT\t(C),E\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
-		+ "\tDJNZ\tXSCRN6\n"
+		+ "\tDJNZ\tX_SCREEN_6\n"
 		+ "\tEI\n"
 		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n" );
@@ -654,8 +665,8 @@ public class Z9001KRTTarget extends Z9001Target
     int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof Z9001 ) {
-	rv = 1;
-	if( ((Z9001) emuSys).emulatesGraphicsKRT() ) {
+	rv = 2;
+	if( ((Z9001) emuSys).emulatesGraphicKRT() ) {
 	  rv = 3;
 	}
       }
@@ -730,9 +741,11 @@ public class Z9001KRTTarget extends Z9001Target
       /*
        * Pruefen der Parameter
        * Ermitteln von Informationen zu einem Pixel
+       *
        * Parameter:
        *   DE: X-Koordinate (0...320)
        *   HL: Y-Koordinate (0...192)
+       *
        * Rueckgabe:
        *   CY=1: Pixel ausserhalb des gueltigen Bereichs
        *   B:    Bitmuster mit einem gesetzten Bit,
@@ -741,19 +754,22 @@ public class Z9001KRTTarget extends Z9001Target
        *   HL:   Speicherzelle, in der sich das Pixel befindet
        */
       if( this.usesScreens ) {
-	buf.append( "X_PST:\tLD\tA,(X_M_SCREEN)\n"
+	buf.append( "X_PINFO:\n"
+		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\t01H\n"
-		+ "\tJR\tNZ,X_PST5\n"
-		+ "X_PST1:\tLD\tA,D\n"
+		+ "\tJR\tNZ,X_PINFO_5\n"
+		+ "X_PINFO_1:\n"
+		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,X_PST2\n"
+		+ "\tJR\tZ,X_PINFO_2\n"
 		+ "\tCP\t02H\n"
 		+ "\tCCF\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,3FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
-		+ "X_PST2:\tLD\tA,H\n"
+		+ "X_PINFO_2:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tOR\tA\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
@@ -764,10 +780,12 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tAND\t07H\n"
 		+ "\tLD\tB,A\n"
 		+ "\tLD\tC,80H\n"
-		+ "\tJR\tZ,X_PST4\n"
-		+ "X_PST3:\tSRL\tC\n"
-		+ "\tDJNZ\tX_PST3\n"
-		+ "X_PST4:\tSRL\tD\n"
+		+ "\tJR\tZ,X_PINFO_4\n"
+		+ "X_PINFO_3:\n"
+		+ "\tSRL\tC\n"
+		+ "\tDJNZ\tX_PINFO_3\n"
+		+ "X_PINFO_4:\n"
+		+ "\tSRL\tD\n"
 		+ "\tRR\tE\n"
 		+ "\tSRL\tE\n"
 		+ "\tSRL\tE\n"
@@ -799,9 +817,9 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tPOP\tBC\n"
 		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n"
-		+ "X_PST5:\n" );
+		+ "X_PINFO_5:\n" );
       } else {
-	buf.append( "X_PST:\n" );
+	buf.append( "X_PINFO:\n" );
       }
       appendExitNoGraphicsScreenTo( buf, compiler );
       this.pixUtilAppended = true;

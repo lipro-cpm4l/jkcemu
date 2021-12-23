@@ -46,11 +46,10 @@
   jedoch hat das Format keinen einheitlichen Namen.
   H&auml;ufig wird es einfach nur RAW-Format genannt.
   Auch ist die Dateiendung nicht festgelegt.
-  Meistens wird <em>*.img</em> verwendet,
-  gelegentlich auch <em>*.image</em> und <em>*.raw</em>.
- <br/><br/>
-  Erzeugen kann man einfache Abbilddateien unter Linux/Unix
-  mit dem Befehl <em>dd</em>, z.B.:
+  &Uuml;blich sind <em>*.img</em>, <em>*.image</em>, <em>*.raw</em>
+  und <em>*.dd</em>.
+  Letzteres ist abgeleitet vom gleichnamigen Linux-/Unix-Befehl,
+  mit dem man Abbilddateien erzeugen kann, z.B.:
  <br/><br/>
   <tt>&nbsp;dd&nbsp;if=/dev/fd0&nbsp;of=&lt;dateiname&gt;</tt>
  <br/><br/>
@@ -61,13 +60,6 @@
   und anderen Laufwerken erstellen.
   Die entsprechende Funktion finden Sie im Hauptfenster im Men&uuml;
   <em>Extra</em>.
- <br/><br/>
-  Da einfache Abbilddatei keine Verwaltungs- bzw. Geometriedaten enthalten,
-  muss man bei deren Verwendung das Diskettenformat in einem
-  speziellen Dialog ausw&auml;hlen.
-  JKCEMU unterst&uuml;tzt Sie bei der Auswahl,
-  indem anhand der Dateigr&ouml;&szlig;e das wahrscheinlich richtige Format
-  bereits vorausgew&auml;hlt ist.
  <br/><br/>
 
  <h2><a name="anadisk">2. AnaDisk-Dateien</a></h2>
@@ -213,11 +205,6 @@
   Die Reparatur bezieht sich nur auf die eingelesenen Daten,
   nicht auf die Datei selbst, d.h. diese wird nicht ver&auml;ndert.
  <br/><br/>
-  <b>Achtung!</b> Wenn Sie eine TeleDisk-Datei im
-  <a href="diskimgviewer.htm">Diskettenabbilddatei-Inspektor</a> &ouml;ffnen,
-  wird diese nicht automatisch repariert,
-  da man ja in dem Fall den Originalzustand sehen m&ouml;chte.
- <br/><br/>
 
 
  <h2><a name="gzip">7. Komprimierte Abbilddateien</a></h2>
@@ -238,11 +225,13 @@
    <tr>
     <td valign="top">Einfache Abbilddatei</td>
     <td valign="top">
+     .dd<br/>
      .img<br/>
      .image<br/>
      .raw
     </td>
     <td valign="top">
+     .dd.gz<br/>
      .img.gz<br/>
      .image.gz<br/>
      .raw.gz
@@ -298,7 +287,7 @@
     <th>Dateikonverter</th>
    </tr>
    <tr>
-    <td>Einfache Abbilddatei (*.img; *.image; *.raw)</td>
+    <td>Einfache Abbilddatei (*.dd; *.img; *.image; *.raw;)</td>
     <td>RW</td>
     <td>W</td>
     <td>RW</td>

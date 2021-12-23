@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.basic;
 
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.EmuSys;
 import jkcemu.programming.PrgOptions;
@@ -32,6 +31,9 @@ public class BasicOptions extends PrgOptions
 
   private static final String OPTION_APP_NAME
 			= OPTION_BASIC_PREFIX + "name";
+
+  private static final String OPTION_APP_TYPE_SUB
+			= OPTION_BASIC_PREFIX + "subroutine";
 
   private static final String OPTION_APP_LANG
 			= OPTION_BASIC_PREFIX + "language.code";
@@ -57,8 +59,11 @@ public class BasicOptions extends PrgOptions
   private static final String OPTION_INCLUDE_BASIC_LINES
 			= OPTION_BASIC_PREFIX + "include_basic_lines";
 
-  private static final String OPTION_OPEN_FILE_ENABLED
-			= OPTION_BASIC_PREFIX + "open.file.enabled";
+  private static final String OPTION_INIT_VARS
+			= OPTION_BASIC_PREFIX + "init_vars";
+
+  private static final String OPTION_OPEN_DISK_ENABLED
+			= OPTION_BASIC_PREFIX + "open.disk.enabled";
 
   private static final String OPTION_OPEN_CRT_ENABLED
 			= OPTION_BASIC_PREFIX + "open.crt.enabled";
@@ -84,6 +89,12 @@ public class BasicOptions extends PrgOptions
   private static final String OPTION_STACK_SIZE
 			= OPTION_BASIC_PREFIX + "stack.size";
 
+  private static final String OPTION_WARN_IMPLICIT_DECLS
+			= OPTION_BASIC_PREFIX + "warn_implicit_decls";
+
+  private static final String OPTION_WARN_TOO_MANY_DIGITS
+			= OPTION_BASIC_PREFIX + "warn_too_many_digits";
+
   private static final String OPTION_WARN_UNUSED_ITEMS
 			= OPTION_BASIC_PREFIX + "warn_unused_items";
 
@@ -91,6 +102,7 @@ public class BasicOptions extends PrgOptions
   private static final String VALUE_BREAK_INPUT  = "input";
   private static final String VALUE_BREAK_NEVER  = "never";
 
+  private boolean        appTypeSub;
   private String         appName;
   private String         langCode;
   private String         targetText;
@@ -104,43 +116,86 @@ public class BasicOptions extends PrgOptions
   private boolean        checkBounds;
   private boolean        openCrtEnabled;
   private boolean        openLptEnabled;
-  private boolean        openFileEnabled;
+  private boolean        openDiskEnabled;
   private boolean        openVdipEnabled;
   private boolean        inclBasicLines;
+  private boolean        initVars;
   private boolean        preferRelJumps;
   private boolean        printLineNumOnAbort;
   private boolean        showAsmText;
+  private boolean        warnImplicitDecls;
+  private boolean        warnTooManyDigits;
   private boolean        warnUnusedItems;
   private BreakOption    breakOption;
 
 
   public BasicOptions()
   {
-    this.appName             = DEFAULT_APP_NAME;
-    this.langCode            = null;
-    this.targetText          = null;
-    this.target              = null;
-    this.emuSys              = null;
-    this.codeBegAddr         = -1;
-    this.bssBegAddr          = -1;
-    this.heapSize            = DEFAULT_HEAP_SIZE;
-    this.stackSize           = DEFAULT_STACK_SIZE;
-    this.checkStack          = true;
-    this.checkBounds         = true;
-    this.openCrtEnabled      = true;
-    this.openLptEnabled      = true;
-    this.openFileEnabled     = true;
-    this.openVdipEnabled     = true;
-    this.inclBasicLines      = true;
-    this.preferRelJumps      = true;
-    this.printLineNumOnAbort = true;
-    this.showAsmText         = false;
-    this.warnUnusedItems     = true;
-    this.breakOption         = BreakOption.ALWAYS;
-    setAsmSyntax( Z80Assembler.Syntax.ZILOG_ONLY );
-    setAllowUndocInst( false );
-    setLabelsCaseSensitive( false );
-    setPrintLabels( false );
+    this( null );
+  }
+
+
+  public BasicOptions( BasicOptions src )
+  {
+    super( src );
+    if( src != null ) {
+      this.appTypeSub          = src.appTypeSub;
+      this.appName             = src.appName;
+      this.langCode            = src.langCode;
+      this.targetText          = src.targetText;
+      this.target              = src.target;
+      this.emuSys              = src.emuSys;
+      this.codeBegAddr         = src.codeBegAddr;
+      this.bssBegAddr          = src.bssBegAddr;
+      this.heapSize            = src.heapSize;
+      this.stackSize           = src.stackSize;
+      this.checkStack          = src.checkStack;
+      this.checkBounds         = src.checkBounds;
+      this.openCrtEnabled      = src.openCrtEnabled;
+      this.openLptEnabled      = src.openLptEnabled;
+      this.openDiskEnabled     = src.openDiskEnabled;
+      this.openVdipEnabled     = src.openVdipEnabled;
+      this.inclBasicLines      = src.inclBasicLines;
+      this.initVars            = src.initVars;
+      this.preferRelJumps      = src.preferRelJumps;
+      this.printLineNumOnAbort = src.printLineNumOnAbort;
+      this.showAsmText         = src.showAsmText;
+      this.warnImplicitDecls   = src.warnImplicitDecls;
+      this.warnTooManyDigits   = src.warnTooManyDigits;
+      this.warnUnusedItems     = src.warnUnusedItems;
+      this.breakOption         = src.breakOption;
+    } else {
+      this.appTypeSub          = false;
+      this.appName             = DEFAULT_APP_NAME;
+      this.langCode            = null;
+      this.targetText          = null;
+      this.target              = null;
+      this.emuSys              = null;
+      this.codeBegAddr         = -1;
+      this.bssBegAddr          = -1;
+      this.heapSize            = DEFAULT_HEAP_SIZE;
+      this.stackSize           = DEFAULT_STACK_SIZE;
+      this.checkStack          = true;
+      this.checkBounds         = true;
+      this.openCrtEnabled      = true;
+      this.openLptEnabled      = true;
+      this.openDiskEnabled     = true;
+      this.openVdipEnabled     = true;
+      this.inclBasicLines      = true;
+      this.initVars            = true;
+      this.preferRelJumps      = true;
+      this.printLineNumOnAbort = true;
+      this.showAsmText         = false;
+      this.warnImplicitDecls   = false;
+      this.warnTooManyDigits   = true;
+      this.warnUnusedItems     = true;
+      this.breakOption         = BreakOption.ALWAYS;
+      setAsmSyntax( Z80Assembler.Syntax.ZILOG_ONLY );
+      setAllowUndocInst( false );
+      setLabelsCaseSensitive( false );
+      setPrintLabels( false );
+      setReplaceTooLongRelJumps( true );
+    }
   }
 
 
@@ -167,6 +222,7 @@ public class BasicOptions extends PrgOptions
   {
     BasicOptions options = null;
     if( props != null ) {
+      Boolean appTypeSub      = getBoolean( props, OPTION_APP_TYPE_SUB );
       String  appName         = props.getProperty( OPTION_APP_NAME );
       String  langCode        = props.getProperty( OPTION_APP_LANG );
       String  targetText      = props.getProperty( OPTION_TARGET );
@@ -179,7 +235,7 @@ public class BasicOptions extends PrgOptions
       Boolean checkBounds     = getBoolean( props, OPTION_CHECK_BOUNDS );
       Boolean openCrtEnabled  = getBoolean( props, OPTION_OPEN_CRT_ENABLED );
       Boolean openLptEnabled  = getBoolean( props, OPTION_OPEN_LPT_ENABLED );
-      Boolean openFileEnabled = getBoolean( props, OPTION_OPEN_FILE_ENABLED );
+      Boolean openDiskEnabled = getBoolean( props, OPTION_OPEN_DISK_ENABLED );
       Boolean openVdipEnabled = getBoolean( props, OPTION_OPEN_VDIP_ENABLED );
       Boolean preferRelJumps  = getBoolean( props, OPTION_PREFER_REL_JUMPS );
       Boolean showAsmText     = getBoolean( props, OPTION_SHOW_ASM_TEXT );
@@ -192,11 +248,22 @@ public class BasicOptions extends PrgOptions
 					props,
 					OPTION_INCLUDE_BASIC_LINES );
 
+      Boolean initVars = getBoolean( props, OPTION_INIT_VARS );
+
+      Boolean warnImplicitDecls = getBoolean(
+					props,
+					OPTION_WARN_IMPLICIT_DECLS );
+
+      Boolean warnTooManyDigits = getBoolean(
+					props,
+					OPTION_WARN_TOO_MANY_DIGITS );
+
       Boolean warnUnusedItems = getBoolean(
 					props,
 					OPTION_WARN_UNUSED_ITEMS );
 
-      if( (appName != null)
+      if( (appTypeSub != null)
+	  || (appName != null)
 	  || (langCode != null)
 	  || (targetText != null)
 	  || (codeBegAddr != null)
@@ -207,17 +274,23 @@ public class BasicOptions extends PrgOptions
 	  || (checkBounds != null)
 	  || (openCrtEnabled != null)
 	  || (openLptEnabled != null)
-	  || (openFileEnabled != null)
+	  || (openDiskEnabled != null)
 	  || (openVdipEnabled != null)
 	  || (preferRelJumps != null)
 	  || (printLineNumOnAbort != null)
 	  || (showAsmText != null)
 	  || (inclBasicLines != null)
+	  || (initVars != null)
+	  || (warnImplicitDecls != null)
+	  || (warnTooManyDigits != null)
 	  || (warnUnusedItems != null)
 	  || (breakOptionText != null) )
       {
 	options = new BasicOptions();
 
+	if( appTypeSub != null ) {
+	  options.appTypeSub = appTypeSub;
+	}
 	if( appName != null ) {
 	  options.appName = appName;
 	}
@@ -251,8 +324,8 @@ public class BasicOptions extends PrgOptions
 	if( openLptEnabled != null ) {
 	  options.openLptEnabled = openLptEnabled.booleanValue();
 	}
-	if( openFileEnabled != null ) {
-	  options.openFileEnabled = openFileEnabled.booleanValue();
+	if( openDiskEnabled != null ) {
+	  options.openDiskEnabled = openDiskEnabled.booleanValue();
 	}
 	if( openVdipEnabled != null ) {
 	  options.openVdipEnabled = openVdipEnabled.booleanValue();
@@ -268,6 +341,15 @@ public class BasicOptions extends PrgOptions
 	}
 	if( inclBasicLines != null ) {
 	  options.inclBasicLines = inclBasicLines.booleanValue();
+	}
+	if( initVars != null ) {
+	  options.initVars = initVars.booleanValue();
+	}
+	if( warnImplicitDecls != null ) {
+	  options.warnImplicitDecls = warnImplicitDecls.booleanValue();
+	}
+	if( warnTooManyDigits != null ) {
+	  options.warnTooManyDigits = warnTooManyDigits.booleanValue();
 	}
 	if( warnUnusedItems != null ) {
 	  options.warnUnusedItems = warnUnusedItems.booleanValue();
@@ -323,15 +405,21 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public int getHeapSize()
+  {
+    return this.heapSize;
+  }
+
+
   public boolean getIncludeBasicLines()
   {
     return this.inclBasicLines;
   }
 
 
-  public int getHeapSize()
+  public boolean getInitVars()
   {
-    return this.heapSize;
+    return this.initVars;
   }
 
 
@@ -377,9 +465,27 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public boolean getWarnImplicitDecls()
+  {
+    return this.warnImplicitDecls;
+  }
+
+
+  public boolean getWarnTooManyDigits()
+  {
+    return this.warnTooManyDigits;
+  }
+
+
   public boolean getWarnUnusedItems()
   {
     return this.warnUnusedItems;
+  }
+
+
+  public boolean isAppTypeSubroutine()
+  {
+    return this.appTypeSub;
   }
 
 
@@ -389,9 +495,9 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public boolean isOpenFileEnabled()
+  public boolean isOpenDiskEnabled()
   {
-    return this.openFileEnabled;
+    return this.openDiskEnabled;
   }
 
 
@@ -410,6 +516,12 @@ public class BasicOptions extends PrgOptions
   public void setAppName( String appName )
   {
     this.appName = appName;
+  }
+
+
+  public void setAppTypeSubroutine( boolean state )
+  {
+    this.appTypeSub = state;
   }
 
 
@@ -461,6 +573,12 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public void setInitVars( boolean state )
+  {
+    this.initVars = state;
+  }
+
+
   public void setLangCode( String langCode )
   {
     this.langCode = langCode;
@@ -479,9 +597,9 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setOpenFileEnabled( boolean state )
+  public void setOpenDiskEnabled( boolean state )
   {
-    this.openFileEnabled = state;
+    this.openDiskEnabled = state;
   }
 
 
@@ -522,6 +640,18 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public void setWarnImplicitDecls( boolean state )
+  {
+    this.warnImplicitDecls = state;
+  }
+
+
+  public void setWarnTooManyDigits( boolean state )
+  {
+    this.warnTooManyDigits = state;
+  }
+
+
   public void setWarnUnusedItems( boolean state )
   {
     this.warnUnusedItems = state;
@@ -530,35 +660,40 @@ public class BasicOptions extends PrgOptions
 
 	/* --- ueberschrieben Methoden --- */
 
+  /*
+   * Die Methode vergleicht nur die eigentlichen Optionen,
+   * die auch in die Profildatei geschrieben werden.
+   */
   @Override
-  public boolean equals( Object o )
+  public boolean sameOptions( PrgOptions options )
   {
-    boolean rv = false;
-    if( o != null ) {
-      if( super.equals( o ) && (o instanceof BasicOptions) ) {
-	BasicOptions options = (BasicOptions) o;
-	if( TextUtil.equals( options.appName, this.appName )
-	    && TextUtil.equals( options.langCode, this.langCode )
-	    && TextUtil.equals( options.targetText, this.targetText )
-	    && (options.codeBegAddr         == this.codeBegAddr)
-	    && (options.bssBegAddr          == this.bssBegAddr)
-	    && (options.heapSize            == this.heapSize)
-	    && (options.stackSize           == this.stackSize)
-	    && (options.checkStack          == this.checkStack)
-	    && (options.checkBounds         == this.checkBounds)
-	    && (options.openCrtEnabled      == this.openCrtEnabled)
-	    && (options.openLptEnabled      == this.openLptEnabled)
-	    && (options.openFileEnabled     == this.openFileEnabled)
-	    && (options.openVdipEnabled     == this.openVdipEnabled)
-	    && (options.inclBasicLines      == this.inclBasicLines)
-	    && (options.preferRelJumps      == this.preferRelJumps)
-	    && (options.printLineNumOnAbort == this.printLineNumOnAbort)
-	    && (options.showAsmText         == this.showAsmText)
-	    && (options.warnUnusedItems     == this.warnUnusedItems)
-	    && (options.breakOption         == this.breakOption) )
-	{
-	  rv = true;
-	}
+    boolean rv = super.sameOptions( options );
+    if( rv && (options != null) ) {
+      if( options instanceof BasicOptions ) {
+	BasicOptions o = (BasicOptions) options;
+	rv = (this.appTypeSub == o.appTypeSub)
+		&& equals( this.appName, o.appName )
+		&& equals( this.langCode, o.langCode )
+		&& equals( this.targetText, o.targetText )
+		&& equals( this.breakOption, o.breakOption )
+		&& (this.codeBegAddr         == o.codeBegAddr)
+		&& (this.bssBegAddr          == o.bssBegAddr)
+		&& (this.heapSize            == o.heapSize)
+		&& (this.stackSize           == o.stackSize)
+		&& (this.checkStack          == o.checkStack)
+		&& (this.checkBounds         == o.checkBounds)
+		&& (this.openCrtEnabled      == o.openCrtEnabled)
+		&& (this.openLptEnabled      == o.openLptEnabled)
+		&& (this.openDiskEnabled     == o.openDiskEnabled)
+		&& (this.openVdipEnabled     == o.openVdipEnabled)
+		&& (this.inclBasicLines      == o.inclBasicLines)
+		&& (this.initVars            == o.initVars)
+		&& (this.preferRelJumps      == o.preferRelJumps)
+		&& (this.printLineNumOnAbort == o.printLineNumOnAbort)
+		&& (this.showAsmText         == o.showAsmText)
+		&& (this.warnImplicitDecls   == o.warnImplicitDecls)
+		&& (this.warnTooManyDigits   == o.warnTooManyDigits)
+		&& (this.warnUnusedItems     == o.warnUnusedItems);
       }
     }
     return rv;
@@ -570,6 +705,10 @@ public class BasicOptions extends PrgOptions
   {
     super.putOptionsTo( props );
     if( props != null ) {
+      props.setProperty(
+		OPTION_APP_TYPE_SUB,
+                Boolean.toString( this.appTypeSub ) );
+
       props.setProperty(
 		OPTION_APP_NAME,
 		this.appName != null ? this.appName : "" );
@@ -615,8 +754,8 @@ public class BasicOptions extends PrgOptions
                 Boolean.toString( this.openLptEnabled ) );
 
       props.setProperty(
-		OPTION_OPEN_FILE_ENABLED,
-                Boolean.toString( this.openFileEnabled ) );
+		OPTION_OPEN_DISK_ENABLED,
+                Boolean.toString( this.openDiskEnabled ) );
 
       props.setProperty(
 		OPTION_OPEN_VDIP_ENABLED,
@@ -637,6 +776,18 @@ public class BasicOptions extends PrgOptions
       props.setProperty(
 		OPTION_INCLUDE_BASIC_LINES,
                 Boolean.toString( this.inclBasicLines ) );
+
+      props.setProperty(
+		OPTION_INIT_VARS,
+                Boolean.toString( this.initVars ) );
+
+      props.setProperty(
+		OPTION_WARN_IMPLICIT_DECLS,
+		Boolean.toString( this.warnImplicitDecls ) );
+
+      props.setProperty(
+		OPTION_WARN_TOO_MANY_DIGITS,
+		Boolean.toString( this.warnTooManyDigits ) );
 
       props.setProperty(
 		OPTION_WARN_UNUSED_ITEMS,

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -28,11 +27,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 import jkcemu.etc.CRC16;
+import jkcemu.file.FileUtil;
 import jkcemu.text.CharConverter;
 
 
@@ -103,7 +104,7 @@ public class TeleDisk extends AbstractFloppyDisk
       }
 
       // Datei oeffnen
-      out       = EmuUtil.createOptionalGZipOutputStream( file );
+      out       = FileUtil.createOptionalGZipOutputStream( file );
       CRC16 crc = new CRC16( CRC_POLYNOM, CRC_INIT );
 
       // Kennung
@@ -146,7 +147,7 @@ public class TeleDisk extends AbstractFloppyDisk
       if( (disk.getCylinders() >= 50)
 	  && (disk.getSectorSize() == 512) )
       {
-	int n = disk.getSectorsPerCylinder();
+	int n = disk.getSectorsPerTrack();
 	if( (n >= 8) && (n <= 10) ) {
 	  driveType = 3;			// 3.5 Zoll DD
 	} else if( n >= 17 ) {
@@ -197,7 +198,7 @@ public class TeleDisk extends AbstractFloppyDisk
 	  lastHead = physHead;
 
 	  // Sektoren der Spur
-	  int n = disk.getSectorsOfCylinder( physCyl, physHead );
+	  int n = disk.getSectorsOfTrack( physCyl, physHead );
 	  if( n > 0 ) {
 	    java.util.List<SectorData> sectors = new ArrayList<>( n );
 	    for( int i = 0; i < n; i++ ) {
@@ -232,7 +233,7 @@ public class TeleDisk extends AbstractFloppyDisk
 		if( sector.checkError() ) {
 		  secCtrl |= 0x02;
 		}
-		if( sector.isDeleted() ) {
+		if( sector.getDataDeleted() ) {
 		  secCtrl |= 0x04;
 		}
 		if( sector.hasBogusID() ) {
@@ -310,7 +311,7 @@ public class TeleDisk extends AbstractFloppyDisk
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return null;
   }
@@ -344,7 +345,7 @@ public class TeleDisk extends AbstractFloppyDisk
     Exception   errEx = null;
     try {
       in = new FileInputStream( file );
-      if( EmuUtil.isGZipFile( file ) ) {
+      if( FileUtil.isGZipFile( file ) ) {
 	in = new GZIPInputStream( in );
       }
       boolean autoRepaired = false;
@@ -433,9 +434,10 @@ public class TeleDisk extends AbstractFloppyDisk
       Map<Integer,java.util.List<SectorData>> side0 = null;
       Map<Integer,java.util.List<SectorData>> side1 = null;
 
-      int cyls           = 0;
-      int sectorsPerCyl  = 0;
-      int diskSectorSize = 0;
+      Map<Integer,Integer> sectPerTrack2Cnt = new HashMap<>();
+
+      int   cyls           = 0;
+      int   diskSectorSize = 0;
       for(;;) {
 	int nSec  = in.read();
 	int track = in.read();
@@ -455,9 +457,6 @@ public class TeleDisk extends AbstractFloppyDisk
 	  if( track >= cyls ) {
 	    cyls = track + 1;
 	  }
-	  if( sectorsPerCyl == 0 ) {
-	    sectorsPerCyl = nSec;
-	  }
 
 	  // Sektoren lesen
 	  boolean                    abnormalFmt        = false;
@@ -470,209 +469,211 @@ public class TeleDisk extends AbstractFloppyDisk
 	    int secCtrl     = readMandatoryByte( in );
 	    int secCrcValue = readMandatoryByte( in );
 
-	    // Datenpuffer anlegen
-	    byte[] secBuf = null;
-	    if( (secSizeCode >= 0) && (secSizeCode <= 6) ) {
-	      int secSize = 128;
-	      if( secSizeCode > 0 ) {
-		secSize <<= secSizeCode;
+	    if( secTrack != 0xFF ) {
+
+	      // Datenpuffer anlegen
+	      byte[] secBuf = null;
+	      if( (secSizeCode >= 0) && (secSizeCode <= 6) ) {
+		int secSize = 128;
+		if( secSizeCode > 0 ) {
+		  secSize <<= secSizeCode;
+		}
+		secBuf = new byte[ secSize ];
+		Arrays.fill( secBuf, (byte) 0 );
+		if( secSize > diskSectorSize ) {
+		  diskSectorSize = secSize;
+		}
 	      }
-	      secBuf = new byte[ secSize ];
-	      Arrays.fill( secBuf, (byte) 0 );
-	      if( secSize > diskSectorSize ) {
-		diskSectorSize = secSize;
-	      }
-	    }
-	    if( secBuf == null ) {
-	      throwUnsupportedTeleDiskFmt(
-		String.format(
+	      if( secBuf == null ) {
+		throwUnsupportedTeleDiskFmt(
+		  String.format(
 			"Code=%02X f\u00FCr Sektorgr\u00F6\u00DFe"
 				+ " nicht unterst\u00FCtzt",
 			secSizeCode ) );
-	    }
+	      }
 
-	    /*
-	     * Bits in secCtrl:
-	     *   0x01: Sektor mehrfach auf der Spur enthalten
-	     *   0x02: Sektor mit CRC-Fehler gelesen
-	     *   0x04: Sektor hat Deleted Data Address Mark
-	     *   0x10: Datenbereich wurde uebersprungen
-	     *         (keine Daten enthalten)
-	     *   0x20: Sektor hat ID-Feld, aber keine Daten
-	     *   0x40: Sektor hat Daten, aber keinen Kopf
-	     *         (Kopfdaten generiert)
-	     */
-	    boolean secCrcError = ((secCtrl & 0x02) != 0);
-	    boolean secDeleted  = ((secCtrl & 0x04) != 0);
-	    boolean bogusHeader = ((secCtrl & 0x40) != 0);
-	    if( !bogusHeader
-		&& ((secTrack != track) || (secHead != head)) )
-	    {
-	      abnormalFmt = true;
-	    }
+	      /*
+	       * Bits in secCtrl:
+	       *   0x01: Sektor mehrfach auf der Spur enthalten
+	       *   0x02: Sektor mit CRC-Fehler gelesen
+	       *   0x04: Sektor hat Deleted Data Address Mark
+	       *   0x10: Datenbereich wurde uebersprungen
+	       *         (keine Daten enthalten)
+	       *   0x20: Sektor hat ID-Feld, aber keine Daten
+	       *   0x40: Sektor hat Daten, aber keinen Kopf
+	       *         (Kopfdaten generiert)
+	       */
+	      boolean crcError    = ((secCtrl & 0x02) != 0);
+	      boolean dataDeleted = ((secCtrl & 0x04) != 0);
+	      boolean bogusHeader = ((secCtrl & 0x40) != 0);
+	      if( !bogusHeader
+		  && ((secTrack != track) || (secHead != head)) )
+	      {
+		abnormalFmt = true;
+	      }
 
-	    if( (secCtrl & 0x30) == 0 ) {
-	      int len = readMandatoryWord( in );
-	      if( len > 0 ) {
-		int secEncoding = readMandatoryByte( in );
-		--len;
+	      if( (secCtrl & 0x30) == 0 ) {
+		int len = readMandatoryWord( in );
+		if( len > 0 ) {
+		  int secEncoding = readMandatoryByte( in );
+		  --len;
 
-		int pos = 0;
-		switch( secEncoding ) {
-		  case 0:
-		    while( len > 0 ) {
-		      int b = readMandatoryByte( in );
-		      if( pos < secBuf.length ) {
-			secBuf[ pos++ ] = (byte) b;
-		      }
-		      --len;
-		    }
-		    break;
-
-		  case 1:
-		    if( len >= 4 ) {
-		      int n  = readMandatoryWord( in );
-		      int b0 = readMandatoryByte( in );
-		      int b1 = readMandatoryByte( in );
-		      len -= 4;
-		      while( n > 0 ) {
+		  int pos = 0;
+		  switch( secEncoding ) {
+		    case 0:
+		      while( len > 0 ) {
+			int b = readMandatoryByte( in );
 			if( pos < secBuf.length ) {
-			  secBuf[ pos++ ] = (byte) b0;
+			  secBuf[ pos++ ] = (byte) b;
 			}
-			if( pos < secBuf.length ) {
-			  secBuf[ pos++ ] = (byte) b1;
-			}
-			--n;
+			--len;
 		      }
-		    }
-		    break;
+		      break;
 
-		  case 2:
-		    while( len >= 2 ) {
-		      int t = readMandatoryByte( in );
-		      int n = readMandatoryByte( in );
-		      len -= 2;
-		      switch( t ) {
-			case 0:
-			  while( (len > 0) && (n > 0) ) {
-			    int b = readMandatoryByte( in );
-			    if( pos < secBuf.length ) {
-			      secBuf[ pos++ ] = (byte) b;
-			    }
-			    --n;
-			    --len;
+		    case 1:
+		      if( len >= 4 ) {
+			int n  = readMandatoryWord( in );
+			int b0 = readMandatoryByte( in );
+			int b1 = readMandatoryByte( in );
+			len -= 4;
+			while( n > 0 ) {
+			  if( pos < secBuf.length ) {
+			    secBuf[ pos++ ] = (byte) b0;
 			  }
-			  if( n > 0 ) {
-			    throwLengthMismatch();
+			  if( pos < secBuf.length ) {
+			    secBuf[ pos++ ] = (byte) b1;
 			  }
-			  break;
+			  --n;
+			}
+		      }
+		      break;
 
-			case 1:
-			  if( len >= 2 ) {
-			    int b0 = readMandatoryByte( in );
-			    int b1 = readMandatoryByte( in );
-			    len -= 2;
-			    while( n > 0 ) {
+		    case 2:
+		      while( len >= 2 ) {
+			int t = readMandatoryByte( in );
+			int n = readMandatoryByte( in );
+			len -= 2;
+			switch( t ) {
+			  case 0:
+			    while( (len > 0) && (n > 0) ) {
+			      int b = readMandatoryByte( in );
 			      if( pos < secBuf.length ) {
-				secBuf[ pos++ ] = (byte) b0;
-			      }
-			      if( pos < secBuf.length ) {
-				secBuf[ pos++ ] = (byte) b1;
+				secBuf[ pos++ ] = (byte) b;
 			      }
 			      --n;
+			      --len;
 			    }
-			  }
-			  break;
+			    if( n > 0 ) {
+			      throwLengthMismatch();
+			    }
+			    break;
 
-			default:
-			  throwUnsupportedTeleDiskFmt(
+			  case 1:
+			    if( len >= 2 ) {
+			      int b0 = readMandatoryByte( in );
+			      int b1 = readMandatoryByte( in );
+			      len -= 2;
+			      while( n > 0 ) {
+				if( pos < secBuf.length ) {
+				  secBuf[ pos++ ] = (byte) b0;
+				}
+				if( pos < secBuf.length ) {
+				  secBuf[ pos++ ] = (byte) b1;
+				}
+				--n;
+			      }
+			    }
+			    break;
+
+			  default:
+			    throwUnsupportedTeleDiskFmt(
 				String.format(
 					"Sektorunterkodierung %02X"
 						+ " nicht unterst\u00FCtzt",
 					t ) );
+			}
 		      }
-		    }
-		    while( len > 0 ) {
-		      readMandatoryByte( in );
-		      --len;
-		    }
-		    break;
+		      while( len > 0 ) {
+			readMandatoryByte( in );
+			--len;
+		      }
+		      break;
 
-		  default:
-		    throwUnsupportedTeleDiskFmt(
+		    default:
+		      throwUnsupportedTeleDiskFmt(
 			String.format(
 				"Sektorkodierung %02Xh"
 					+ " nicht unterst\u00FCtzt",
 				secEncoding ) );
-		}
-		if( len > 0 ) {
-		  throwLengthMismatch();
+		  }
+		  if( len > 0 ) {
+		    throwLengthMismatch();
+		  }
 		}
 	      }
-	    }
 
-	    Map<Integer,java.util.List<SectorData>> map = null;
-	    if( head == 0 ) {
-	      if( side0 == null ) {
-		side0 = new HashMap<>();
+	      Map<Integer,java.util.List<SectorData>> map = null;
+	      if( head == 0 ) {
+		if( side0 == null ) {
+		  side0 = new HashMap<>();
+		}
+		map = side0;
+	      } else if( head == 1 ) {
+		if( side1 == null ) {
+		  side1 = new HashMap<>();
+		}
+		map = side1;
 	      }
-	      map = side0;
-	    } else if( head == 1 ) {
-	      if( side1 == null ) {
-		side1 = new HashMap<>();
-	      }
-	      map = side1;
-	    }
-	    if( map != null ) {
-	      java.util.List<SectorData> sectors = map.get( track );
-	      if( sectors == null ) {
-		sectors = new ArrayList<>( nSec > 0 ? nSec : 1 );
-		map.put( track, sectors );
-	      }
-	      // doppelte Sektoren herausfiltern
-	      boolean found  = false;
-	      int     secLen = (secBuf != null ? secBuf.length : 0);
-	      if( enableAutoRepair ) {
-		for( SectorData sector : sectors ) {
-		  if( sector.equalsSectorID(
+	      if( map != null ) {
+		java.util.List<SectorData> sectors = map.get( track );
+		if( sectors == null ) {
+		  sectors = new ArrayList<>( nSec > 0 ? nSec : 1 );
+		  map.put( track, sectors );
+		}
+		// doppelte Sektoren herausfiltern
+		boolean found  = false;
+		int     secLen = (secBuf != null ? secBuf.length : 0);
+		if( enableAutoRepair ) {
+		  for( SectorData sector : sectors ) {
+		    if( sector.equalsSectorID(
 					secTrack,
 					secHead,
 					secNum,
 					secSizeCode ) )
-		  {
-		    found = true;
-		    if( sector.equalsData( secBuf, 0, secLen ) ) {
-		      /*
-		       * Daten sind gleich:
-		       *   sofern moeglich, den Sektor als fehlerfrei
-		       *   und nicht geloescht behalten
-		       */
-		      if( !secCrcError ) {
-			sector.setError( false );
-		      }
-		      if( !secDeleted ) {
-			sector.setDeleted( false );
-		      }
-		    } else {
-		      /*
-		       * Daten sind unterschiedlich
-		       *   sofern moeglich, den fehlerhaften durch den
-		       *   fehlerfreien Sektor ersetzen
-		       */
-		      if( sector.checkError() && !secCrcError ) {
-			if( secDeleted && !sector.isDeleted() ) {
-			  secDeleted   = false;
-			  autoRepaired = true;
+		    {
+		      found = true;
+		      if( sector.equalsData( secBuf, 0, secLen ) ) {
+			/*
+			 * Daten sind gleich:
+			 *   sofern moeglich, den Sektor als fehlerfrei
+			 *   und nicht geloescht behalten
+			 */
+			if( !crcError ) {
+			  sector.setError( false );
 			}
-			sector.setData( secDeleted, secBuf, secLen );
-			sector.setError( false );
+			if( !dataDeleted ) {
+			  sector.setDataDeleted( false );
+			}
+		      } else {
+			/*
+			 * Daten sind unterschiedlich
+			 *   sofern moeglich, den fehlerhaften durch den
+			 *   fehlerfreien Sektor ersetzen
+			 */
+			if( sector.checkError() && !crcError ) {
+			  if( dataDeleted && !sector.getDataDeleted() ) {
+			    dataDeleted  = false;
+			    autoRepaired = true;
+			  }
+			  sector.setData( dataDeleted, secBuf, secLen );
+			  sector.setError( false );
+			}
 		      }
 		    }
 		  }
 		}
-	      }
-	      if( !found ) {
-		SectorData sector = new SectorData(
+		if( !found ) {
+		  SectorData sector = new SectorData(
 						sectors.size(),
 						secTrack,
 						secHead,
@@ -681,46 +682,47 @@ public class TeleDisk extends AbstractFloppyDisk
 						secBuf,
 						0,
 						secLen );
-		sector.setBogusID( bogusHeader );
-		sector.setError( secCrcError );
-		sector.setDeleted( secDeleted );
-		sectors.add( sector );
-		if( bogusHeader && !abnormalFmt ) {
-		  if( bogusHeaderSectors == null ) {
-		    bogusHeaderSectors = new ArrayList<>();
+		  sector.setBogusID( bogusHeader );
+		  sector.setError( crcError );
+		  sector.setDataDeleted( dataDeleted );
+		  sectors.add( sector );
+		  if( bogusHeader && !abnormalFmt ) {
+		    if( bogusHeaderSectors == null ) {
+		      bogusHeaderSectors = new ArrayList<>();
+		    }
+		    bogusHeaderSectors.add( sector );
 		  }
-		  bogusHeaderSectors.add( sector );
 		}
 	      }
 	    }
 	  }
 
-	  /*
-	   * ggf. automatische Reparatur von Sektoren,
-	   * deren Kopf nicht gelesen werden konnte
-	   *
-	   * Das ist jedoch nicht moeglich,
-	   * wenn mehr als ein Sektor pro Spur betroffen sind.
-	   */
-	  if( enableAutoRepair
-	      && (bogusHeaderSectors != null)
-	      && !abnormalFmt )
-	  {
-	    if( bogusHeaderSectors.size() == 1 ) {
-	      SectorData bogusHeaderSector = bogusHeaderSectors.get( 0 );
+	  // Sektoren untersuchen und ggf. reparieren
+	  Map<Integer,java.util.List<SectorData>> sideData     = null;
+	  java.util.List<SectorData>              trackSectors = null;
+	  if( head == 0 ) {
+	    sideData = side0;
+	  } else if( head == 1 ) {
+	    sideData = side1;
+	  }
+	  if( sideData != null ) {
+	    trackSectors = sideData.get( track );
+	  }
+	  if( trackSectors != null ) {
 
-	      // Sektoren der Spur holen
-	      Map<Integer,java.util.List<SectorData>> sideData     = null;
-	      java.util.List<SectorData>              trackSectors = null;
-	      if( head == 0 ) {
-		sideData = side0;
-	      } else if( head == 1 ) {
-		sideData = side1;
-	      }
-	      if( sideData != null ) {
-		trackSectors = sideData.get( track );
-	      }
-	      if( trackSectors != null ) {
+	    /*
+	     * ggf. automatische Reparatur von Sektoren,
+	     * deren Kopf nicht gelesen werden konnte
+	     *
+	     * Das ist jedoch nicht moeglich,
+	     * wenn mehr als ein Sektor pro Spur betroffen sind.
+	     */
+	    if( enableAutoRepair
+		&& (bogusHeaderSectors != null)
+		&& !abnormalFmt )
+	    {
+	      if( bogusHeaderSectors.size() == 1 ) {
+		SectorData bogusHeaderSector = bogusHeaderSectors.get( 0 );
 		if( (trackSectors.size() == nSec)
 		    && trackSectors.contains( bogusHeaderSector ) )
 		{
@@ -771,16 +773,50 @@ public class TeleDisk extends AbstractFloppyDisk
 		}
 	      }
 	    }
+
+	    /*
+	     * Mitunter sind in einer TeleDisk-Datei Sektoren 
+	     * mehrfach enthalten.
+	     * Damit man daraus nicht ein falsches Diskettenformat ableitet,
+	     * wird hier versucht,
+	     * die wahrscheinliche Anzahl der realen Sektoren
+	     * anhand der unterschiedlichen Sektornummern zu erkennen.
+	     * Fuer das Diskettenformat wird dann die Anzahl an Sektoren
+	     * pro Spur genommen, die am haeufigsten vorkommt.
+	     */
+	    Set<Integer> sectorNums = new TreeSet<>();
+	    for( SectorData sector : trackSectors ) {
+	      sectorNums.add( sector.getSectorNum() );
+	    }
+	    Integer nSectorNums = Integer.valueOf( sectorNums.size() );
+	    Integer occurrences = sectPerTrack2Cnt.get( nSectorNums );
+	    if( occurrences != null ) {
+	      occurrences = Integer.valueOf( occurrences.intValue() + 1 );
+	    } else {
+	      occurrences = Integer.valueOf( 1 );
+	    }
+	    sectPerTrack2Cnt.put( nSectorNums, occurrences );
 	  }
 	}
       }
 
-      // Diskattenobjekt anlegen
+      // Sektoren pro Zylinder ermitteln
+      int sectorsPerTrack = 0;
+      int lastOccurrences = -1;
+      for( Map.Entry<Integer,Integer> e : sectPerTrack2Cnt.entrySet() ) {
+	int v = e.getValue().intValue();
+	if( v > lastOccurrences ) {
+	  lastOccurrences = v;
+	  sectorsPerTrack = e.getKey().intValue();
+	}
+      }
+
+      // Diskettenobjekt anlegen
       rv = new TeleDisk(
 			owner,
-			sides,
 			cyls,
-			sectorsPerCyl,
+			sides,
+			sectorsPerTrack,
 			diskSectorSize,
 			file.getPath(),
 			remark,
@@ -790,6 +826,7 @@ public class TeleDisk extends AbstractFloppyDisk
 
       // ggf. Warnung
       if( autoRepaired ) {
+	rv.setRepaired( true );
 	rv.setWarningText( "JKCEMU hat Sektoren repariert,"
 			+ " die beim Erzeugen der\n"
 			+ "Teledisk-Datei nicht korrekt gelesen"
@@ -797,7 +834,7 @@ public class TeleDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( in );
     }
     return rv;
   }
@@ -844,7 +881,7 @@ public class TeleDisk extends AbstractFloppyDisk
 
 
   @Override
-  public int getSectorsOfCylinder( int physCyl, int physHead )
+  public int getSectorsOfTrack( int physCyl, int physHead )
   {
     java.util.List<SectorData> sectors = getSectorList( physCyl, physHead );
     return sectors != null ? sectors.size() : 0;
@@ -862,7 +899,7 @@ public class TeleDisk extends AbstractFloppyDisk
 
 
   @Override
-  public boolean supportsDeletedSectors()
+  public boolean supportsDeletedDataSectors()
   {
     return true;
   }
@@ -872,9 +909,9 @@ public class TeleDisk extends AbstractFloppyDisk
 
   private TeleDisk(
 		Frame                                   owner,
-		int                                     sides,
 		int                                     cyls,
-		int                                     sectorsPerCyl,
+		int                                     sides,
+		int                                     sectorsPerTrack,
 		int                                     sectorSize,
 		String                                  fileName,
 		String                                  remark,
@@ -882,7 +919,7 @@ public class TeleDisk extends AbstractFloppyDisk
 		Map<Integer,java.util.List<SectorData>> side0,
 		Map<Integer,java.util.List<SectorData>> side1 )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize );
     this.fileName = fileName;
     this.remark   = remark;
     this.diskDate = diskDate;

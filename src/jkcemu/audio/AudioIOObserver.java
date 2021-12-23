@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,12 +8,12 @@
 
 package jkcemu.audio;
 
-import java.lang.*;
-
 
 public interface AudioIOObserver
 {
-  public void fireFinished( AudioIO audioIO, String errText );
+  public void fireFinished( AudioIO audioIO, String errorText );
+  public void fireFormatChanged( AudioIO audioIO, String formatText );
+  public void fireMonitorFailed( AudioIn audioIn, String errorText );
   public void fireProgressUpdate( AudioInFile audioInFile );
   public void fireRecordingStatusChanged( AudioOut audioOut );
   public void setVolumeLimits( int minLimit, int maxLimit );

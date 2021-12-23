@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ package jkcemu.base;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.FocusTraversalPolicy;
-import java.lang.*;
+import javax.swing.SwingUtilities;
 
 
 public class ListFocusTraversalPolicy extends FocusTraversalPolicy
@@ -80,11 +80,13 @@ public class ListFocusTraversalPolicy extends FocusTraversalPolicy
   private Component getComponentByOffs( Component c, int offs )
   {
     Component rv = null;
-    if( this.components != null ) {
+    if( (this.components != null) && (c != null) ) {
       if( this.components.length > 0 ) {
 	int idx = -1;
 	for( int i = 0; i < this.components.length; i++ ) {
-	  if( this.components[ i ] == c ) {
+	  if( (c == this.components[ i ])
+	      || SwingUtilities.isDescendingFrom( c, this.components[ i ] ) )
+	  {
 	    rv = this.components[ (i + offs) % this.components.length ];
 	    break;
 	  }

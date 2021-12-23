@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,8 +13,6 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
@@ -25,35 +23,38 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.RAMFloppy;
-import jkcemu.base.RAMFloppySettingsFld;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
 import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.AC1;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.RAMFloppySettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class AC1SettingsFld extends AbstractSettingsFld
 {
   private JTabbedPane            tabbedPane;
-  private JRadioButton           btnMon31_64x16;
-  private JRadioButton           btnMon31_64x32;
-  private JRadioButton           btnMonSCCH80;
-  private JRadioButton           btnMonSCCH1088;
-  private JRadioButton           btnMon2010;
-  private JRadioButton           btnCTCAllSerial;
-  private JRadioButton           btnCTCM1ToClk2;
-  private JCheckBox              btnColor;
-  private JCheckBox              btnFloppyDisk;
-  private JCheckBox              btnJoystick;
-  private JCheckBox              btnKCNet;
-  private JCheckBox              btnVDIP;
-  private JCheckBox              btnPasteFast;
+  private JRadioButton           rbMon31_64x16;
+  private JRadioButton           rbMon31_64x32;
+  private JRadioButton           rbMonSCCH80;
+  private JRadioButton           rbMonSCCH1088;
+  private JRadioButton           rbMon2010;
+  private JRadioButton           rbCtcAllInSeries;
+  private JRadioButton           rbCtcM1ToClk2;
+  private JCheckBox              cbCtcT0ToSound;
+  private JCheckBox              cbColor;
+  private JCheckBox              cbFloppyDisk;
+  private JCheckBox              cbJoystick;
+  private JCheckBox              cbK1520Sound;
+  private JCheckBox              cbKCNet;
+  private JCheckBox              cbVDIP;
+  private JCheckBox              cbPasteFast;
   private ROMFileSettingsFld     fldAltOS;
   private ROMFileSettingsFld     fldAltFont;
   private ROMFileSettingsFld     fldAltPio2Rom2010;
@@ -75,12 +76,12 @@ public class AC1SettingsFld extends AbstractSettingsFld
     super( settingsFrm, propPrefix );
 
     setLayout( new BorderLayout() );
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Modell
-    this.tabModel = new JPanel( new GridBagLayout() );
+    this.tabModel = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Modell", this.tabModel );
 
     GridBagConstraints gbcModel = new GridBagConstraints(
@@ -94,42 +95,38 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpModel = new ButtonGroup();
 
-    this.btnMon31_64x16 = new JRadioButton(
-				"Ur-AC1 mit Monitorprogramm 3.1",
-				false );
-    grpModel.add( this.btnMon31_64x16 );
+    this.rbMon31_64x16 = GUIFactory.createRadioButton(
+				"Ur-AC1 mit Monitorprogramm 3.1" );
+    grpModel.add( this.rbMon31_64x16 );
     gbcModel.insets.top = 0;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMon31_64x16, gbcModel );
+    this.tabModel.add( this.rbMon31_64x16, gbcModel );
 
-    this.btnMon31_64x32 = new JRadioButton(
-				"AC1-ACC mit Monitorprogramm 3.1",
-				false );
-    grpModel.add( this.btnMon31_64x32 );
+    this.rbMon31_64x32 = GUIFactory.createRadioButton(
+				"AC1-ACC mit Monitorprogramm 3.1" );
+    grpModel.add( this.rbMon31_64x32 );
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMon31_64x32, gbcModel );
+    this.tabModel.add( this.rbMon31_64x32, gbcModel );
 
-    this.btnMonSCCH80 = new JRadioButton(
-				"AC1-SCCH mit Monitorprogramm 8.0",
-				false );
-    grpModel.add( this.btnMonSCCH80 );
+    this.rbMonSCCH80 = GUIFactory.createRadioButton(
+				"AC1-SCCH mit Monitorprogramm 8.0" );
+    grpModel.add( this.rbMonSCCH80 );
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMonSCCH80, gbcModel );
+    this.tabModel.add( this.rbMonSCCH80, gbcModel );
 
-    this.btnMonSCCH1088 = new JRadioButton(
+    this.rbMonSCCH1088 = GUIFactory.createRadioButton(
 	"AC1-SCCH mit Monitorprogramm 10/88 und Zeichensatzumschaltung",
 	true );
-    grpModel.add( this.btnMonSCCH1088 );
+    grpModel.add( this.rbMonSCCH1088 );
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMonSCCH1088, gbcModel );
+    this.tabModel.add( this.rbMonSCCH1088, gbcModel );
 
-    this.btnMon2010 = new JRadioButton(
-		"AC1-2010 mit Monitorprogramm f\u00FCr Farbgrafik",
-		true );
-    grpModel.add( this.btnMon2010 );
+    this.rbMon2010 = GUIFactory.createRadioButton(
+		"AC1-2010 mit Monitorprogramm f\u00FCr Farbgrafik" );
+    grpModel.add( this.rbMon2010 );
     gbcModel.insets.bottom = 5;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMon2010, gbcModel );
+    this.tabModel.add( this.rbMon2010, gbcModel );
 
 
     // Tab SCCH-Modul 1
@@ -141,7 +138,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
 
     // Tab AC1-2010
-    this.tab2010 = new JPanel( new GridBagLayout() );
+    this.tab2010 = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "AC1-2010", this.tab2010 );
 
     GridBagConstraints gbc2010 = new GridBagConstraints(
@@ -171,10 +168,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     // Tab RAM-Floppy
     this.tabRF = new RAMFloppySettingsFld(
-		settingsFrm,
-		propPrefix + AC1.PROP_RF_PREFIX,
-		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen E0h-E7h",
-		RAMFloppy.RFType.MP_3_1988 );
+	settingsFrm,
+	propPrefix + AC1.PROP_RF_PREFIX,
+	"RAM-Floppy nach MP 3/1988 (256 KByte) an E/A-Adressen E0h-E7h",
+	RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppy", this.tabRF );
 
 
@@ -184,7 +181,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
 
     // Tab Erweiterungen
-    this.tabExt = new JPanel( new GridBagLayout() );
+    this.tabExt = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
     GridBagConstraints gbcExt = new GridBagConstraints(
@@ -196,34 +193,37 @@ public class AC1SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnColor = new JCheckBox(
-		"Farbgrafik mit Taktfrequenz- und Zeichensatzumschaltung",
-		false );
-    this.tabExt.add( this.btnColor, gbcExt );
+    this.cbColor = GUIFactory.createCheckBox(
+		"Farbgrafik mit Taktfrequenz- und Zeichensatzumschaltung" );
+    this.tabExt.add( this.cbColor, gbcExt );
 
-    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
-    gbcExt.insets.top = 0;
+    this.cbFloppyDisk = GUIFactory.createCheckBox( "Floppy-Disk-Modul" );
+    gbcExt.insets.top  = 0;
     gbcExt.gridy++;
-    this.tabExt.add( this.btnFloppyDisk, gbcExt );
+    this.tabExt.add( this.cbFloppyDisk, gbcExt );
 
-    this.btnKCNet = new JCheckBox( "KCNet-kompatible Netzwerkkarte", false );
+    this.cbJoystick = GUIFactory.createCheckBox( "Joystick" );
     gbcExt.gridy++;
-    this.tabExt.add( this.btnKCNet, gbcExt );
+    this.tabExt.add( this.cbJoystick, gbcExt );
 
-    this.btnVDIP = new JCheckBox(
-			"USB-Anschluss (Vinculum VDIP Modul)",
-			false );
+    this.cbK1520Sound = GUIFactory.createCheckBox( "K1520-Sound-Karte" );
     gbcExt.gridy++;
-    this.tabExt.add( this.btnVDIP, gbcExt );
+    this.tabExt.add( this.cbK1520Sound, gbcExt );
 
-    this.btnJoystick     = new JCheckBox( "Joystick", false );
+    this.cbKCNet = GUIFactory.createCheckBox(
+				"KCNet-kompatible Netzwerkkarte" );
+    gbcExt.gridy++;
+    this.tabExt.add( this.cbKCNet, gbcExt );
+
+    this.cbVDIP = GUIFactory.createCheckBox(
+			"USB-Anschluss (Vinculum VDIP Modul)" );
     gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
-    this.tabExt.add( this.btnJoystick, gbcExt );
+    this.tabExt.add( this.cbVDIP, gbcExt );
 
 
     // Tab CTC
-    this.tabCtc = new JPanel( new GridBagLayout() );
+    this.tabCtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "CTC", this.tabCtc );
 
     GridBagConstraints gbcCtc = new GridBagConstraints(
@@ -232,34 +232,42 @@ public class AC1SettingsFld extends AbstractSettingsFld
 					1.0, 0.0,
 					GridBagConstraints.WEST,
 					GridBagConstraints.REMAINDER,
-					new Insets( 5, 5, 5, 5 ),
+					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.tabCtc.add( new JLabel( "Kopplung der CTC-Kan\u00E4le:" ), gbcCtc );
+    this.tabCtc.add(
+		GUIFactory.createLabel( "Kopplung der CTC-Kan\u00E4le:" ),
+		gbcCtc );
 
     ButtonGroup grpCTC = new ButtonGroup();
 
-    this.btnCTCAllSerial = new JRadioButton(
+    this.rbCtcAllInSeries = GUIFactory.createRadioButton(
 		"Alle Kan\u00E4le in Reihe gekoppelt",
 		true );
-    grpCTC.add( this.btnCTCAllSerial );
+    grpCTC.add( this.rbCtcAllInSeries );
     gbcCtc.insets.left   = 50;
     gbcCtc.insets.bottom = 0;
     gbcCtc.gridy++;
-    this.tabCtc.add( this.btnCTCAllSerial, gbcCtc );
+    this.tabCtc.add( this.rbCtcAllInSeries, gbcCtc );
 
-    this.btnCTCM1ToClk2 = new JRadioButton(
-		"/M1 an Kanal 2, die anderen Kan\u00E4le in Reihe gekoppelt",
-		false );
-    grpCTC.add( this.btnCTCM1ToClk2 );
-    gbcCtc.insets.top    = 0;
+    this.rbCtcM1ToClk2 = GUIFactory.createRadioButton(
+	"/M1 an Kanal 2, die anderen Kan\u00E4le in Reihe gekoppelt" );
+    grpCTC.add( this.rbCtcM1ToClk2 );
+    gbcCtc.insets.top = 0;
+    gbcCtc.gridy++;
+    this.tabCtc.add( this.rbCtcM1ToClk2, gbcCtc );
+
+    this.cbCtcT0ToSound = GUIFactory.createCheckBox(
+				"CTC-Kanal 0 zum Lautsprecher" );
+    gbcCtc.insets.top    = 10;
+    gbcCtc.insets.left   = 5;
     gbcCtc.insets.bottom = 5;
     gbcCtc.gridy++;
-    this.tabCtc.add( this.btnCTCM1ToClk2, gbcCtc );
+    this.tabCtc.add( this.cbCtcT0ToSound, gbcCtc );
 
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -271,14 +279,14 @@ public class AC1SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnPasteFast = new JCheckBox(
+    this.cbPasteFast = GUIFactory.createCheckBox(
 		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs" );
-    this.tabEtc.add( this.btnPasteFast, gbcEtc );
+    this.tabEtc.add( this.cbPasteFast, gbcEtc );
 
     gbcEtc.insets.top    = 10;
     gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
-    this.tabEtc.add( new JSeparator(), gbcEtc );
+    this.tabEtc.add( GUIFactory.createSeparator(), gbcEtc );
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
@@ -310,26 +318,28 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 				settingsFrm,
 				propPrefix,
+				AC1.getAutoInputCharSet(),
 				AC1.DEFAULT_SWAP_KEY_CHAR_CASE,
-				AC1.FUNCTION_KEY_COUNT,
 				AC1.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
-    this.btnMon31_64x16.addActionListener( this );
-    this.btnMon31_64x32.addActionListener( this );
-    this.btnMonSCCH80.addActionListener( this );
-    this.btnMonSCCH1088.addActionListener( this );
-    this.btnMon2010.addActionListener( this );
-    this.btnColor.addActionListener( this );
-    this.btnFloppyDisk.addActionListener( this );
-    this.btnKCNet.addActionListener( this );
-    this.btnVDIP.addActionListener( this );
-    this.btnJoystick.addActionListener( this );
-    this.btnCTCAllSerial.addActionListener( this );
-    this.btnCTCM1ToClk2.addActionListener( this );
-    this.btnPasteFast.addActionListener( this );
+    this.rbMon31_64x16.addActionListener( this );
+    this.rbMon31_64x32.addActionListener( this );
+    this.rbMonSCCH80.addActionListener( this );
+    this.rbMonSCCH1088.addActionListener( this );
+    this.rbMon2010.addActionListener( this );
+    this.cbColor.addActionListener( this );
+    this.cbFloppyDisk.addActionListener( this );
+    this.cbKCNet.addActionListener( this );
+    this.cbVDIP.addActionListener( this );
+    this.cbJoystick.addActionListener( this );
+    this.cbK1520Sound.addActionListener( this );
+    this.rbCtcAllInSeries.addActionListener( this );
+    this.rbCtcM1ToClk2.addActionListener( this );
+    this.cbCtcT0ToSound.addActionListener( this );
+    this.cbPasteFast.addActionListener( this );
   }
 
 
@@ -346,16 +356,16 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
       // Tab Modell
       String os = AC1.VALUE_MON_31_64X32;
-      if( this.btnMon31_64x16.isSelected() ) {
+      if( this.rbMon31_64x16.isSelected() ) {
 	os = AC1.VALUE_MON_31_64X16;
       }
-      else if( this.btnMonSCCH80.isSelected() ) {
+      else if( this.rbMonSCCH80.isSelected() ) {
 	os = AC1.VALUE_MON_SCCH80;
       }
-      else if( this.btnMonSCCH1088.isSelected() ) {
+      else if( this.rbMonSCCH1088.isSelected() ) {
 	os = AC1.VALUE_MON_SCCH1088;
       }
-      else if( this.btnMon2010.isSelected() ) {
+      else if( this.rbMon2010.isSelected() ) {
 	os = AC1.VALUE_MON_2010;
       }
       props.setProperty( this.propPrefix + AC1.PROP_OS_VERSION, os );
@@ -382,34 +392,46 @@ public class AC1SettingsFld extends AbstractSettingsFld
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + AC1.PROP_COLOR,
-		this.btnColor.isSelected() );
+		this.cbColor.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + AC1.PROP_FDC_ENABLED,
-		this.btnFloppyDisk.isSelected() );
-      EmuUtil.setProperty(
-		props,
-		this.propPrefix + AC1.PROP_KCNET_ENABLED,
-		this.btnKCNet.isSelected() );
-      EmuUtil.setProperty(
-		props,
-		this.propPrefix + AC1.PROP_VDIP_ENABLED,
-		this.btnVDIP.isSelected() );
+		this.cbFloppyDisk.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + AC1.PROP_JOYSTICK_ENABLED,
-		this.btnJoystick.isSelected() );
+		this.cbJoystick.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + AC1.PROP_K1520SOUND_ENABLED,
+		this.cbK1520Sound.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + AC1.PROP_KCNET_ENABLED,
+		this.cbKCNet.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + AC1.PROP_VDIP_ENABLED,
+		this.cbVDIP.isSelected() );
+
+      // Tab CTC
+      tab = this.tabCtc;
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + AC1.PROP_M1_TO_CTC_CLK2,
+		this.rbCtcM1ToClk2.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + AC1.PROP_CTC_T0_TO_SOUND,
+		this.cbCtcT0ToSound.isSelected() );
+
 
       // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + AC1.PROP_M1_TO_CTC_CLK2,
-		this.btnCTCM1ToClk2.isSelected() );
-      EmuUtil.setProperty(
-		props,
 		this.propPrefix + AC1.PROP_PASTE_FAST,
-		this.btnPasteFast.isSelected() );
+		this.cbPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
 
@@ -438,11 +460,11 @@ public class AC1SettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( (src == this.btnMon31_64x16)
-	  || (src == this.btnMon31_64x32)
-	  || (src == this.btnMonSCCH80)
-	  || (src == this.btnMonSCCH1088)
-	  || (src == this.btnMon2010) )
+      if( (src == this.rbMon31_64x16)
+	  || (src == this.rbMon31_64x32)
+	  || (src == this.rbMonSCCH80)
+	  || (src == this.rbMonSCCH1088)
+	  || (src == this.rbMon2010) )
       {
 	rv = true;
 	upd2010FieldsEnabled();
@@ -469,36 +491,21 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.fldAltOS.lookAndFeelChanged();
-    this.fldAltFont.lookAndFeelChanged();
-    this.fldAltPio2Rom2010.lookAndFeelChanged();
-    this.fldRomBank2010.lookAndFeelChanged();
-    this.tabSCCH.lookAndFeelChanged();
-    this.tabRF.lookAndFeelChanged();
-    this.tabGIDE.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     String os = EmuUtil.getProperty(
 			props,
 			this.propPrefix + AC1.PROP_OS_VERSION );
     if( os.equals( AC1.VALUE_MON_31_64X16 ) ) {
-      this.btnMon31_64x16.setSelected( true );
+      this.rbMon31_64x16.setSelected( true );
     } else if( os.equals( AC1.VALUE_MON_31_64X32 ) ) {
-      this.btnMon31_64x32.setSelected( true );
+      this.rbMon31_64x32.setSelected( true );
     } else if( os.equals( AC1.VALUE_MON_SCCH80 ) ) {
-      this.btnMonSCCH80.setSelected( true );
+      this.rbMonSCCH80.setSelected( true );
     } else if( os.equals( AC1.VALUE_MON_2010 ) ) {
-      this.btnMon2010.setSelected( true );
+      this.rbMon2010.setSelected( true );
     } else {
-      this.btnMonSCCH1088.setSelected( true );
+      this.rbMonSCCH1088.setSelected( true );
     }
     this.tabRF.updFields( props );
     this.tabSCCH.updFields( props );
@@ -508,34 +515,40 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.fldAltPio2Rom2010.updFields( props );
     this.fldRomBank2010.updFields( props );
 
-    this.btnColor.setSelected(
+    this.cbColor.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + AC1.PROP_COLOR,
 			false ) );
 
-    this.btnFloppyDisk.setSelected(
+    this.cbFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + AC1.PROP_FDC_ENABLED,
 			false ) );
 
-    this.btnKCNet.setSelected(
+    this.cbJoystick.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + AC1.PROP_JOYSTICK_ENABLED,
+			false ) );
+
+    this.cbK1520Sound.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + AC1.PROP_K1520SOUND_ENABLED,
+			false ) );
+
+    this.cbKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + AC1.PROP_KCNET_ENABLED,
 			false ) );
 
-    this.btnVDIP.setSelected(
+    this.cbVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + AC1.PROP_VDIP_ENABLED,
-			false ) );
-
-    this.btnJoystick.setSelected(
-		EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + AC1.PROP_JOYSTICK_ENABLED,
 			false ) );
 
     if( EmuUtil.getBooleanProperty(
@@ -543,12 +556,18 @@ public class AC1SettingsFld extends AbstractSettingsFld
 			this.propPrefix + AC1.PROP_M1_TO_CTC_CLK2,
 			false ) )
     {
-      this.btnCTCM1ToClk2.setSelected( true );
+      this.rbCtcM1ToClk2.setSelected( true );
     } else {
-      this.btnCTCAllSerial.setSelected( true );
+      this.rbCtcAllInSeries.setSelected( true );
     }
 
-    this.btnPasteFast.setSelected(
+    this.cbCtcT0ToSound.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + AC1.PROP_CTC_T0_TO_SOUND,
+			false ) );
+
+    this.cbPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + AC1.PROP_PASTE_FAST,
@@ -566,7 +585,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
   private void upd2010FieldsEnabled()
   {
-    boolean state = this.btnMon2010.isSelected();
+    boolean state = this.rbMon2010.isSelected();
     this.fldAltPio2Rom2010.setEnabled( state );
     this.fldRomBank2010.setEnabled( state );
   }
@@ -574,7 +593,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
   private void updSCCHFieldsEnabled()
   {
-    this.tabSCCH.setEnabled( this.btnMonSCCH80.isSelected()
-				|| this.btnMonSCCH1088.isSelected() );
+    this.tabSCCH.setEnabled( this.rbMonSCCH80.isSelected()
+				|| this.rbMonSCCH1088.isSelected() );
   }
 }

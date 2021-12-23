@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.base;
 
-import java.lang.*;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
@@ -125,7 +124,7 @@ public class HexDocument extends PlainDocument
       if( len < numDigits ) {
 	StringBuilder buf = new StringBuilder( numDigits );
 	for( int i = len; i < numDigits; i++ ) {
-	  buf.append( (char) '0' );
+	  buf.append( '0' );
 	}
 	buf.append( text );
 	if( (numDigits > this.maxLen) && (this.maxLen > 0) ) {
@@ -155,29 +154,30 @@ public class HexDocument extends PlainDocument
 			AttributeSet a ) throws BadLocationException
   {
     if( s != null ) {
-      int len = s.length();
-      if( len > 0 ) {
-	// ungueltige Zeichen aussortieren
-	int	pos = 0;
-	char[]	buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  char ch = Character.toUpperCase( s.charAt( i ) );
-	  if( ((ch >= '0') && (ch <= '9')) ||
-	      ((ch >= 'A') && (ch <= 'F') ) )
-	  {
-	    buf[ pos++ ] = ch;
-	  }
-	}
 
-	// Laenge pruefen
-	if( pos > this.maxLen - getLength() ) {
-	  pos = this.maxLen - getLength();
+      // ungueltige Zeichen aussortieren
+      char[] buf = s.toCharArray();
+      int    pos = 0;
+      for( char ch : buf ) {
+	if( ((ch >= '0') && (ch <= '9')) ||
+	    ((ch >= 'A') && (ch <= 'F') ) )
+	{
+	  buf[ pos++ ] = ch;
 	}
+	else if( (ch >= 'a') && (ch <= 'f') )
+	{
+	  buf[ pos++ ] = (char) (ch - 'a' + 'A');
+	}
+      }
 
-	// Text einfuegen
-	if( pos > 0 ) {
-	  super.insertString( offs, new String( buf, 0, pos ), a );
-	}
+      // Laenge pruefen
+      if( pos > this.maxLen - getLength() ) {
+	pos = this.maxLen - getLength();
+      }
+
+      // Text einfuegen
+      if( pos > 0 ) {
+	super.insertString( offs, String.valueOf( buf, 0, pos ), a );
       }
     }
   }

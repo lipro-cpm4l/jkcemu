@@ -27,10 +27,11 @@
      <li><a href="nanos.htm#cassette">1.5. Kassettenschnittstelle</a></li>
      <li><a href="nanos.htm#fdc">1.6. Floppy Disk Controller</a></li>
      <li><a href="nanos.htm#gide">1.7. GIDE</a></li>
-     <li><a href="nanos.htm#kcnet">1.8. KCNet</a></li>
-     <li><a href="nanos.htm#vdip">1.9. USB-Anschluss</a></li>
-     <li><a href="nanos.htm#keyboard">1.10. Tastatur</a></li>
-     <li><a href="nanos.htm#printer">1.11. Drucker</a></li>
+     <li><a href="nanos.htm#k1520sound">1.8. K1520-Sound-Karte</a></li>
+     <li><a href="nanos.htm#kcnet">1.9. KCNet</a></li>
+     <li><a href="nanos.htm#vdip">1.10. USB-Anschluss</a></li>
+     <li><a href="nanos.htm#keyboard">1.11. Tastatur</a></li>
+     <li><a href="nanos.htm#printer">1.12. Drucker</a></li>
     </ul>
    </li>
    <li><a href="nanos.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -141,17 +142,37 @@
   an der E/A-Basisadresse&nbsp;D0h emuliert.
  <br/><br/>
 
- <h3><a name="kcnet">1.8. KCNet</a></h3>
+ <h3><a name="k1520sound">1.8. K1520-Sound-Karte</a></h3>
+  Eine <a href="k1520sound.htm">K1520-Sound-Karte</a> wird optional
+  an der E/A-Basisadresse&nbsp;E0h emuliert.
+ <br/><br/>
+  <b>Achtung!</b> &Uuml;blicherweise wird die K1520-Sound-Karte
+  im E/A-Adressbereich 38h bis 3Fh betrieben.
+  Da im NANOS dieser Bereich jedoch durch die ZVE-Karte blockiert wird,
+  kommt der E/A-Adressbereich E0h bis E7h zur Anwendung.
+ <br/><br/>
+  <table border="1">
+   <tr><th>E/A-Adresse</th><th>Bedeutung</th></tr>
+   <tr><td>E0h</td><td>Sound-Register ausw&auml;hlen bzw. lesen</td></tr>
+   <tr><td>E1h</td><td>Sound-Register beschreiben</td></tr>
+   <tr><td>E4h</td><td>CTC-Kanal&nbsp;0</td></tr>
+   <tr><td>E5h</td><td>CTC-Kanal&nbsp;1</td></tr>
+   <tr><td>E6h</td><td>CTC-Kanal&nbsp;2</td></tr>
+   <tr><td>E7h</td><td>CTC-Kanal&nbsp;3</td></tr>
+  </table>
+ <br/>
+
+ <h3><a name="kcnet">1.9. KCNet</a></h3>
   Eine <a href="kcnet.htm">KCNet</a>-Karte wird optional
   an der ersten PIO der IO-Baugruppe (E/A-Basisadresse&nbsp;80h) emuliert.
  <br/><br/>
 
- <h3><a name="vdip">1.9. USB-Anschluss</a></h3>
+ <h3><a name="vdip">1.10. USB-Anschluss</a></h3>
   Ein <a href="usb.htm">USB</a>-Anschluss (Vinculum VDIP Modul) wird optional
   an der zweiten PIO der IO-Baugruppe (E/A-Basisadresse&nbsp;88h) emuliert.
  <br/><br/>
 
- <h3><a name="keyboard">1.10. Tastatur</a></h3>
+ <h3><a name="keyboard">1.11. Tastatur</a></h3>
   Es gibt keine spezielle NANOS-Tastatur und damit auch keine
   einheitliche Tastaturschnittstelle.
   Die Tastatur wurde einfach an eine der zahlreichen Schnittstellen
@@ -169,7 +190,7 @@
   </ul>
  <br/>
 
- <h3><a name="printer">1.11. Drucker</a></h3>
+ <h3><a name="printer">1.12. Drucker</a></h3>
   Es wird ein Drucker <a href="print.htm">emuliert</a>,
   der an der IO-Karte, SIO Kanal&nbsp;A mit Hardware-Handshake (CTS),
   angeschlossen ist.

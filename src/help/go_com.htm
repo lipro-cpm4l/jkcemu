@@ -1,0 +1,55 @@
+<html>
+<body>
+ <h1>G.COM und GO.COM</h1>
+  Die Dateien <em>G.COM</em> und <em>GO.COM</em>
+  dienen zum Starten eines im Arbeitsspeicher
+  befindlichen CP/M-kompatiblen Programms.
+  <em>GO.COM</em> ist auf allen im JKCEMU enthaltenen
+  Diskettenabbildern f&uuml;r CP/M-kompatible Betriebssysteme enthalten.
+  Zus&auml;tzlich ist auf den MicroDOS-Diskettenabbildern
+  wegen den dort &uuml;blichen kurzen Kommandos auch <em>G.COM</em>
+  enthalten.
+ <br/><br/>
+  <em>G.COM</em> und <em>GO.COM</em> sind leere Dateien
+  (0&nbsp;Bytes gro&szlig;) und funktionieren folgenderma&szlig;en:
+  Bei CP/M-kompatiblen Betriebssystemen gibt es interne und externe
+  Kommandos.
+  Interne Kommandos sind im Kommandoprozessor (CCP) enthalten,
+  externe Kommandos werden von Diskette
+  (oder auch RAM-Floppy bzw. Festplatte) geladen und gestartet.
+  Wenn der Anwender eine Kommandozeile eingegeben hat
+  und das eingegebene Kommando nicht im CCP zu finden ist,
+  wird versucht, die Datei in den Arbeitsspeicher zu laden,
+  die so hei&szlig;t wie das Kommando zuz&uuml;glich der Endung
+  <em>.COM</em>.
+  CP/M-kompatible Programmdateien werden in den Arbeitsspeicher
+  ab Adresse 100h geladen und auf dieser Adresse auch gestartet.
+  Da die Datei <em>GO.COM</em> leer ist,
+  wird beim Aufruf des Kommandos <em>GO</em> nichts
+  in den Arbeitsspeicher geladen,
+  aber trotzdem erfolgt der Start des Programms auf der Adresse&nbsp;100h.
+  Es wird somit das Programm gestartet,
+  welches sich bereits im Arbeitsspeicher befindet.
+  Das gleiche gilt f&uuml;r die Datei <em>G.COM</em>,
+  die nur auf den MicroDOS-Dikettenabbildern enthalten ist.
+ <br/><br/>
+  <b>Achtung!</b> Befindet sich kein Programm im Arbeitsspeicher,
+  f&uuml;hrt der Aufruf von <em>G</em> bzw. <em>GO</em> zu einem Absturz.
+ <br/><br/>
+  Im JKCEMU ist die Datei <em>GO.COM</em>
+  (und bei MicroDOS auch <em>G.COM</em>) deshalb auf den
+  Diskettenabbildern vorhanden, um CP/M-kompatible Programme
+  mit den Mitteln des Emulators bequem in den Arbeitsspeicher laden
+  und anschlie&szlig;end dort starten zu k&ouml;nnen,
+  ohne dass diese Programme erst in einer emulierten Diskette
+  verf&uuml;gbar sein müssen.
+ <br/><br/>
+  Falls Sie eine Diskette oder RAM-Floppy ohne <em>GO.COM</em>
+  vor sich haben, k&ouml;nnen Sie mit folgender Kommandozeile
+  diese Datei erzeugen:
+ <br/><br/>
+  <tt>SAVE 0 GO.COM</tt>
+ <br/><br/>
+  Dazu muss das Speichermedium nat&uuml;rlich beschreibbar sein.
+</body>
+</html>

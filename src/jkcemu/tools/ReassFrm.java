@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.tools;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Event;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -27,24 +26,22 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
-import java.lang.*;
 import java.util.Collection;
 import java.util.EventObject;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.KeyStroke;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.text.JTextComponent;
@@ -54,12 +51,18 @@ import jkcemu.base.BaseFrm;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
 import jkcemu.base.HexDocument;
+import jkcemu.base.PopupMenuOwner;
+import jkcemu.base.ReplyTextDlg;
 import jkcemu.base.ScreenFrm;
+import jkcemu.file.FileUtil;
 import jkcemu.print.PlainTextPrintable;
 import jkcemu.print.PrintOptionsDlg;
 import jkcemu.print.PrintUtil;
+import jkcemu.programming.assembler.AsmLabel;
+import jkcemu.text.TextFinder;
 import jkcemu.text.TextUtil;
 import jkcemu.tools.debugger.DebugFrm;
 import z80emu.Z80Memory;
@@ -67,7 +70,9 @@ import z80emu.Z80Reassembler;
 import z80emu.Z80ReassInstr;
 
 
-public class ReassFrm extends BaseFrm implements CaretListener
+public class ReassFrm
+		extends BaseFrm
+		implements CaretListener, PopupMenuOwner
 {
   private static final String HELP_PAGE = "/help/tools/reassembler.htm";
 
@@ -79,14 +84,18 @@ public class ReassFrm extends BaseFrm implements CaretListener
   private static final int COL_SRC_ARGS     = COL_SRC_MNEMONIC + 8;
   private static final int COL_SRC_REMARK   = COL_SRC_ARGS + 18;
 
+  private ScreenFrm                  screenFrm;
   private Z80Memory                  memory;
+  private boolean                    notified;
   private int                        begAddr;
   private int                        endAddr;
   private int                        clickAddr;
+  private String                     clickLabel;
   private File                       lastFile;
   private File                       lastLabelFile;
+  private String                     labelPrefix;
   private Map<Integer,Set<String>>   addr2Labels;
-  private String                     textFind;
+  private TextFinder                 textFinder;
   private JTextArea                  textArea;
   private JTextComponent             selectionFld;
   private JMenuItem                  mnuReass;
@@ -96,7 +105,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
   private JMenuItem                  mnuPrintOptions;
   private JMenuItem                  mnuPrint;
   private JMenuItem                  mnuSaveAs;
-  private JMenuItem                  mnuSourceCopy;
+  private JMenuItem                  mnuSourceOpen;
   private JMenuItem                  mnuSourceExport;
   private JMenuItem                  mnuClose;
   private JMenuItem                  mnuCopy;
@@ -109,156 +118,152 @@ public class ReassFrm extends BaseFrm implements CaretListener
   private JTextField                 fldEndAddr;
   private HexDocument                docBegAddr;
   private HexDocument                docEndAddr;
-  private JPopupMenu                 popup;
+  private JPopupMenu                 popupMnu;
   private JMenuItem                  popupCopy;
+  private JMenuItem                  popupFind;
+  private JMenuItem                  popupFindPrev;
+  private JMenuItem                  popupFindNext;
   private JMenuItem                  popupBreak;
   private JMenuItem                  popupSelectAll;
 
 
-  public ReassFrm( Z80Memory memory )
+  public ReassFrm( ScreenFrm screenFrm, Z80Memory memory )
   {
+    this.screenFrm      = screenFrm;
     this.memory         = memory;
+    this.notified       = false;
     this.begAddr        = -1;
     this.endAddr        = -1;
     this.clickAddr      = -1;
+    this.clickLabel     = null;
+    this.labelPrefix    = "M_";
     this.lastFile       = null;
     this.lastLabelFile  = null;
     this.addr2Labels    = null;
-    this.textFind       = null;
+    this.textFinder     = null;
     this.selectionFld   = null;
-    this.textArea       = new JTextArea();
-    this.textArea.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 12 ) );
+    this.textArea       = GUIFactory.createCodeArea();
     setTitle( "JKCEMU Reassembler" );
-    Main.updIcon( this );
 
 
     // Popup-Menu
-    this.popup = new JPopupMenu();
+    this.popupMnu = GUIFactory.createPopupMenu();
 
-    this.popupCopy = createJMenuItem( "Kopieren" );
-    this.popup.add( this.popupCopy );
-    this.popup.addSeparator();
+    this.popupCopy = createMenuItemCopy( false );
+    this.popupCopy.setEnabled( false );
+    this.popupMnu.add( this.popupCopy );
+    this.popupMnu.addSeparator();
 
-    this.popupBreak = createJMenuItem( "Halte-/Log-Punkt anlegen" );
-    this.popup.add( this.popupBreak );
-    this.popup.addSeparator();
+    this.popupFind = createMenuItemOpenFind( false );
+    this.popupFind.setEnabled( false );
+    this.popupMnu.add( this.popupFind );
 
-    this.popupSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
-    this.popup.add( this.popupSelectAll );
+    this.popupFindNext = createMenuItemFindNext( false );
+    this.popupFindNext.setEnabled( false );
+    this.popupMnu.add( this.popupFindNext );
 
+    this.popupFindPrev = createMenuItemFindPrev( false );
+    this.popupFindPrev.setEnabled( false );
+    this.popupMnu.add( this.popupFindPrev );
+    this.popupMnu.addSeparator();
 
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
+    this.popupBreak = createMenuItem(
+			"Im Debugger Halte-/Log-Punkt hinzuf\u00FCgen..." );
+    this.popupBreak.setEnabled( false );
+    this.popupMnu.add( this.popupBreak );
+    this.popupMnu.addSeparator();
+
+    this.popupSelectAll = createMenuItemSelectAll( false );
+    this.popupSelectAll.setEnabled( false );
+    this.popupMnu.add( this.popupSelectAll );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuBar.add( mnuFile );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuReass = createJMenuItem(
-			"Reassemblieren",
-			KeyStroke.getKeyStroke(
-					KeyEvent.VK_R,
-					Event.CTRL_MASK ) );
+    this.mnuReass = createMenuItemWithStandardAccelerator(
+						"Reassemblieren",
+						KeyEvent.VK_R );
     mnuFile.add( this.mnuReass );
     mnuFile.addSeparator();
 
-    this.mnuImportLabelsFile = createJMenuItem(
+    this.mnuImportLabelsFile = createMenuItem(
 			"Marken aus Datei importieren..." );
     mnuFile.add( this.mnuImportLabelsFile );
 
-    this.mnuImportLabelsClp = createJMenuItem(
+    this.mnuImportLabelsClp = createMenuItem(
 			"Marken aus Zwischenablage importieren" );
     mnuFile.add( this.mnuImportLabelsClp );
 
-    this.mnuRemoveLabels = createJMenuItem(
+    this.mnuRemoveLabels = createMenuItem(
 			"Importierte Marken entfernen" );
     this.mnuRemoveLabels.setEnabled( false );
     mnuFile.add( this.mnuRemoveLabels );
     mnuFile.addSeparator();
 
-    this.mnuSourceCopy = createJMenuItem( "Als Quelltext kopieren" );
-    this.mnuSourceCopy.setEnabled( false );
-    mnuFile.add( this.mnuSourceCopy );
+    this.mnuSourceOpen = createMenuItem(
+			"Als Quelltext im Texteditor \u00F6ffnen..." );
+    this.mnuSourceOpen.setEnabled( false );
+    mnuFile.add( this.mnuSourceOpen );
 
-    this.mnuSourceExport = createJMenuItem( "Als Quelltext exportieren..." );
+    this.mnuSourceExport = createMenuItem( "Als Quelltext exportieren..." );
     this.mnuSourceExport.setEnabled( false );
     mnuFile.add( this.mnuSourceExport );
     mnuFile.addSeparator();
 
-    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
+    this.mnuPrintOptions = createMenuItemOpenPrintOptions();
     mnuFile.add( this.mnuPrintOptions );
 
-    this.mnuPrint = createJMenuItem(
-			"Drucken...",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_P,
-				Event.CTRL_MASK ) );
+    this.mnuPrint = createMenuItemOpenPrint( true );
     this.mnuPrint.setEnabled( false );
     mnuFile.add( this.mnuPrint );
     mnuFile.addSeparator();
 
-    this.mnuSaveAs = createJMenuItem(
-		"Speichern unter...",
-		KeyStroke.getKeyStroke(
-			KeyEvent.VK_S,
-			Event.CTRL_MASK | Event.SHIFT_MASK ) );
+    this.mnuSaveAs = createMenuItemSaveAs( true );
     this.mnuSaveAs.setEnabled( false );
     mnuFile.add( this.mnuSaveAs );
     mnuFile.addSeparator();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuCopy = createJMenuItem(
-			"Kopieren",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_C,
-				Event.CTRL_MASK ) );
+    this.mnuCopy = createMenuItemCopy( true );
     this.mnuCopy.setEnabled( false );
     mnuEdit.add( this.mnuCopy );
     mnuEdit.addSeparator();
 
-    this.mnuFind = createJMenuItem(
-			"Suchen...",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_F,
-				Event.CTRL_MASK ) );
+    this.mnuFind = createMenuItemOpenFind( true );
     this.mnuFind.setEnabled( false );
     mnuEdit.add( this.mnuFind );
 
-    this.mnuFindNext = createJMenuItem(
-		"Weitersuchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
+    this.mnuFindNext = createMenuItemFindNext( true );
     this.mnuFindNext.setEnabled( false );
     mnuEdit.add( this.mnuFindNext );
 
-    this.mnuFindPrev = createJMenuItem(
-		"R\u00FCckw\u00E4rts suchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, Event.SHIFT_MASK ) );
+    this.mnuFindPrev = createMenuItemFindPrev( true );
     this.mnuFindPrev.setEnabled( false );
     mnuEdit.add( this.mnuFindPrev );
     mnuEdit.addSeparator();
 
-    this.mnuSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuSelectAll = createMenuItemSelectAll( true );
     this.mnuSelectAll.setEnabled( false );
     mnuEdit.add( this.mnuSelectAll );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuBar.add( mnuHelp );
+    JMenu mnuHelp = createMenuHelp();
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    this.mnuHelpContent = GUIFactory.createMenuItem(
+				"Hilfe zum Reassembler..." );
     mnuHelp.add( this.mnuHelpContent );
+
+
+    // Menu
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuEdit, mnuHelp ) );
 
 
     // Fensterinhalt
@@ -266,7 +271,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 
 
     // Kopfbereich
-    JPanel panelHead = new JPanel( new GridBagLayout() );
+    JPanel panelHead = GUIFactory.createPanel( new GridBagLayout() );
     add( panelHead, BorderLayout.NORTH );
 
     GridBagConstraints gbcHead = new GridBagConstraints(
@@ -278,12 +283,10 @@ public class ReassFrm extends BaseFrm implements CaretListener
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    panelHead.add( new JLabel( "Anfangsadresse:" ), gbcHead );
+    panelHead.add( GUIFactory.createLabel( "Anfangsadresse:" ), gbcHead );
 
     this.docBegAddr = new HexDocument( 4, "Anfangsadresse" );
-    this.fldBegAddr = new JTextField( this.docBegAddr, "", 4 );
-    this.fldBegAddr.addActionListener( this );
-    this.fldBegAddr.addCaretListener( this );
+    this.fldBegAddr = GUIFactory.createTextField( this.docBegAddr, 4 );
     gbcHead.fill    = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx = 0.5;
     gbcHead.gridx++;
@@ -292,12 +295,10 @@ public class ReassFrm extends BaseFrm implements CaretListener
     gbcHead.fill    = GridBagConstraints.NONE;
     gbcHead.weightx = 0.0;
     gbcHead.gridx++;
-    panelHead.add( new JLabel( "Endadresse:" ), gbcHead );
+    panelHead.add( GUIFactory.createLabel( "Endadresse:" ), gbcHead );
 
     this.docEndAddr = new HexDocument( 4, "Endadresse" );
-    this.fldEndAddr = new JTextField( this.docEndAddr, "", 4 );
-    this.fldEndAddr.addActionListener( this );
-    this.fldEndAddr.addCaretListener( this );
+    this.fldEndAddr = GUIFactory.createTextField( this.docEndAddr, 4 );
     gbcHead.fill    = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx = 0.5;
     gbcHead.gridx++;
@@ -309,14 +310,12 @@ public class ReassFrm extends BaseFrm implements CaretListener
     this.textArea.setRows( 20 );
     this.textArea.setEditable( false );
     this.textArea.setMargin( new Insets( 5, 5, 5, 5 ) );
-    this.textArea.addCaretListener( this );
-    this.textArea.addMouseListener( this );
-    add( new JScrollPane( this.textArea ), BorderLayout.CENTER );
+    add( GUIFactory.createScrollPane( this.textArea ), BorderLayout.CENTER );
 
 
     // sonstiges
     setResizable( true );
-    if( !applySettings( Main.getProperties(), true ) ) {
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setLocationByPlatform( true );
       this.fldBegAddr.setColumns( 0 );
@@ -338,7 +337,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 		int                  begAddr,
 		int                  endAddr )
   {
-    importLabels( labels, true );
+    importLabels( labels, true, true );
     if( (begAddr >= 0) && (begAddr <= endAddr) && (endAddr < 0x10000) ) {
       this.docBegAddr.setValue( begAddr, 4 );
       this.docEndAddr.setValue( endAddr, 4 );
@@ -358,15 +357,41 @@ public class ReassFrm extends BaseFrm implements CaretListener
     if( src != null ) {
       if( src instanceof JTextComponent ) {
 	this.selectionFld = (JTextComponent) src;
-	this.mnuCopy.setEnabled(
-		this.selectionFld.getSelectionStart()
-			!= this.selectionFld.getSelectionEnd() );
+	boolean state = TextUtil.isTextSelected( this.selectionFld );
+	this.mnuCopy.setEnabled( state );
+	this.popupCopy.setEnabled( state );
       }
     }
   }
 
 
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMnu;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.mnuHelpContent.addActionListener( this );
+      this.fldBegAddr.addActionListener( this );
+      this.fldBegAddr.addCaretListener( this );
+      this.fldEndAddr.addActionListener( this );
+      this.fldEndAddr.addCaretListener( this );
+      this.textArea.addCaretListener( this );
+      this.textArea.addMouseListener( this );
+    }
+  }
+
 
   @Override
   public boolean doAction( EventObject e )
@@ -375,87 +400,94 @@ public class ReassFrm extends BaseFrm implements CaretListener
     try {
       Object src = e.getSource();
       if( src == this.fldBegAddr ) {
-	rv = true;
 	this.fldEndAddr.requestFocus();
+	rv = true;
       }
       else if( (src == this.fldEndAddr) || (src == this.mnuReass) ) {
-	rv = true;
 	doReass();
+	rv = true;
       }
       else if( src == this.mnuImportLabelsClp ) {
 	rv = true;
 	doImportLabelsClp();
       }
       else if( src == this.mnuImportLabelsFile ) {
-	rv = true;
 	doImportLabelsFile();
+	rv = true;
       }
       else if( src == this.mnuRemoveLabels ) {
-	rv = true;
 	doRemoveLabels();
-      }
-      else if( src == this.mnuSourceCopy ) {
 	rv = true;
-	EmuUtil.copyToClipboard( this, createSourceText() );
+      }
+      else if( src == this.mnuSourceOpen ) {
+	String text = createSourceText();
+	if( text != null ) {
+	  this.screenFrm.openText( text );
+	}
+	rv = true;
       }
       else if( src == this.mnuSourceExport ) {
-	rv = true;
 	doSourceExport();
+	rv = true;
       }
       else if( src == this.mnuPrintOptions ) {
-	rv = true;
 	PrintOptionsDlg.showPrintOptionsDlg( this, true, true );
+	rv = true;
       }
       else if( src == this.mnuPrint ) {
-	rv = true;
 	doPrint();
+	rv = true;
       }
       else if( src == this.mnuSaveAs ) {
-	rv = true;
 	doSaveAs();
+	rv = true;
       }
       else if( src == this.mnuClose ) {
-	rv = true;
 	doClose();
-      }
-      else if( src == this.mnuCopy ) {
 	rv = true;
+      }
+      else if( (src == this.mnuCopy) || (src == this.popupCopy) ) {
 	if( this.selectionFld != null ) {
 	  this.selectionFld.copy();
 	}
-      }
-      else if( src == this.mnuFind ) {
 	rv = true;
+      }
+      else if( (src == this.mnuFind) || (src == this.popupFind) ) {
 	doFind();
-      }
-      else if( src == this.mnuFindPrev ) {
 	rv = true;
-	doFindNext( true );
       }
-      else if( src == this.mnuFindNext ) {
+      else if( (src == this.mnuFindPrev) || (src == this.popupFindPrev) ) {
+	if( this.textFinder != null ) {
+	  this.textFinder.findPrev( this.textArea );
+	}
 	rv = true;
-	doFindNext( false );
       }
-      else if( src == this.mnuSelectAll ) {
+      else if( (src == this.mnuFindNext) || (src == this.popupFindNext) ) {
+	if( this.textFinder != null ) {
+	  this.textFinder.findNext( this.textArea );
+	}
 	rv = true;
+      }
+      else if( (src == this.mnuSelectAll) || (src == this.popupSelectAll) ) {
 	this.textArea.requestFocus();
 	this.textArea.selectAll();
+	rv = true;
       }
       else if( src == this.mnuHelpContent ) {
+	HelpFrm.openPage( HELP_PAGE );
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
       }
       else if( src == this.popupCopy ) {
-	rv = true;
 	this.textArea.copy();
+	rv = true;
       }
       else if( src == this.popupBreak ) {
-	rv = true;
 	doCreateBreakpoint();
+	rv = true;
       }
       else if( src == this.popupSelectAll ) {
-	rv = true;
 	this.textArea.selectAll();
+	rv = true;
       }
     }
     catch( IOException ex ) {
@@ -474,12 +506,16 @@ public class ReassFrm extends BaseFrm implements CaretListener
       this.fldEndAddr.setText( "" );
       this.mnuPrint.setEnabled( false );
       this.mnuSaveAs.setEnabled( false );
-      this.mnuSourceCopy.setEnabled( false );
+      this.mnuSourceOpen.setEnabled( false );
       this.mnuSourceExport.setEnabled( false );
       this.mnuFind.setEnabled( false );
       this.mnuFindNext.setEnabled( false );
       this.mnuFindPrev.setEnabled( false );
       this.mnuSelectAll.setEnabled( false );
+      this.popupFind.setEnabled( false );
+      this.popupFindNext.setEnabled( false );
+      this.popupFindPrev.setEnabled( false );
+      this.popupSelectAll.setEnabled( false );
       setText( "" );
     }
     return rv;
@@ -487,17 +523,29 @@ public class ReassFrm extends BaseFrm implements CaretListener
 
 
   @Override
-  public void resetFired()
+  public void removeNotify()
   {
-    ScreenFrm screenFrm = Main.getScreenFrm();
-    if( screenFrm != null ) {
-      EmuThread emuThread = screenFrm.getEmuThread();
-      if( emuThread != null ) {
-	EmuSys emuSys = emuThread.getEmuSys();
-	if( emuSys != null ) {
-	  final int millis = emuSys.getDefaultPromptAfterResetMillisMax();
-	  if( millis > 0 ) {
-	    javax.swing.Timer timer = new javax.swing.Timer(
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.mnuHelpContent.removeActionListener( this );
+      this.fldBegAddr.removeActionListener( this );
+      this.fldBegAddr.removeCaretListener( this );
+      this.fldEndAddr.removeActionListener( this );
+      this.fldEndAddr.removeCaretListener( this );
+      this.textArea.removeCaretListener( this );
+      this.textArea.removeMouseListener( this );
+    }
+  }
+
+
+  @Override
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
+  {
+    if( newEmuSys != null ) {
+      final int millis = newEmuSys.getDefaultPromptAfterResetMillisMax();
+      if( millis > 0 ) {
+	javax.swing.Timer timer = new javax.swing.Timer(
 			millis,
 			new ActionListener()
 			{
@@ -507,35 +555,38 @@ public class ReassFrm extends BaseFrm implements CaretListener
 			    reassemble();
 			  }
 			} );
-	    timer.setRepeats( false );
-	    timer.start();
-	  } else {
-	    reassemble();
-	  }
-	}
+	timer.setRepeats( false );
+	timer.start();
+      } else {
+	reassemble();
       }
     }
   }
 
 
   @Override
-  protected boolean showPopup( MouseEvent e )
+  protected boolean showPopupMenu( MouseEvent e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Component c = e.getComponent();
-      if( c != null ) {
-	if( c == this.textArea ) {
-	  this.clickAddr = ToolsUtil.getReassAddr(
+    boolean   rv = false;
+    Component c  = e.getComponent();
+    if( c != null ) {
+      if( c == this.textArea ) {
+	StringBuilder labelBuf = new StringBuilder();
+	this.clickAddr         = ToolUtil.getReassAddr(
 						this.textArea,
-						e.getPoint() );
-	  this.popupCopy.setEnabled(
+						e.getPoint(),
+						labelBuf );
+	if( (this.clickAddr >= 0) && (labelBuf.length() > 0) ) {
+	  this.clickLabel = labelBuf.toString();
+	} else {
+	  this.clickLabel = null;
+	}
+	this.popupCopy.setEnabled(
 		this.textArea.getSelectionStart()
 			!= this.textArea.getSelectionEnd() );
-	  this.popupBreak.setEnabled( this.clickAddr >= 0 );
-	  this.popup.show( c, e.getX(), e.getY() );
-	  rv = true;
-	}
+	this.popupBreak.setEnabled( this.clickAddr >= 0 );
+	this.popupMnu.show( c, e.getX(), e.getY() );
+	rv = true;
       }
     }
     return rv;
@@ -559,7 +610,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 	  }
 	}
 	if( debugFrm != null ) {
-	  debugFrm.doDebugBreakPCAdd( this.clickAddr );
+	  debugFrm.openBreakpointAdd( this.clickLabel, this.clickAddr, 0 );
 	}
       }
     }
@@ -568,68 +619,14 @@ public class ReassFrm extends BaseFrm implements CaretListener
 
   private void doFind()
   {
-    String selectedText = this.textArea.getSelectedText();
-    if( selectedText != null ) {
-      if( selectedText.length() == 0 ) {
-	selectedText = null;
-      }
-    }
-
-    String[]    options = { "Suchen", "Abbrechen" };
-    JOptionPane pane    = new JOptionPane(
-				"Suchen nach:",
-				JOptionPane.PLAIN_MESSAGE );
-    pane.setOptions( options );
-    pane.setWantsInput( true );
-    if( selectedText != null ) {
-      pane.setInitialSelectionValue( selectedText );
-    } else {
-      if( this.textFind != null ) {
-	pane.setInitialSelectionValue( this.textFind );
-      }
-    }
-    pane.setInitialValue( options[ 0 ] );
-    pane.createDialog( this, "Suchen" ).setVisible( true );
-    Object value = pane.getValue();
-    if( value != null ) {
-      if( value.equals( options[ 0 ] ) ) {
-	value = pane.getInputValue();
-	if( value != null ) {
-	  String text = value.toString();
-	  if( text != null ) {
-	    if( text.length() > 0 ) {
-	      this.textFind = text;
-	      findText(
-		Math.max(
-			this.textArea.getCaretPosition(),
-			this.textArea.getSelectionEnd() ),
-		false );
-	    }
-	  }
-	}
-      }
-    }
-  }
-
-
-  private void doFindNext( boolean backward )
-  {
-    if( this.textFind == null ) {
-      doFind();
-    } else {
-      if( backward ) {
-	findText(
-                Math.min(
-                        textArea.getCaretPosition(),
-                        textArea.getSelectionStart() ) - 1,
-                true );
-      } else {
-	findText(
-                Math.max(
-                        textArea.getCaretPosition(),
-                        textArea.getSelectionEnd() ),
-		false );
-      }
+    this.textFinder = TextFinder.openFindDlg(
+					this.textArea,
+					this.textFinder );
+    if( textFinder != null ) {
+      this.mnuFindPrev.setEnabled( true );
+      this.mnuFindNext.setEnabled( true );
+      this.popupFindPrev.setEnabled( true );
+      this.popupFindNext.setEnabled( true );
     }
   }
 
@@ -642,11 +639,11 @@ public class ReassFrm extends BaseFrm implements CaretListener
       Reader  reader = null;
       try {
 	reader = new StringReader( text );
-	state  = importLabels( ToolsUtil.readLabels( reader ), false );
+	state  = importLabels( ToolUtil.readLabels( reader ), false, false );
       }
       catch( IOException ex ) {}
       finally {
-	EmuUtil.closeSilent( reader );
+	EmuUtil.closeSilently( reader );
       }
     }
     if( !state ) {
@@ -664,20 +661,20 @@ public class ReassFrm extends BaseFrm implements CaretListener
     if( file == null ) {
       file = Main.getLastDirFile( Main.FILE_GROUP_LABEL );
     }
-    file = EmuUtil.showFileOpenDlg(
+    file = FileUtil.showFileOpenDlg(
 			this,
 			"Haltepunkte importieren",
-			file,
-			EmuUtil.getTextFileFilter() );
+			FileUtil.getDirectory( file ),
+			FileUtil.getTextFileFilter() );
     if( file != null ) {
       boolean state  = false;
       Reader  reader = null;
       try {
 	reader = new FileReader( file );
-	state  = importLabels( ToolsUtil.readLabels( reader ), true );
+	state  = importLabels( ToolUtil.readLabels( reader ), false, true );
       }
       finally {
-	EmuUtil.closeSilent( reader );
+	EmuUtil.closeSilently( reader );
       }
       if( state ) {
 	this.lastLabelFile = file;
@@ -699,6 +696,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 	new PlainTextPrintable(
 		this.textArea.getText(),
 		this.textArea.getTabSize(),
+		this.textArea.getFont(),
 		this.lastFile != null ? this.lastFile.getName() : null ),
 	"JKCEMU - Reassembler" );
   }
@@ -744,13 +742,13 @@ public class ReassFrm extends BaseFrm implements CaretListener
 
   private void doSaveAs() throws IOException
   {
-    File file = EmuUtil.showFileSaveDlg(
+    File file = FileUtil.showFileSaveDlg(
 			this,
 			"Textdatei speichern",
 			this.lastFile != null ?
 				this.lastFile
 				: Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
-			EmuUtil.getTextFileFilter() );
+			FileUtil.getTextFileFilter() );
     if( file != null ) {
       Writer out = null;
       try {
@@ -762,7 +760,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 	Main.setLastFile( file, Main.FILE_GROUP_TEXT );
       }
       finally {
-	EmuUtil.closeSilent( out );
+	EmuUtil.closeSilently( out );
       }
     }
   }
@@ -772,13 +770,13 @@ public class ReassFrm extends BaseFrm implements CaretListener
   {
     String text = createSourceText();
     if( text != null ) {
-      File file = EmuUtil.showFileSaveDlg(
+      File file = FileUtil.showFileSaveDlg(
 		this,
 		"Als Quelltext speichern",
 		this.lastFile != null ?
 			this.lastFile
 			: Main.getLastDirFile( Main.FILE_GROUP_LABEL ),
-		EmuUtil.getTextFileFilter() );
+		FileUtil.getTextFileFilter() );
       if( file != null ) {
 	BufferedWriter out = null;
 	try {
@@ -799,7 +797,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 	  Main.setLastFile( file, Main.FILE_GROUP_TEXT );
 	}
 	finally {
-	  EmuUtil.closeSilent( out );
+	  EmuUtil.closeSilently( out );
 	}
       }
     }
@@ -829,13 +827,13 @@ public class ReassFrm extends BaseFrm implements CaretListener
   private static void appendSpaces( StringBuilder buf, int endPos )
   {
     for( int i = buf.length(); i < endPos; i++ )
-      buf.append( (char) '\u0020' );
+      buf.append( '\u0020' );
   }
 
 
-  private static String createAddrLabel( int addr )
+  private String createAddrLabel( int addr )
   {
-    return String.format( "m%04X", addr );
+    return String.format( "%s%04X", this.labelPrefix, addr );
   }
 
 
@@ -843,19 +841,35 @@ public class ReassFrm extends BaseFrm implements CaretListener
   {
     String rv = null;
     if( (this.begAddr >= 0) && (this.endAddr >= this.begAddr) ) {
-      StringBuilder buf    = new StringBuilder( 0x4000 );
-      EmuSys        emuSys = getEmuSys();
+      String labelPrefix = ReplyTextDlg.showDlg(
+					this,
+					"Prefix f\u00FCr Marken:",
+					"Eingabe",
+					this.labelPrefix );
+      if( labelPrefix != null ) {
+	boolean prefixOK  = false;
+	int     prefixLen = labelPrefix.length();
+	if( prefixLen > 0 ) {
+	  prefixOK = AsmLabel.isIdentifierStart( labelPrefix.charAt( 0 ) );
+	  for( int i = 1; i < prefixLen; i++ ) {
+	    prefixOK &= AsmLabel.isIdentifierPart( labelPrefix.charAt( i ) );
+	  }
+	}
+	if( prefixOK ) {
+	  this.labelPrefix     = labelPrefix;
+	  StringBuilder buf    = new StringBuilder( 0x4000 );
+	  EmuSys        emuSys = getEmuSys();
 
-      // Pass 1: Adressen ermitteln
-      Set<Integer> instrAddrs = new TreeSet<>();
-      Set<Integer> destAddrs  = new TreeSet<>();
-      int          addr       = this.begAddr;
-      while( addr <= this.endAddr ) {
-	instrAddrs.add( addr );
+	  // Pass 1: Adressen ermitteln
+	  Set<Integer> instrAddrs = new TreeSet<>();
+	  Set<Integer> destAddrs  = new TreeSet<>();
+	  int          addr       = this.begAddr;
+	  while( addr <= this.endAddr ) {
+	    instrAddrs.add( addr );
 
-	int len = 0;
-	if( emuSys != null ) {
-	  len = emuSys.reassembleSysCall(
+	    int len = 0;
+	    if( emuSys != null ) {
+	      len = emuSys.reassembleSysCall(
 					this.memory,
 					addr,
 					buf,
@@ -863,82 +877,82 @@ public class ReassFrm extends BaseFrm implements CaretListener
 					COL_SRC_MNEMONIC,
 					COL_SRC_ARGS,
 					COL_SRC_REMARK );
-	}
-	if( len > 0 ) {
-	  addr += len;
-	} else {
-	  Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-						this.memory,
-						addr );
-	  if( instr != null ) {
-	    Integer tmpAddr = instr.getAddress1();
-	    if( tmpAddr != null ) {
-	      destAddrs.add( tmpAddr );
 	    }
-	    tmpAddr = instr.getAddress2();
-	    if( tmpAddr != null ) {
-	      destAddrs.add( tmpAddr );
-	    }
-	    addr += instr.getLength();
-	  } else {
-	    addr++;
-	  }
-	}
-      }
-
-      /*
-       * Alle Zieladressen entfernen,
-       * die nicht den Anfang eines Befehls darstellen.
-       */
-      try {
-	int n = destAddrs.size();
-	if( n > 0 ) {
-	  Integer[] ary = destAddrs.toArray( new Integer[ n ] );
-	  if( ary != null ) {
-	    for( Integer a : ary ) {
-	      if( !instrAddrs.contains( a ) ) {
-		destAddrs.remove( a );
+	    if( len > 0 ) {
+	      addr += len;
+	    } else {
+	      Z80ReassInstr instr = Z80Reassembler.reassInstruction(
+							this.memory,
+							addr );
+	      if( instr != null ) {
+		Integer tmpAddr = instr.getAddress1();
+		if( tmpAddr != null ) {
+		  destAddrs.add( tmpAddr );
+		}
+		tmpAddr = instr.getAddress2();
+		if( tmpAddr != null ) {
+		  destAddrs.add( tmpAddr );
+		}
+		addr += instr.getLength();
+	      } else {
+		addr++;
 	      }
 	    }
 	  }
-	}
-      }
-      catch( Exception ex ) {}
 
-      // Pass 2: eigentliche Texterzeugung
-      addr = this.begAddr;
-      buf.setLength( 0 );
-      buf.append( "\tORG     " );
-      if( addr >= 0xA000 ) {
-	buf.append( (char) '0' );
-      }
-      buf.append( String.format( "%04XH\n", addr ) );
-
-      int nExtLabels = 0;
-      while( addr <= this.endAddr ) {
-	boolean addrLabelEnabled = true;
-	if( this.addr2Labels != null ) {
-	  Set<String> labels = this.addr2Labels.get( addr );
-	  if( labels != null ) {
-	    int n = 0;
-	    for( String label : labels ) {
-	      if( label != null ) {
-		if( !label.isEmpty() ) {
-		  buf.append( label );
-		  buf.append( ":\n" );
-		  nExtLabels++;
+	  /*
+	   * Alle Zieladressen entfernen,
+	   * die nicht den Anfang eines Befehls darstellen.
+	   */
+	  try {
+	    int n = destAddrs.size();
+	    if( n > 0 ) {
+	      Integer[] ary = destAddrs.toArray( new Integer[ n ] );
+	      if( ary != null ) {
+		for( Integer a : ary ) {
+		  if( !instrAddrs.contains( a ) ) {
+		    destAddrs.remove( a );
+		  }
 		}
 	      }
 	    }
 	  }
-	}
-	if( (nExtLabels != 1) && destAddrs.contains( addr ) ) {
-	  buf.append( createAddrLabel( addr ) );
-	  buf.append( ":\n" );
-	}
-	int len = 0;
-	if( emuSys != null ) {
-	  len = emuSys.reassembleSysCall(
+	  catch( Exception ex ) {}
+
+	  // Pass 2: eigentliche Texterzeugung
+	  addr = this.begAddr;
+	  buf.setLength( 0 );
+	  buf.append( "\tORG     " );
+	  if( addr >= 0xA000 ) {
+	    buf.append( '0' );
+	  }
+	  buf.append( String.format( "%04XH\n", addr ) );
+
+	  int nExtLabels = 0;
+	  while( addr <= this.endAddr ) {
+	    boolean addrLabelEnabled = true;
+	    if( this.addr2Labels != null ) {
+	      Set<String> labels = this.addr2Labels.get( addr );
+	      if( labels != null ) {
+		int n = 0;
+		for( String label : labels ) {
+		  if( label != null ) {
+		    if( !label.isEmpty() ) {
+		      buf.append( label );
+		      buf.append( ":\n" );
+		      nExtLabels++;
+		    }
+		  }
+		}
+	      }
+	    }
+	    if( (nExtLabels != 1) && destAddrs.contains( addr ) ) {
+	      buf.append( createAddrLabel( addr ) );
+	      buf.append( ":\n" );
+	    }
+	    int len = 0;
+	    if( emuSys != null ) {
+	      len = emuSys.reassembleSysCall(
 					this.memory,
 					addr,
 					buf,
@@ -946,122 +960,63 @@ public class ReassFrm extends BaseFrm implements CaretListener
 					COL_SRC_MNEMONIC,
 					COL_SRC_ARGS,
 					COL_SRC_REMARK );
-	}
-	if( len > 0 ) {
-	  addr += len;
-	} else {
-	  int bol = buf.length();
-	  for( int i = 0; i < COL_SRC_MNEMONIC; i++ ) {
-	    buf.append( (char) '\u0020' );
-	  }
-	  Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-						this.memory,
-						addr );
-	  if( instr != null ) {
-	    String s = instr.getName();
-	    if( s != null ) {
-	      if( s.startsWith( "*" ) ) {
-		s = s.substring( 1 );
+	    }
+	    if( len > 0 ) {
+	      addr += len;
+	    } else {
+	      int bol = buf.length();
+	      for( int i = 0; i < COL_SRC_MNEMONIC; i++ ) {
+		buf.append( '\u0020' );
 	      }
-	      appendSpaces( buf, bol + COL_SRC_MNEMONIC );
-	      buf.append( s );
-
-	      Integer addr1 = instr.getAddress1();
-	      s = getArgText(
-			instr.getArg1(),
-			addr1,
-			instr.isIndirect1(),
-			destAddrs );
-	      if( s != null ) {
-		appendSpaces( buf, bol + COL_SRC_ARGS );
-		buf.append( s );
-
-		Integer addr2 = instr.getAddress2();
-		s = getArgText(
-			instr.getArg2(),
-			addr2,
-			instr.isIndirect2(),
-			destAddrs );
+	      Z80ReassInstr instr = Z80Reassembler.reassInstruction(
+							this.memory,
+							addr );
+	      if( instr != null ) {
+		String s = instr.getName();
 		if( s != null ) {
-		  buf.append( (char) ',' );
+		  if( s.startsWith( "*" ) ) {
+		    s = s.substring( 1 );
+		  }
+		  appendSpaces( buf, bol + COL_SRC_MNEMONIC );
 		  buf.append( s );
+
+		  Integer addr1 = instr.getAddress1();
+		  s = getArgText(
+				instr.getArg1(),
+				addr1,
+				instr.isIndirect1(),
+				destAddrs );
+		  if( s != null ) {
+		    appendSpaces( buf, bol + COL_SRC_ARGS );
+		    buf.append( s );
+
+		    Integer addr2 = instr.getAddress2();
+		    s = getArgText(
+				instr.getArg2(),
+				addr2,
+				instr.isIndirect2(),
+				destAddrs );
+		    if( s != null ) {
+		      buf.append( ',' );
+		      buf.append( s );
+		    }
+		  }
 		}
-	      }
-	    }
-	    addr += instr.getLength();
-	  } else {
-	    buf.append( String.format(
+		addr += instr.getLength();
+	      } else {
+		buf.append( String.format(
 				"  %02X",
 				this.memory.getMemByte( addr++, true ) ) );
+	      }
+	      buf.append( '\n' );
+	    }
 	  }
-	  buf.append( (char) '\n' );
-	}
-      }
-      rv = buf.toString();
-    }
-    return rv;
-  }
-
-
-  private boolean findText( int startPos, boolean backward )
-  {
-    boolean rv       = false;
-    String  textFind = this.textFind;
-    if( textFind != null ) {
-      if( textFind.isEmpty() ) {
-	textFind = null;
-      }
-    }
-    if( textFind != null ) {
-      this.mnuFindPrev.setEnabled( true );
-      this.mnuFindNext.setEnabled( true );
-
-      String textBase = this.textArea.getText();
-      if( textBase == null ) {
-	textBase = "";
-      }
-      textFind = textFind.toUpperCase();
-      textBase = textBase.toUpperCase();
-      if( startPos < 0 ) {
-	startPos = 0;
-      }
-      int len     = textBase.length();
-      int posFind = -1;
-      if( backward ) {
-	if( startPos >= (len - 1) ) {
-	  startPos = len - 1;
-	}
-	if( startPos > 0 ) {
-	  posFind = textBase.lastIndexOf( textFind, startPos );
-	}
-      } else {
-	if( startPos < 0 ) {
-	  startPos = 0;
-	}
-	if( startPos < len ) {
-	  posFind = textBase.indexOf( textFind, startPos );
-	}
-      }
-      if( (posFind >= 0) && (posFind < len) ) {
-	toFront();
-	this.textArea.requestFocus();
-	this.textArea.setCaretPosition( posFind );
-	this.textArea.select( posFind, posFind + textFind.length() );
-	rv = true;
-      }
-      if( !rv ) {
-	if( backward ) {
-	  if( startPos < (len - 1) ) {
-	    rv = findText( len - 1, true );
-	  } else {
-	    TextUtil.showTextNotFound( this );
-	  }
+	  rv = buf.toString();
 	} else {
-	  if( startPos > 0 ) {
-	    rv = findText( 0, false );
-	  } else {
-	    TextUtil.showTextNotFound( this );
-	  }
+	  BaseDlg.showErrorDlg(
+		this, 
+		"Der Prefix entspricht nicht den Namenskonventionen"
+			+ " f\u00FCr Assembler-Marken." );
 	}
       }
     }
@@ -1123,6 +1078,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 
   private boolean importLabels(
 			jkcemu.tools.Label[] labels,
+			boolean              addrLabelsOnly,
 			boolean              removeObsolete )
   {
     boolean             rv            = false;
@@ -1144,15 +1100,17 @@ public class ReassFrm extends BaseFrm implements CaretListener
     if( labels != null ) {
       Map<Integer,Set<String>> map = null;
       for( jkcemu.tools.Label label : labels ) {
-	String labelName = label.getLabelName();
-	if( labelName != null ) {
-	  if( !labelName.isEmpty() ) {
-	    if( map == null ) {
-	      map = new HashMap<>();
-	    }
-	    addLabel( map, label.intValue(), labelName );
-	    if( oldLabel2Addr != null ) {
-	      oldLabel2Addr.remove( labelName );
+	if( label.isAddress() ) {
+	  String labelName = label.getLabelName();
+	  if( labelName != null ) {
+	    if( !labelName.isEmpty() ) {
+	      if( map == null ) {
+		map = new HashMap<>();
+	      }
+	      addLabel( map, label.intValue(), labelName );
+	      if( oldLabel2Addr != null ) {
+		oldLabel2Addr.remove( labelName );
+	      }
 	    }
 	  }
 	}
@@ -1225,7 +1183,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 						this.memory,
 						addr );
 	  if( instr != null ) {
-	    buf.append( (char) '\u0020' );
+	    buf.append( '\u0020' );
 	    len = instr.getLength();
 	    for( int i = 0; i < len; i++ ) {
 	      buf.append( String.format( " %02X", instr.getByte( i ) ) );
@@ -1254,7 +1212,7 @@ public class ReassFrm extends BaseFrm implements CaretListener
 			instr.isIndirect2(),
 			null );
 		if( s != null ) {
-		  buf.append( (char) ',' );
+		  buf.append( ',' );
 		  buf.append( s );
 		}
 	      }
@@ -1264,18 +1222,20 @@ public class ReassFrm extends BaseFrm implements CaretListener
 				"  %02X",
 				this.memory.getMemByte( addr++, true ) ) );
 	  }
-	  buf.append( (char) '\n' );
+	  buf.append( '\n' );
 	}
       }
       setText( buf.toString() );
       this.textArea.requestFocus();
       if( buf.length() > 0 ) {
-	this.mnuSourceCopy.setEnabled( true );
+	this.mnuSourceOpen.setEnabled( true );
 	this.mnuSourceExport.setEnabled( true );
 	this.mnuPrint.setEnabled( true );
 	this.mnuSaveAs.setEnabled( true );
 	this.mnuFind.setEnabled( true );
 	this.mnuSelectAll.setEnabled( true );
+	this.popupFind.setEnabled( true );
+	this.popupSelectAll.setEnabled( true );
       }
     }
   }

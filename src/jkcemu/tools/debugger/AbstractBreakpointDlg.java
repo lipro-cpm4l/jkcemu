@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,12 +13,13 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.lang.*;
+import java.util.Collection;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 
 
 public abstract class AbstractBreakpointDlg extends BaseDlg
@@ -26,14 +27,15 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
   protected static String[] conditions = { "<", "<=", "<>", "=", ">=" , ">" };
 
   protected DebugFrm           debugFrm;
-  protected AbstractBreakpoint breakpoint;
+  protected AbstractBreakpoint oldBP;
 
   private static boolean lastStopEnabled = true;
   private static boolean lastLogEnabled  = false;
 
+  private boolean            notified;
   private AbstractBreakpoint approvedBreakpoint;
-  private JCheckBox          btnStopEnabled;
-  private JCheckBox          btnLogEnabled;
+  private JCheckBox          cbStopEnabled;
+  private JCheckBox          cbLogEnabled;
   private JButton            btnOK;
   private JButton            btnCancel;
 
@@ -49,19 +51,67 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
 		("Halte-/Log-Punkt auf " + watchedObj + " bearbeiten")
 		: ("Neuer Halte-/Log-Punkt auf " + watchedObj) );
     this.debugFrm           = debugFrm;
-    this.breakpoint         = breakpoint;
+    this.oldBP              = breakpoint;
     this.approvedBreakpoint = null;
+    this.notified           = false;
   }
 
 
   protected void approveBreakpoint( AbstractBreakpoint breakpoint )
   {
-    breakpoint.setStopEnabled( this.btnStopEnabled.isSelected() );
-    breakpoint.setLogEnabled( this.btnLogEnabled.isSelected() );
-    this.approvedBreakpoint = breakpoint;
-    doClose();
-    lastStopEnabled = breakpoint.isStopEnabled();
-    lastLogEnabled  = breakpoint.isLogEnabled();
+    if( breakpoint instanceof ImportableBreakpoint ) {
+
+      /*
+       * Sicherstellen, dass eskeinen weiteren Halte-/Log-Punkt
+       * mit dem gleichen Namen gibt
+       */
+      String name = ((ImportableBreakpoint) breakpoint).getName();
+      if( name != null ) {
+	AbstractBreakpoint otherBP = null;
+	if( breakpoint instanceof PCBreakpoint ) {
+	  otherBP = this.debugFrm.getPCBreakpointByName( name );
+	} else if( breakpoint instanceof MemoryBreakpoint ) {
+	  otherBP = this.debugFrm.getMemoryBreakpointByName( name );
+	}
+	if( (otherBP != null) && (otherBP != this.oldBP) ) {
+	  if( !showConfirmDlg(
+			this,
+			"Ein Halte-Log-Punkt mit dem Namen existiert"
+				+ " bereits.\n"
+				+ "Dieser wird aktualisiert." ) )
+	  {
+	    breakpoint = null;
+	  }
+	}
+      }
+
+      /*
+       * Markierung fuer importiert uebernehmen, aber nur,
+       * wenn sich die Marke und die Adresse nicht geaendert haben.
+       */
+      if( (breakpoint != null) && (this.oldBP != null) ) {
+	if( this.oldBP instanceof ImportableBreakpoint ) {
+	  if( (((ImportableBreakpoint) breakpoint).getAddress()
+			== ((ImportableBreakpoint) this.oldBP).getAddress())
+	      && (((ImportableBreakpoint) breakpoint).getName()
+			== ((ImportableBreakpoint) this.oldBP).getName()) )
+	  {
+	    ((ImportableBreakpoint) breakpoint).setImported(
+			((ImportableBreakpoint) this.oldBP).getImported() );
+	  }
+	}
+      }
+    }
+
+    // Status uebernehmen
+    if( breakpoint != null ) {
+      breakpoint.setStopEnabled( this.cbStopEnabled.isSelected() );
+      breakpoint.setLogEnabled( this.cbLogEnabled.isSelected() );
+      this.approvedBreakpoint = breakpoint;
+      doClose();
+      lastStopEnabled = breakpoint.isStopEnabled();
+      lastLogEnabled  = breakpoint.isLogEnabled();
+    }
   }
 
 
@@ -98,7 +148,7 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
 
   protected JPanel createGeneralButtons()
   {
-    JPanel panel = new JPanel( new GridBagLayout() );
+    JPanel panel = GUIFactory.createPanel( new GridBagLayout() );
 
     GridBagConstraints gbc = new GridBagConstraints(
 						0, 0,
@@ -109,36 +159,39 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.btnStopEnabled = new JCheckBox(
+    this.cbStopEnabled = GUIFactory.createCheckBox(
 		"Programmausf\u00FChrung anhalten (Haltepunkt)",
 		lastStopEnabled );
-    panel.add( this.btnStopEnabled, gbc );
+    panel.add( this.cbStopEnabled, gbc );
 
-    this.btnLogEnabled = new JCheckBox(
+    this.cbLogEnabled = GUIFactory.createCheckBox(
 				"Log-Meldung erzeugen (Log-Punkt)",
 				lastLogEnabled );
     gbc.insets.top    = 0;
     gbc.insets.bottom = 10;
     gbc.gridy++;
-    panel.add( this.btnLogEnabled, gbc );
+    panel.add( this.cbLogEnabled, gbc );
 
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.insets.left = 5;
     gbc.gridy++;
     panel.add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
-    if( this.breakpoint != null ) {
-      this.btnStopEnabled.setSelected( this.breakpoint.isStopEnabled() );
-      this.btnLogEnabled.setSelected( this.breakpoint.isLogEnabled() );
+    if( this.notified ) {
+      this.btnOK.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+
+    if( this.oldBP != null ) {
+      this.cbStopEnabled.setSelected( this.oldBP.isStopEnabled() );
+      this.cbLogEnabled.setSelected( this.oldBP.isLogEnabled() );
     }
 
     return panel;
@@ -165,6 +218,22 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      if( this.btnOK != null ) {
+	this.btnOK.addActionListener( this );
+      }
+      if( this.btnCancel != null ) {
+	this.btnCancel.addActionListener( this );
+      }
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -180,5 +249,21 @@ public abstract class AbstractBreakpointDlg extends BaseDlg
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      if( this.btnOK != null ) {
+	this.btnOK.removeActionListener( this );
+      }
+      if( this.btnCancel != null ) {
+	this.btnCancel.removeActionListener( this );
+      }
+    }
   }
 }

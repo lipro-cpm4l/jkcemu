@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -26,49 +25,57 @@ import javax.swing.JRadioButton;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.table.TableModel;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HexDocument;
 import jkcemu.base.UserInputException;
 
 
 public class VarDataDlg extends BaseDlg
 {
-  private DebugFrm     debugFrm;
-  private VarData      varData;
-  private VarData      appliedVarData;
-  private JTextField   fldName;
-  private JTextField   fldAddr;
-  private HexDocument  docAddr;
-  private JRadioButton btnInt1;
-  private JRadioButton btnInt2;
-  private JRadioButton btnInt3;
-  private JRadioButton btnInt4;
-  private JRadioButton btnInt8;
-  private JRadioButton btnFloat4;
-  private JRadioButton btnFloat8;
-  private JRadioButton btnByteArray;
-  private JRadioButton btnPointer;
-  private JRadioButton btnLE;
-  private JRadioButton btnBE;
-  private JSpinner     spinnerSize;
-  private JLabel       labelSize;
-  private JLabel       labelByteOrder;
-  private JButton      btnOK;
-  private JButton      btnCancel;
+  private DebugFrm      debugFrm;
+  private VarData       oldVarData;
+  private VarData       appliedVarData;
+  private JTextField    fldAddr;
+  private JTextField    fldName;
+  private HexDocument   docAddr;
+  private LabelDocument docName;
+  private JRadioButton  rbInt1;
+  private JRadioButton  rbInt2;
+  private JRadioButton  rbInt3;
+  private JRadioButton  rbInt4;
+  private JRadioButton  rbBCDec6;
+  private JRadioButton  rbByteArray;
+  private JRadioButton  rbPointer;
+  private JRadioButton  rbLE;
+  private JRadioButton  rbBE;
+  private JSpinner      spinnerSize;
+  private JLabel        labelSize;
+  private JLabel        labelByteOrder;
+  private JButton       btnOK;
+  private JButton       btnCancel;
 
 
   public static VarData showEditVarDlg( DebugFrm debugFrm, VarData varData )
   {
-    VarDataDlg dlg = new VarDataDlg( debugFrm, varData );
+    VarDataDlg dlg = new VarDataDlg( debugFrm, varData, null, -1, -1 );
     dlg.setVisible( true );
     return dlg.appliedVarData;
   }
 
 
-  public static VarData showNewVarDlg( DebugFrm debugFrm )
+  public static VarData showNewVarDlg(
+				DebugFrm debugFrm,
+				String   name,
+				int      addr,
+				int      size )
   {
-    VarDataDlg dlg = new VarDataDlg( debugFrm, null );
+    VarDataDlg dlg = new VarDataDlg(
+				debugFrm,
+				null,
+				name,
+				addr,
+				size );
     dlg.setVisible( true );
     return dlg.appliedVarData;
   }
@@ -82,13 +89,10 @@ public class VarDataDlg extends BaseDlg
     boolean rv = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src == this.fldName ) {
+      if( src == this.fldAddr ) {
 	rv = true;
-	this.fldAddr.requestFocus();
-      } else if( src == this.fldAddr ) {
-	rv = true;
-	this.fldAddr.transferFocus();
-      } else if( src == this.btnOK ) {
+	this.fldName.requestFocus();
+      } else if( (src == this.fldName) || (src == this.btnOK) ) {
 	rv = true;
 	doApply();
       } else if( src == this.btnCancel ) {
@@ -98,6 +102,29 @@ public class VarDataDlg extends BaseDlg
 	rv = true;
 	updFieldsEnabled();
       }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.fldName.removeActionListener( this );
+      this.fldAddr.removeActionListener( this );
+      this.rbInt1.removeActionListener( this );
+      this.rbInt2.removeActionListener( this );
+      this.rbInt3.removeActionListener( this );
+      this.rbInt4.removeActionListener( this );
+      this.rbBCDec6.removeActionListener( this );
+      this.rbByteArray.removeActionListener( this );
+      this.rbPointer.removeActionListener( this );
+      this.rbLE.removeActionListener( this );
+      this.rbBE.removeActionListener( this );
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
     }
     return rv;
   }
@@ -114,14 +141,19 @@ public class VarDataDlg extends BaseDlg
 
 	/* --- Konstruktor --- */
 
-  private VarDataDlg( DebugFrm debugFrm, VarData varData )
+  private VarDataDlg(
+		DebugFrm debugFrm,
+		VarData  varData,
+		String   name,
+		int      addr,
+		int      size )
   {
     super(
 	debugFrm,
 	varData != null ? "Variable bearbeiten" : "Variable anlegen" );
 
     this.debugFrm       = debugFrm;
-    this.varData        = varData;
+    this.oldVarData     = varData;
     this.appliedVarData = null;
 
 
@@ -137,27 +169,28 @@ public class VarDataDlg extends BaseDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    add( new JLabel( "Bezeichnung (optional):" ), gbc );
+    add( GUIFactory.createLabel( "Adresse (hex):" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Adresse (hex):" ), gbc );
+    add( GUIFactory.createLabel( "Name (optional):" ), gbc );
     gbc.anchor = GridBagConstraints.NORTHEAST;
     gbc.gridy++;
-    add( new JLabel( "Typ:" ), gbc );
+    add( GUIFactory.createLabel( "Typ:" ), gbc );
 
-    this.fldName = new JTextField();
+    this.docAddr = new HexDocument( 4, "Adresse" );
+    this.fldAddr = GUIFactory.createTextField( this.docAddr, 0 );
     gbc.anchor   = GridBagConstraints.WEST;
     gbc.weightx  = 1.0;
     gbc.fill     = GridBagConstraints.HORIZONTAL;
     gbc.gridy    = 0;
     gbc.gridx++;
-    add( this.fldName, gbc );
-
-    this.docAddr = new HexDocument( 4, "Adresse" );
-    this.fldAddr = new JTextField( this.docAddr, "", 0 );
-    gbc.gridy++;
     add( this.fldAddr, gbc );
 
-    JPanel panelType = new JPanel( new GridBagLayout() );
+    this.docName = new LabelDocument();
+    this.fldName = GUIFactory.createTextField( this.docName, 0 );
+    gbc.gridy++;
+    add( this.fldName, gbc );
+
+    JPanel panelType = GUIFactory.createPanel( new GridBagLayout() );
     gbc.weightx      = 0.0;
     gbc.fill         = GridBagConstraints.NONE;
     gbc.gridy++;
@@ -174,65 +207,56 @@ public class VarDataDlg extends BaseDlg
 
     ButtonGroup grpType = new ButtonGroup();
 
-    this.btnInt1 = new JRadioButton( "1 Byte Integer", true );
-    grpType.add( this.btnInt1 );
-    panelType.add( this.btnInt1, gbcType );
+    this.rbInt1 = GUIFactory.createRadioButton( "1 Byte Integer" );
+    grpType.add( this.rbInt1 );
+    panelType.add( this.rbInt1, gbcType );
 
-    this.btnInt2 = new JRadioButton( "2 Byte Integer" );
-    grpType.add( this.btnInt2 );
+    this.rbInt2 = GUIFactory.createRadioButton( "2 Byte Integer" );
+    grpType.add( this.rbInt2 );
     gbcType.gridy++;
-    panelType.add( this.btnInt2, gbcType );
+    panelType.add( this.rbInt2, gbcType );
 
-    this.btnInt3 = new JRadioButton( "3 Byte Integer" );
-    grpType.add( this.btnInt3 );
+    this.rbInt3 = GUIFactory.createRadioButton( "3 Byte Integer" );
+    grpType.add( this.rbInt3 );
     gbcType.gridy++;
-    panelType.add( this.btnInt3, gbcType );
+    panelType.add( this.rbInt3, gbcType );
 
-    this.btnInt4 = new JRadioButton( "4 Byte Integer" );
-    grpType.add( this.btnInt4 );
+    this.rbInt4 = GUIFactory.createRadioButton( "4 Byte Integer" );
+    grpType.add( this.rbInt4 );
     gbcType.gridy++;
-    panelType.add( this.btnInt4, gbcType );
+    panelType.add( this.rbInt4, gbcType );
 
-    this.btnInt8 = new JRadioButton( "8 Byte Integer" );
-    grpType.add( this.btnInt8 );
+    this.rbBCDec6 = GUIFactory.createRadioButton( "Decimal (6 Byte BCD)" );
+    grpType.add( this.rbBCDec6 );
     gbcType.gridy++;
-    panelType.add( this.btnInt8, gbcType );
+    panelType.add( this.rbBCDec6, gbcType );
 
-    this.btnFloat4 = new JRadioButton( "4 Byte Float (IEEE 754)" );
-    grpType.add( this.btnFloat4 );
+    this.rbByteArray = GUIFactory.createRadioButton( "Bytes / Text" );
+    grpType.add( this.rbByteArray );
     gbcType.gridy++;
-    panelType.add( this.btnFloat4, gbcType );
+    panelType.add( this.rbByteArray, gbcType );
 
-    this.btnFloat8 = new JRadioButton( "8 Byte Float (IEEE 754)" );
-    grpType.add( this.btnFloat8 );
-    gbcType.gridy++;
-    panelType.add( this.btnFloat8, gbcType );
-
-    this.btnByteArray = new JRadioButton( "Bytes / Text" );
-    grpType.add( this.btnByteArray );
-    gbcType.gridy++;
-    panelType.add( this.btnByteArray, gbcType );
-
-    this.labelSize      = new JLabel( "Anzahl Bytes:" );
+    this.labelSize      = GUIFactory.createLabel( "Anzahl Bytes:" );
     gbcType.insets.left = 50;
     gbcType.gridwidth   = 1;
     gbcType.gridy++;
     panelType.add( this.labelSize, gbcType );
 
-    this.spinnerSize = new JSpinner(
+    this.spinnerSize = GUIFactory.createSpinner(
 				new SpinnerNumberModel( 16, 1, 256, 1 ) );
     gbcType.insets.left = 5;
     gbcType.gridwidth   = GridBagConstraints.REMAINDER;
     gbcType.gridx++;
     panelType.add( this.spinnerSize, gbcType );
 
-    this.btnPointer = new JRadioButton( "Zeiger auf Bytes / Text" );
-    grpType.add( this.btnPointer );
+    this.rbPointer = GUIFactory.createRadioButton(
+					"Zeiger auf Bytes / Text" );
+    grpType.add( this.rbPointer );
     gbcType.gridx = 0;
     gbcType.gridy++;
-    panelType.add( this.btnPointer, gbcType );
+    panelType.add( this.rbPointer, gbcType );
 
-    JPanel panelByteOrder = new JPanel();
+    JPanel panelByteOrder = GUIFactory.createPanel();
     panelByteOrder.setLayout(
 		new BoxLayout( panelByteOrder, BoxLayout.X_AXIS ) );
     gbcType.insets.top  = 10;
@@ -240,24 +264,27 @@ public class VarDataDlg extends BaseDlg
     gbcType.gridy++;
     panelType.add( panelByteOrder, gbcType );
     
-    this.labelByteOrder = new JLabel( "Byte Order:" );
+    this.labelByteOrder = GUIFactory.createLabel( "Byte Order:" );
     panelByteOrder.add( this.labelByteOrder );
     panelByteOrder.add( Box.createRigidArea( new Dimension( 5, 0 ) ) );
 
     ButtonGroup grpByteOrder = new ButtonGroup();
 
-    this.btnLE = new JRadioButton( "Little Endian (LE, Intel-Format)", true );
-    grpByteOrder.add( this.btnLE );
-    panelByteOrder.add( this.btnLE, gbcType );
+    this.rbLE = GUIFactory.createRadioButton(
+			"Little Endian (LE, Intel-Format)",
+			true );
+    grpByteOrder.add( this.rbLE );
+    panelByteOrder.add( this.rbLE, gbcType );
     panelByteOrder.add( Box.createRigidArea( new Dimension( 5, 0 ) ) );
 
-    this.btnBE = new JRadioButton( "Big Endian (BE)" );
-    grpByteOrder.add( this.btnBE );
-    panelByteOrder.add( this.btnBE, gbcType );
+    this.rbBE = GUIFactory.createRadioButton( "Big Endian (BE)" );
+    grpByteOrder.add( this.rbBE );
+    panelByteOrder.add( this.rbBE, gbcType );
 
 
     // Schaltflaechen
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn   = GUIFactory.createPanel(
+					new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor        = GridBagConstraints.CENTER;
     gbc.insets.top    = 15;
     gbc.insets.left   = 5;
@@ -267,77 +294,75 @@ public class VarDataDlg extends BaseDlg
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
     // Vorbelegung
+    VarData.VarType varType = null;
     if( varData != null ) {
       this.fldName.setText( varData.getName() );
       this.docAddr.setValue( varData.getAddress(), 4 );
-      switch( varData.getType() ) {
+      this.spinnerSize.setValue( varData.getSize() );
+      varType = varData.getType();
+    } else {
+      if( name != null ) {
+	this.fldName.setText( name );
+      }
+      if( addr >= 0 ) {
+	this.docAddr.setValue( addr, 4 );
+      }
+      if( size > 0 ) {
+	this.spinnerSize.setValue( size );
+      }
+      varType = VarData.createDefaultType( name, size );
+    }
+    if( varType != null ) {
+      switch( varType ) {
 	case INT1:
-	  this.btnInt1.setSelected( true );
+	  this.rbInt1.setSelected( true );
 	  break;
-	case INT2LE:
-	  this.btnInt2.setSelected( true );
-	  this.btnLE.setSelected( true );
+	case INT2_LE:
+	  this.rbInt2.setSelected( true );
+	  this.rbLE.setSelected( true );
 	  break;
-	case INT2BE:
-	  this.btnInt2.setSelected( true );
-	  this.btnBE.setSelected( true );
+	case INT2_BE:
+	  this.rbInt2.setSelected( true );
+	  this.rbBE.setSelected( true );
 	  break;
-	case INT3LE:
-	  this.btnInt3.setSelected( true );
-	  this.btnLE.setSelected( true );
+	case INT3_LE:
+	  this.rbInt3.setSelected( true );
+	  this.rbLE.setSelected( true );
 	  break;
-	case INT3BE:
-	  this.btnInt3.setSelected( true );
-	  this.btnBE.setSelected( true );
+	case INT3_BE:
+	  this.rbInt3.setSelected( true );
+	  this.rbBE.setSelected( true );
 	  break;
-	case INT4LE:
-	  this.btnInt4.setSelected( true );
-	  this.btnLE.setSelected( true );
+	case INT4_LE:
+	  this.rbInt4.setSelected( true );
+	  this.rbLE.setSelected( true );
 	  break;
-	case INT4BE:
-	  this.btnInt4.setSelected( true );
-	  this.btnBE.setSelected( true );
+	case INT4_BE:
+	  this.rbInt4.setSelected( true );
+	  this.rbBE.setSelected( true );
 	  break;
-	case INT8LE:
-	  this.btnInt8.setSelected( true );
-	  this.btnLE.setSelected( true );
-	  break;
-	case INT8BE:
-	  this.btnInt8.setSelected( true );
-	  this.btnBE.setSelected( true );
-	  break;
-	case FLOAT4LE:
-	  this.btnFloat4.setSelected( true );
-	  this.btnLE.setSelected( true );
-	  break;
-	case FLOAT4BE:
-	  this.btnFloat4.setSelected( true );
-	  this.btnBE.setSelected( true );
-	  break;
-	case FLOAT8LE:
-	  this.btnFloat8.setSelected( true );
-	  this.btnLE.setSelected( true );
-	  break;
-	case FLOAT8BE:
-	  this.btnFloat8.setSelected( true );
-	  this.btnBE.setSelected( true );
+	case BC_DEC6:
+	  this.rbBCDec6.setSelected( true );
 	  break;
 	case BYTE_ARRAY:
-	  this.btnByteArray.setSelected( true );
+	  this.rbByteArray.setSelected( true );
 	  break;
 	case POINTER:
-	  this.btnPointer.setSelected( true );
+	  this.rbPointer.setSelected( true );
 	  break;
+	default:
+	  this.rbInt1.setSelected( true );
       }
-      this.spinnerSize.setValue( varData.getSize() );
+    } else {
+      this.rbInt1.setSelected( true );
     }
     updFieldsEnabled();
 
@@ -345,22 +370,21 @@ public class VarDataDlg extends BaseDlg
     // Listener
     this.fldName.addActionListener( this );
     this.fldAddr.addActionListener( this );
-    this.btnInt1.addActionListener( this );
-    this.btnInt2.addActionListener( this );
-    this.btnInt3.addActionListener( this );
-    this.btnInt4.addActionListener( this );
-    this.btnInt8.addActionListener( this );
-    this.btnFloat4.addActionListener( this );
-    this.btnFloat8.addActionListener( this );
-    this.btnByteArray.addActionListener( this );
-    this.btnPointer.addActionListener( this );
-    this.btnLE.addActionListener( this );
-    this.btnBE.addActionListener( this );
+    this.rbInt1.addActionListener( this );
+    this.rbInt2.addActionListener( this );
+    this.rbInt3.addActionListener( this );
+    this.rbInt4.addActionListener( this );
+    this.rbBCDec6.addActionListener( this );
+    this.rbByteArray.addActionListener( this );
+    this.rbPointer.addActionListener( this );
+    this.rbLE.addActionListener( this );
+    this.rbBE.addActionListener( this );
     this.btnOK.addActionListener( this );
     this.btnCancel.addActionListener( this );
 
 
     // Sonstiges
+    this.docName.setReverseCase( true );
     pack();
     setParentCentered();
   }
@@ -371,7 +395,7 @@ public class VarDataDlg extends BaseDlg
   private void doApply()
   {
     try {
-      String name = this.fldName.getText();
+      String name = this.docName.getLabel();
       if( name != null ) {
 	if( name.isEmpty() ) {
 	  name = null;
@@ -380,7 +404,7 @@ public class VarDataDlg extends BaseDlg
       if( name != null ) {
 	VarData tmpVar = this.debugFrm.getVarByName( name );
 	if( (tmpVar != null)
-	    && ((this.varData == null) || (tmpVar != this.varData)) )
+	    && ((this.oldVarData == null) || (tmpVar != this.oldVarData)) )
 	{
 	  this.debugFrm.selectVar( tmpVar );
 	  throw new UserInputException(
@@ -389,29 +413,23 @@ public class VarDataDlg extends BaseDlg
       }
       VarData.VarType type = VarData.VarType.BYTE_ARRAY;
       int             size = 0;
-      boolean         isLE = this.btnLE.isSelected();
-      if( this.btnInt1.isSelected() ) {
+      boolean         isLE = this.rbLE.isSelected();
+      if( this.rbInt1.isSelected() ) {
 	type = VarData.VarType.INT1;
 	size = 1;
-      } else if( this.btnInt2.isSelected() ) {
-	type = isLE ? VarData.VarType.INT2LE : VarData.VarType.INT2BE;
+      } else if( this.rbInt2.isSelected() ) {
+	type = isLE ? VarData.VarType.INT2_LE : VarData.VarType.INT2_BE;
 	size = 2;
-      } else if( this.btnInt3.isSelected() ) {
-	type = isLE ? VarData.VarType.INT3LE : VarData.VarType.INT3BE;
+      } else if( this.rbInt3.isSelected() ) {
+	type = isLE ? VarData.VarType.INT3_LE : VarData.VarType.INT3_BE;
 	size = 3;
-      } else if( this.btnInt4.isSelected() ) {
-	type = isLE ? VarData.VarType.INT4LE : VarData.VarType.INT4BE;
+      } else if( this.rbInt4.isSelected() ) {
+	type = isLE ? VarData.VarType.INT4_LE : VarData.VarType.INT4_BE;
 	size = 4;
-      } else if( this.btnInt8.isSelected() ) {
-	type = isLE ? VarData.VarType.INT8LE : VarData.VarType.INT8BE;
-	size = 8;
-      } else if( this.btnFloat4.isSelected() ) {
-	type = isLE ? VarData.VarType.FLOAT4LE : VarData.VarType.FLOAT4BE;
+      } else if( this.rbBCDec6.isSelected() ) {
+	type = VarData.VarType.BC_DEC6;
 	size = 4;
-      } else if( this.btnFloat8.isSelected() ) {
-	type = isLE ? VarData.VarType.FLOAT8LE : VarData.VarType.FLOAT8BE;
-	size = 8;
-      } else if( this.btnPointer.isSelected() ) {
+      } else if( this.rbPointer.isSelected() ) {
 	type = VarData.VarType.POINTER;
 	size = 2;
       } else {
@@ -429,7 +447,7 @@ public class VarDataDlg extends BaseDlg
 	throw new UserInputException(
 		  "Ung\u00FCltige Variablengr\u00F6\u00DFe (Anzahl Bytes)" );
       }
-      VarData varDate = this.varData;
+      VarData varData = this.oldVarData;
       if( varData != null ) {
 	int addr = this.docAddr.intValue();
 	varData.setValues(
@@ -437,9 +455,9 @@ public class VarDataDlg extends BaseDlg
 		addr,
 		type,
 		size,
-		varData.wasImported()
-			&& (addr == this.varData.getAddress())
-			&& name.equalsIgnoreCase( this.varData.getName() ) );
+		varData.getImported()
+			&& (addr == this.oldVarData.getAddress())
+			&& name.equals( this.oldVarData.getName() ) );
       } else {
 	varData = new VarData(
 			name,
@@ -462,18 +480,15 @@ public class VarDataDlg extends BaseDlg
 
   private void updFieldsEnabled()
   {
-    boolean state = this.btnByteArray.isSelected();
+    boolean state = this.rbByteArray.isSelected();
     this.labelSize.setEnabled( state );
     this.spinnerSize.setEnabled( state );
 
-    state = this.btnInt2.isSelected()
-		|| this.btnInt3.isSelected()
-		|| this.btnInt4.isSelected()
-		|| this.btnInt8.isSelected()
-		|| this.btnFloat4.isSelected()
-		|| this.btnFloat8.isSelected();
+    state = this.rbInt2.isSelected()
+		|| this.rbInt3.isSelected()
+		|| this.rbInt4.isSelected();
     this.labelByteOrder.setEnabled( state );
-    this.btnLE.setEnabled( state );
-    this.btnBE.setEnabled( state );
+    this.rbLE.setEnabled( state );
+    this.rbBE.setEnabled( state );
   }
 }

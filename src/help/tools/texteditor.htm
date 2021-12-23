@@ -24,15 +24,19 @@
      </li>
      <li><a href="texteditor.htm#print">3.5. Drucken</a></li>
      <li><a href="texteditor.htm#props">3.6. Eigenschaften</a></li>
-     <li><a href="texteditor.htm#tabsize">3.7. Tabulatorbreite</a></li>
      <li>
-      <a href="texteditor.htm#check_bracket">3.8. Klammer pr&uuml;fen</a>
+      <a href="texteditor.htm#check_bracket">3.7. Klammer pr&uuml;fen</a>
+     </li>
+     <li><a href="texteditor.htm#select_char">3.8. Zeichenauswahl</a></li>
+     <li>
+      <a href="texteditor.htm#newpage">3.9. Seitenumbruchzeichen einf&uuml;gen und entfernen</a>
+     </li>
+     <li><a href="texteditor.htm#tabsize">3.10. Tabulatorbreite</a></li>
+     <li>
+      <a href="texteditor.htm#wordstar">3.11. WordStar-Formatierungen entfernen</a>
      </li>
      <li>
-      <a href="texteditor.htm#conv_umlauts">3.9. Deutsche Umlaute konvertieren</a>
-     </li>
-     <li>
-      <a href="texteditor.htm#wordstar">3.10. WordStar-Formatierungen entfernen</a>
+      <a href="texteditor.htm#conv_umlauts">3.12. Deutsche Umlaute konvertieren</a>
      </li>
     </ul>
    </li>
@@ -42,6 +46,7 @@
      <li><a href="texteditor.htm#prj">4.1. Projektdateien</a></li>
     </ul>
    </li>
+   <li><a href="texteditor.htm#settings">5. Einstellungen</a></li>
   </ul>
  <br/>
 
@@ -250,7 +255,46 @@
   und geben dort die neuen Eigenschaften an.
  <br/><br/>
 
- <h3><a name="tabsize">3.7. Tabulatorbreite</a></h3>
+ <h3><a name="check_bracket">3.7. Klammer pr&uuml;fen</a></h3>
+  Mit dieser Funktion finden Sie die zugeh&ouml;rige Klammer,
+  wenn sich der Cursor unmittelbar vor einer Klammer befindet.
+  Steht dagegen der Cursor an einer anderen Stelle,
+  springt er zur n&auml;chsten schlie&szlig;enden Klammer.
+ <br/><br/>
+
+ <h3><a name="select_char">3.8. Zeichenauswahl</a></h3>
+  Der Men&uuml;punkt <em>Zeichenauswahl...</em> &ouml;ffnet ein Fenster,
+  in dem Sie beliebige, in der aktuell eingestellten Schriftart darstellbare
+  Unicode-Zeichen ausw&auml;hlen und in den Text einf&uuml;gen bzw.
+  in die Zwischenablage kopieren k&ouml;nnen.
+ <br/><br/>
+  Die Unicode-Zeichen sind in Seiten aufgeteilt.
+  Es wird immer eine Seite angezeigt.
+  Mit den Pfeiltasten oben k&ouml;nnen Sie zur n&auml;chsten
+  und zur vorherigen Seite navigieren.
+  In dem Feld mit der hexadezimalen Seitennummer k&ouml;nnen Sie
+  durch Eintippen einer Nummer und anschlie&szlig;enden Dr&uuml;cken
+  der Enter-Taste auch direkt zu einer beliebigen Seite springen.
+ <br/><br/>
+  Jedes Unicode-Zeichen hat einen numerischen Code.
+  Ganz links finden Sie die Codes der Zeichen in der ersten Spalte
+  und oben die letzten beiden Ziffern der Codes der anderen Spalten.
+ <br/><br/>
+
+ <h3>
+  <a name="newpage">3.9. Seitenumbruchzeichen einf&uuml;gen und entfernen</a>
+ </h3>
+  Seitenumbruchzeichen (Form&nbsp;Feed, Code&nbsp;0Ch)
+  k&ouml;nnen eingef&uuml;gt und auch (alle auf einmal) wieder
+  entfernt werden.
+  Diese Zeichen haben jedoch nur beim Drucken eine Wirkung.
+  Im Editor werden die Seitenumbruchzeichen wie normale Zeichen behandelt.
+  Da ein Seitenumbruchzeichen jedoch ein sogenanntes nicht druckbares
+  Zeichen ist, h&auml;ngt es von der verwendeten Schrift ab,
+  ob und wie dieses Zeichen angezeigt wird.
+ <br/><br/>
+
+ <h3><a name="tabsize">3.10. Tabulatorbreite</a></h3>
   Die Tabulatorbreite wird nicht in der Textdatei gespeichert,
   d.h., es wird immer die Tabulatorbreite verwendet,
   die Sie gerade eingestellt haben.
@@ -268,14 +312,26 @@
   ein Profil speichern.
  <br/><br/>
 
- <h3><a name="check_bracket">3.8. Klammer pr&uuml;fen</a></h3>
-  Mit dieser Funktion finden Sie die zugeh&ouml;rige Klammer,
-  wenn sich der Cursor unmittelbar vor einer Klammer befindet.
-  Steht dagegen der Cursor an einer anderen Stelle,
-  springt er zur n&auml;chsten schlie&szlig;enden Klammer.
+ <h3><a name="wordstar">3.11. WordStar-Formatierungen entfernen</a></h3>
+  WordStar war zu Zeiten der 8-Bit-Computer eine weit verbreitete
+  Textverarbung.
+  Aus diesem Grund wurden viele Dokumentationen in WordStar erstellt.
+  Damit Sie solche Dateien lesen k&ouml;nnen,
+  bietet der JKCEMU-Texteditor eine spezielle Unterst&uuml;tzung an:
+  Wenn Sie nach dem &Ouml;ffnen einer Datei erkennen,
+  dass es sich um eine WordStar-Datei handelt,
+  k&ouml;nnen Sie mit dem Men&uuml;punkt die WordStar-Formatierungen
+  entfernen und so eine einfache Textdatei daraus machen.
+  Eine WordStar-Datei erkennt man meistens daran,
+  dass der letzte Buchstabe eines jeden Wortes durch ein
+  seltsames Zeichen dargestellt wird.
+ <br/><br/>
+  <b>Achtung!</b> Bei einer Datei mit deutschsprachigem Inhalt
+  m&uuml;ssen Sie nach dem Entfernen der WordStar-Formatierungen
+  wahrscheinlich noch die Umlaute konvertieren (siehe vorherigen Abschnitt).
  <br/><br/>
 
- <h3><a name="conv_umlauts">3.9. Deutsche Umlaute konvertieren</a></h3>
+ <h3><a name="conv_umlauts">3.12. Deutsche Umlaute konvertieren</a></h3>
   Die emulierten Computer kennen in ihrem Originalzustand keine
   deutschen Umlaute.
   Um trotzdem deutschsprachige Texte anzeigen zu k&ouml;nnen,
@@ -306,31 +362,13 @@
   ob und wie Sie Zeichen umwandeln m&uuml;ssen.
  <br/><br/>
 
- <h3><a name="wordstar">3.10. WordStar-Formatierungen entfernen</a></h3>
-  WordStar war zu Zeiten der 8-Bit-Computer eine weit verbreitete
-  Textverarbung.
-  Aus diesem Grund wurden viele Dokumentationen in WordStar erstellt.
-  Damit Sie solche Dateien lesen k&ouml;nnen,
-  bietet der JKCEMU-Texteditor eine spezielle Unterst&uuml;tzung an:
-  Wenn Sie nach dem &Ouml;ffnen einer Datei erkennen,
-  dass es sich um eine WordStar-Datei handelt,
-  k&ouml;nnen Sie mit dem Men&uuml;punkt die WordStar-Formatierungen
-  entfernen und so eine einfache Textdatei daraus machen.
-  Eine WordStar-Datei erkennt man meistens daran,
-  dass der letzte Buchstabe eines jeden Wortes durch ein
-  seltsames Zeichen dargestellt wird.
- <br/><br/>
-  <b>Achtung!</b> Bei einer Datei mit deutschsprachigem Inhalt
-  m&uuml;ssen Sie nach dem Entfernen der WordStar-Formatierungen
-  wahrscheinlich noch die Umlaute konvertieren (siehe vorherigen Abschnitt).
- <br/><br/>
 
  <h2>
   <a name="prg">4. Programmierung mit Assembler und BASIC-Compiler</a>
  </h2>
   Dieser Abschnitt geht auf die Programmierung mit
-  <a href="assembler.htm">Assemblers</a> und
-  <a href="basicc.htm">BASIC-Compilers</a>
+  <a href="assembler.htm">Assembler</a> und
+  <a href="basicc.htm">BASIC-Compiler</a>
   unter Nutzung des im JKCEMU integrierten Texteditors ein.
   M&ouml;chten Sie zur Programmierung jedoch einen anderen
   Texteditor verwenden,
@@ -369,8 +407,11 @@
   Das erleichert den &Uuml;berblick bei der Arbeit mit dem
   <a href="debugger.htm">Debugger</a>.
   Au&szlig;erdem ist es damit auch m&ouml;glich,
-  &uuml;ber das Kontextmen&uuml; im Texteditor direkt einen Haltepunkt
-  im Debugger anzulegen.
+  &uuml;ber das Kontextmen&uuml; im Texteditor direkt
+  einen Halte-/Log-Punkt oder eine Variable im Debugger anzulegen.
+  Steht der Cursor dabei auf einer Zeile mit einer Marke,
+  wird diese als Name f&uuml;r den Halte-/Log-Punkt bzw.
+  f&uuml;r die Variable &uuml;bernommen.
  <br/><br/>
 
  <h3><a name="prj">4.1. Projektdateien</a></h3>
@@ -392,5 +433,13 @@
   <b>Achtung!</b> Wenn Sie nur die Quelltextdatei anstelle der Projektdatei
   &ouml;ffnen, werden die Assembler- bzw. Compiler-Optionen
   nicht wieder so eingestellt, wie sie beim Speichern des Projektes waren.
+ <br/><br/>
+
+
+ <h2><a name="settings">5. Einstellungen</a></h2>
+  Die Schrift kann man in den
+  <a href="../settings.htm">JKCEMU-Einstellungen</a>
+  im Reiter <em>Schriften/Symbole</em> unter
+  <em>Schrift f&uuml;r Code-Bereiche</em> &auml;ndern.
 </body>
 </html>

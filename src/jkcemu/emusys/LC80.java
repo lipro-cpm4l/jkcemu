@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,35 +11,39 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuMemView;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
-import jkcemu.base.SaveDlg;
 import jkcemu.base.SourceUtil;
 import jkcemu.emusys.lc80.LC80KeyboardFld;
 import jkcemu.emusys.lc80.TVTerminal;
-import jkcemu.etc.VDIP;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
+import jkcemu.file.SaveDlg;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80HaltStateListener;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PCListener;
 import z80emu.Z80PIO;
 import z80emu.Z80SIO;
 import z80emu.Z80SIOChannelListener;
+import z80emu.Z80PIOPortListener;
 
 
 public class LC80 extends EmuSys implements
 					Z80HaltStateListener,
+					Z80MaxSpeedListener,
 					Z80PCListener,
+					Z80PIOPortListener,
 					Z80SIOChannelListener
 {
   public static final String SYSNAME              = "LC80";
@@ -87,6 +91,8 @@ public class LC80 extends EmuSys implements
 	"TROFF",    "FILES",  "LFILES",   "LLIST",
 	"LPRINT",   "TIME$",  "DATE$",    "EDIT" };
 
+  private static AutoInputCharSet autoInputCharSet = null;
+
   private static byte[] lc80_u505   = null;
   private static byte[] lc80_2716   = null;
   private static byte[] lc80_2      = null;
@@ -110,13 +116,11 @@ public class LC80 extends EmuSys implements
   private volatile int     pioSysBValue;
   private long             curDisplayTStates;
   private long             displayCheckTStates;
-  private boolean          tapeInPhase;
   private boolean          tapeOutLED;
   private volatile boolean tapeOutState;
   private boolean          chessComputer;
   private boolean          chessMode;
   private boolean          haltState;
-  private boolean          tvTermFired;
   private TVTerminal       tvTerm;
   private VDIP             vdip;
   private LC80KeyboardFld  keyboardFld;
@@ -145,7 +149,6 @@ public class LC80 extends EmuSys implements
       this.ram = new byte[ 0x1000 ];
     }
     this.chessComputer       = this.sysName.equals( SYSNAME_LC80_E );
-    this.tapeInPhase         = false;
     this.tapeOutLED          = false;
     this.tapeOutState        = false;
     this.chessMode           = false;
@@ -159,29 +162,28 @@ public class LC80 extends EmuSys implements
     this.kbMatrix            = new int[ 6 ];
     this.keyboardFld         = null;
 
-    Z80CPU cpu       = emuThread.getZ80CPU();
-    this.pioSys      = new Z80PIO( "System-PIO" );
-    this.pioUser     = new Z80PIO( "User-PIO" );
-    this.ctc         = new Z80CTC( "CTC" );
-    this.sio         = null;
-    this.vdip        = null;
-    this.tvTerm      = null;
-    this.tvTermFired = false;
+    Z80CPU cpu   = emuThread.getZ80CPU();
+    this.pioSys  = new Z80PIO( "System-PIO" );
+    this.pioUser = new Z80PIO( "User-PIO" );
+    this.ctc     = new Z80CTC( "CTC" );
+    this.sio     = null;
+    this.vdip    = null;
+    this.tvTerm  = null;
     if( this.sysName.equals( SYSNAME_LC80_EX ) ) {
       this.tvTerm = new TVTerminal( this, props );
       this.sio    = new Z80SIO( "SIO" );
       cpu.setInterruptSources(
 		this.ctc, this.pioUser, this.pioSys, this.sio );
       // VDIP nicht in Interrupt-Logik enthalten!
-      this.vdip = new VDIP(
-			this.emuThread.getFileTimesViewFactory(),
-			"USB-PIO" );
+      this.vdip = new VDIP( 0, this.emuThread.getZ80CPU(), "USB-PIO" );
     } else {
       cpu.setInterruptSources( this.ctc, this.pioUser, this.pioSys );
     }
     cpu.addMaxSpeedListener( this );
     cpu.addHaltStateListener( this );
     cpu.addTStatesListener( this );
+    this.pioSys.addPIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pioSys.addPIOPortListener( this, Z80PIO.PortInfo.B );
     if( this.sio != null ) {
       this.sio.addChannelListener( this, 0 );
       this.sio.addChannelListener( this, 1 );
@@ -193,9 +195,25 @@ public class LC80 extends EmuSys implements
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
+  }
+
+
+  public static AutoInputCharSet getAutoInputCharSet()
+  {
+    if( autoInputCharSet == null ) {
+      autoInputCharSet = new AutoInputCharSet();
+      autoInputCharSet.addHexChars();
+      autoInputCharSet.addKeyChar( 0x1B, "RESET" );
+      autoInputCharSet.addKeyChar( 'N', "NMI" );
+      autoInputCharSet.addKeyChar( 'S', "ST" );
+      autoInputCharSet.addKeyChar( 'L', "LD" );
+      autoInputCharSet.addKeyChar( 'X', "EX" );
+      autoInputCharSet.addKeyChar( 0xF1, "ADR" );
+      autoInputCharSet.addKeyChar( 0xF2, "DAT" );
+      autoInputCharSet.addKeyChar( '+', "A+" );
+      autoInputCharSet.addKeyChar( '-', "A-" );
     }
+    return autoInputCharSet;
   }
 
 
@@ -261,6 +279,15 @@ public class LC80 extends EmuSys implements
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
 	/* --- Z80PCListener --- */
 
   @Override
@@ -273,6 +300,39 @@ public class LC80 extends EmuSys implements
       case 0xC800:
 	setChessMode( true );
 	break;
+    }
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pioSys)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      if( port == Z80PIO.PortInfo.A ) {
+	this.curDigitValue = toDigitValue(
+			this.pioSys.fetchOutValuePortA( 0x00 ) );
+	putKBMatrixRowValueToPort();
+	updDisplay();
+      }
+      else if( port == Z80PIO.PortInfo.B ) {
+	this.pioSysBValue    = this.pioSys.fetchOutValuePortB( 0x03 );
+	boolean tapeOutPhase = ((this.pioSysBValue & 0x02) != 0);
+	if( tapeOutPhase != this.tapeOutPhase ) {
+	  this.tapeOutPhase = tapeOutPhase;
+	  this.tapeOutState = true;
+	  this.screenFrm.setScreenDirty( true );
+	}
+	putKBMatrixRowValueToPort();
+	updDisplay();
+      }
     }
   }
 
@@ -304,6 +364,9 @@ public class LC80 extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
+    if( this.tvTerm != null ) {
+      this.tvTerm.applySettings( props );
+    }
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
@@ -344,7 +407,7 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public LC80KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new LC80KeyboardFld( this );
     return this.keyboardFld;
@@ -362,6 +425,8 @@ public class LC80 extends EmuSys implements
     if( this.chessComputer ) {
       cpu.removePCListener( this );
     }
+    this.pioSys.removePIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pioSys.removePIOPortListener( this, Z80PIO.PortInfo.B );
     if( this.sio != null ) {
       this.sio.removeChannelListener( this, 0 );
       this.sio.removeChannelListener( this, 1 );
@@ -369,6 +434,7 @@ public class LC80 extends EmuSys implements
     if( this.vdip != null ) {
       this.vdip.die();
     }
+    super.die();
   }
 
 
@@ -450,7 +516,7 @@ public class LC80 extends EmuSys implements
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorGreenDark;
@@ -582,9 +648,11 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  protected VDIP getVDIP()
+  public VDIP[] getVDIPs()
   {
-    return this.vdip;
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -628,7 +696,7 @@ public class LC80 extends EmuSys implements
       updKeyboardFld();
     } else {
       if( keyCode == KeyEvent.VK_ESCAPE ) {
-	this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+	this.emuThread.fireReset( false );
 	rv = true;
       }
     }
@@ -676,7 +744,7 @@ public class LC80 extends EmuSys implements
       if( !rv ) {
 	switch( Character.toUpperCase( keyChar ) ) {
 	  case '\u001B':
-	    this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+	    this.emuThread.fireReset( false );
 	    rv = true;
 	    break;
 
@@ -914,6 +982,84 @@ public class LC80 extends EmuSys implements
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.romOSFile = EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_OS_FILE );
+    this.romOS = readROMFile( this.romOSFile, 0x2000, "Monitorprogramm" );
+    if( this.romOS == null ) {
+      if( this.sysName.equals( SYSNAME_LC80_U505 ) ) {
+	if( lc80_u505 == null ) {
+	  lc80_u505 = readResource( "/rom/lc80/lc80_u505.bin" );
+	}
+	this.romOS = lc80_u505;
+      } else if( this.sysName.equals( SYSNAME_LC80_2 ) ) {
+	if( lc80_2 == null ) {
+	  lc80_2 = readResource( "/rom/lc80/lc80_2.bin" );
+	}
+	this.romOS = lc80_2;
+      } else if( this.sysName.equals( SYSNAME_LC80_E )
+		 || this.sysName.equals( SYSNAME_LC80_EX ) )
+      {
+	if( lc80e_0000 == null ) {
+	  lc80e_0000 = readResource( "/rom/lc80/lc80e_0000.bin" );
+	}
+	this.romOS = lc80e_0000;
+      } else {
+	if( lc80_2716 == null ) {
+	  lc80_2716 = readResource( "/rom/lc80/lc80_2716.bin" );
+	}
+	this.romOS = lc80_2716;
+      }
+    }
+    if( this.sysName.equals( SYSNAME_LC80_EX ) ) {
+      this.romA000File = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_A000_PREFIX + PROP_FILE );
+      this.romA000 = readROMFile(
+			this.romA000File,
+			0x2000,
+			"ROM A000h / LLCTOOLS" );
+      if( this.romA000 == null ) {
+	if( lc80ex_a000 == null ) {
+	  lc80ex_a000 = readResource( "/rom/lc80/lc80ex_a000.bin" );
+	}
+	this.romA000 = lc80ex_a000;
+      }
+    } else {
+      this.romA000 = null;
+    }
+    if( this.sysName.equals( SYSNAME_LC80_E )
+	|| this.sysName.equals( SYSNAME_LC80_EX ) )
+    {
+      this.romC000File = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_C000_PREFIX + PROP_FILE );
+      this.romC000 = readROMFile(
+			this.romC000File,
+			0x4000,
+			"ROM C0000" );
+      if( this.romC000 == null ) {
+	if( this.sysName.equals( SYSNAME_LC80_E ) ) {
+	  if( lc80e_c000 == null ) {
+	    lc80e_c000 = readResource( "/rom/lc80/lc80e_c000.bin" );
+	  }
+	  this.romC000 = lc80e_c000;
+	} else if( this.sysName.equals( SYSNAME_LC80_EX ) ) {
+	  if( lc80ex_c000 == null ) {
+	    lc80ex_c000 = readResource( "/rom/lc80/lc80ex_c000.bin" );
+	  }
+	  this.romC000 = lc80ex_c000;
+	}
+      }
+    } else {
+      this.romC000 = null;
+    }
+  }
+
+
+  @Override
   public void openBasicProgram()
   {
     String text = SourceUtil.getBasicProgram(
@@ -989,12 +1135,6 @@ public class LC80 extends EmuSys implements
 	case 1:
 	  rv &= this.pioUser.readDataB();
 	  break;
-	case 2:
-	  rv &= this.pioUser.readControlA();
-	  break;
-	case 3:
-	  rv &= this.pioUser.readControlB();
-	  break;
       }
     }
     if( (port & 0x08) == 0 ) {
@@ -1004,12 +1144,6 @@ public class LC80 extends EmuSys implements
 	  break;
 	case 1:
 	  rv &= this.pioSys.readDataB();
-	  break;
-	case 2:
-	  rv &= this.pioSys.readControlA();
-	  break;
-	case 3:
-	  rv &= this.pioSys.readControlB();
 	  break;
       }
     }
@@ -1024,7 +1158,7 @@ public class LC80 extends EmuSys implements
 	case 1:
 	  rv &= this.sio.readDataB();
 	  if( (this.sio.availableB() == 0) && (this.tvTerm != null) ) {
-	    this.tvTerm.keyCharQueueEmpty();
+	    this.tvTerm.processNextQueuedKeyChar();
 	  }
 	  break;
 	case 2:
@@ -1043,27 +1177,25 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
       if( (this.sio != null) && (this.ram.length >= 0x6000) ) {
 	this.ram[ 0x5FF8 ] = 0;		// Timekeeper RAM Control
       }
     }
-    boolean coldReset = ((resetLevel == EmuThread.ResetLevel.POWER_ON)
-		|| (resetLevel == EmuThread.ResetLevel.COLD_RESET));
-    this.pioSys.reset( coldReset );
-    this.pioUser.reset( coldReset );
-    this.ctc.reset( coldReset );
+    this.pioSys.reset( powerOn );
+    this.pioUser.reset( powerOn );
+    this.ctc.reset( powerOn );
     if( this.sio != null ) {
-      this.sio.reset( coldReset );
+      this.sio.reset( powerOn );
       this.sio.setClearToSendA( true );
       this.sio.setClearToSendB( true );
+    }
+    if( this.vdip != null ) {
+      this.vdip.reset( powerOn );
     }
     if( this.tvTerm != null ) {
       this.tvTerm.reset();
@@ -1076,7 +1208,6 @@ public class LC80 extends EmuSys implements
       Arrays.fill( this.digitValues, 0 );
     }
     setChessMode( false );
-    this.tapeInPhase       = this.emuThread.readTapeInPhase();
     this.sioTStatesCounter = 0;
   }
 
@@ -1092,7 +1223,7 @@ public class LC80 extends EmuSys implements
 		endAddr,
 		"LC-80ex-BASIC-Programm speichern",
 		SaveDlg.BasicType.MS_DERIVED_BASIC_HS,
-		EmuUtil.getHeadersaveFileFilter() )).setVisible( true );
+		FileUtil.getHeadersaveFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1181,6 +1312,13 @@ public class LC80 extends EmuSys implements
 
 
   @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pioSys.putInValuePortB( this.tapeInPhase ? 1 : 0, false );
+  }
+
+
+  @Override
   public void updSysCells(
 			int        begAddr,
 			int        len,
@@ -1196,10 +1334,10 @@ public class LC80 extends EmuSys implements
 		&& (begAddr <= 0x2400)
 		&& ((begAddr + len) > 0x2407)) )
       {
-	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x2400 ) + 1;
-	this.emuThread.setMemWord( 0x20D2, tAddr );
-	this.emuThread.setMemWord( 0x20D4, tAddr );
-	this.emuThread.setMemWord( 0x20D6, tAddr );
+	int topAddr = begAddr + len;
+	this.emuThread.setMemWord( 0x20D2, topAddr );
+	this.emuThread.setMemWord( 0x20D4, topAddr );
+	this.emuThread.setMemWord( 0x20D6, topAddr );
       }
     }
   }
@@ -1229,22 +1367,9 @@ public class LC80 extends EmuSys implements
       switch( port & 0x03 ) {
 	case 0:
 	  this.pioSys.writeDataA( value );
-	  this.curDigitValue = toDigitValue(
-			this.pioSys.fetchOutValuePortA( false ) );
-	  putKBMatrixRowValueToPort();
-	  updDisplay();
 	  break;
 	case 1:
 	  this.pioSys.writeDataB( value );
-	  this.pioSysBValue    = this.pioSys.fetchOutValuePortB( false );
-	  boolean tapeOutPhase = ((this.pioSysBValue & 0x02) != 0);
-	  if( tapeOutPhase != this.tapeOutPhase ) {
-	    this.tapeOutPhase = tapeOutPhase;
-	    this.tapeOutState = true;
-	    this.screenFrm.setScreenDirty( true );
-	  }
-	  putKBMatrixRowValueToPort();
-	  updDisplay();
 	  break;
 	case 2:
 	  this.pioSys.writeControlA( value );
@@ -1264,10 +1389,7 @@ public class LC80 extends EmuSys implements
 	  break;
 	case 1:
 	  this.sio.writeDataB( value );
-	  if( !this.tvTermFired ) {
-	    this.screenFrm.fireOpenSecondScreen();
-	    this.tvTermFired = true;
-	  }
+	  checkAndFireOpenSecondScreen();
 	  break;
 	case 2:
 	  this.sio.writeControlA( value );
@@ -1284,23 +1406,9 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
-
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pioSys.putInValuePortB( this.tapeInPhase ? 1 : 0, false );
-    }
     this.ctc.z80TStatesProcessed( cpu, tStates );
     if( this.displayCheckTStates > 0 ) {
       this.curDisplayTStates += tStates;
@@ -1351,83 +1459,6 @@ public class LC80 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
-  private void loadROMs( Properties props )
-  {
-    this.romOSFile = EmuUtil.getProperty(
-				props,
-				this.propPrefix + PROP_OS_FILE );
-    this.romOS = readROMFile( this.romOSFile, 0x2000, "Monitorprogramm" );
-    if( this.romOS == null ) {
-      if( this.sysName.equals( SYSNAME_LC80_U505 ) ) {
-	if( lc80_u505 == null ) {
-	  lc80_u505 = readResource( "/rom/lc80/lc80_u505.bin" );
-	}
-	this.romOS = lc80_u505;
-      } else if( this.sysName.equals( SYSNAME_LC80_2 ) ) {
-	if( lc80_2 == null ) {
-	  lc80_2 = readResource( "/rom/lc80/lc80_2.bin" );
-	}
-	this.romOS = lc80_2;
-      } else if( this.sysName.equals( SYSNAME_LC80_E )
-		 || this.sysName.equals( SYSNAME_LC80_EX ) )
-      {
-	if( lc80e_0000 == null ) {
-	  lc80e_0000 = readResource( "/rom/lc80/lc80e_0000.bin" );
-	}
-	this.romOS = lc80e_0000;
-      } else {
-	if( lc80_2716 == null ) {
-	  lc80_2716 = readResource( "/rom/lc80/lc80_2716.bin" );
-	}
-	this.romOS = lc80_2716;
-      }
-    }
-    if( this.sysName.equals( SYSNAME_LC80_EX ) ) {
-      this.romA000File = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM_A000_PREFIX + PROP_FILE );
-      this.romA000 = readROMFile(
-			this.romA000File,
-			0x2000,
-			"ROM A000h / LLCTOOLS" );
-      if( this.romA000 == null ) {
-	if( lc80ex_a000 == null ) {
-	  lc80ex_a000 = readResource( "/rom/lc80/lc80ex_a000.bin" );
-	}
-	this.romA000 = lc80ex_a000;
-      }
-    } else {
-      this.romA000 = null;
-    }
-    if( this.sysName.equals( SYSNAME_LC80_E )
-	|| this.sysName.equals( SYSNAME_LC80_EX ) )
-    {
-      this.romC000File = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM_C000_PREFIX + PROP_FILE );
-      this.romC000 = readROMFile(
-			this.romC000File,
-			0x4000,
-			"ROM C0000" );
-      if( this.romC000 == null ) {
-	if( this.sysName.equals( SYSNAME_LC80_E ) ) {
-	  if( lc80e_c000 == null ) {
-	    lc80e_c000 = readResource( "/rom/lc80/lc80e_c000.bin" );
-	  }
-	  this.romC000 = lc80e_c000;
-	} else if( this.sysName.equals( SYSNAME_LC80_EX ) ) {
-	  if( lc80ex_c000 == null ) {
-	    lc80ex_c000 = readResource( "/rom/lc80/lc80ex_c000.bin" );
-	  }
-	  this.romC000 = lc80ex_c000;
-	}
-      }
-    } else {
-      this.romC000 = null;
-    }
-  }
-
-
   private void putKBMatrixRowValueToPort()
   {
     int v = 0;
@@ -1449,7 +1480,9 @@ public class LC80 extends EmuSys implements
     if( state != this.chessMode ) {
       this.chessMode = state;
       if( this.keyboardFld != null ) {
+        this.keyboardFld.invalidate();
         this.keyboardFld.repaint();
+        this.keyboardFld.validate();
       }
     }
   }

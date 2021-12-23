@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.CPCDisk;
+import jkcemu.file.FileUtil;
 
 
 public class CPCDiskFileTarget extends AbstractConvertTarget
@@ -35,14 +34,14 @@ public class CPCDiskFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getDskFileFilter();
+    return FileUtil.getDskFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".dsk" );
+    return FileUtil.replaceExtension( srcFile, ".dsk" );
   }
 
 

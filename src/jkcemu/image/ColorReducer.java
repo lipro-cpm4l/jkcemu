@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Transparency;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import jkcemu.base.CancelableProgressDlg;
@@ -124,7 +123,7 @@ public class ColorReducer
 
 	// Farben reduzieren
 	int[] rgbs = ocTree.reduceColors(
-		transparency ? (this.maxColors - 1): this.maxColors );
+		transparency ? (this.maxColors - 1) : this.maxColors );
 	if( rgbs != null ) {
 	  int colorCnt = rgbs.length;
 	  if( transparency ) {
@@ -140,17 +139,17 @@ public class ColorReducer
 	    // letzter Pixel Transparenz
 	    a = new byte[ colorCnt ];
 	    Arrays.fill( a, (byte) 0xFF );
-	    a[ rgbs.length ] = (byte) (ImgUtil.TRANSPARENT_ARGB >> 24);
-	    r[ rgbs.length ] = (byte) (ImgUtil.TRANSPARENT_ARGB >> 16);
-	    g[ rgbs.length ] = (byte) (ImgUtil.TRANSPARENT_ARGB >> 8);
-	    b[ rgbs.length ] = (byte) ImgUtil.TRANSPARENT_ARGB;
+	    a[ rgbs.length ] = (byte) (ImageUtil.TRANSPARENT_ARGB >> 24);
+	    r[ rgbs.length ] = (byte) (ImageUtil.TRANSPARENT_ARGB >> 16);
+	    g[ rgbs.length ] = (byte) (ImageUtil.TRANSPARENT_ARGB >> 8);
+	    b[ rgbs.length ] = (byte) ImageUtil.TRANSPARENT_ARGB;
 	  }
 	  for( int i = 0; i < rgbs.length; i++ ) {
 	    r[ i ] = (byte) ((rgbs[ i ] >> 16) & 0xFF);
 	    g[ i ] = (byte) ((rgbs[ i ] >> 8) & 0xFF);
 	    b[ i ] = (byte) (rgbs[ i ] & 0xFF);
 	  }
-	  IndexColorModel icm = ImgUtil.createIndexColorModel(
+	  IndexColorModel icm = ImageUtil.createIndexColorModel(
 							colorCnt,
 							r,
 							g,
@@ -178,7 +177,7 @@ public class ColorReducer
 		}
 		int argb = srcImg.getRGB( x, y );
 		if( ((argb >> 24) & 0xFF) < 0x80 ) {
-		  newImg.setRGB( x, y, ImgUtil.TRANSPARENT_ARGB );
+		  newImg.setRGB( x, y, ImageUtil.TRANSPARENT_ARGB );
 		} else {
 		  newImg.setRGB( x, y, argb );
 		}

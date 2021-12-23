@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,30 +14,34 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.SystemColor;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseEvent;
-import java.lang.*;
+import java.awt.geom.Rectangle2D;
 import java.util.Map;
 import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JViewport;
 import javax.swing.text.BadLocationException;
-import jkcemu.Main;
+import jkcemu.base.RolloverCloseBtn;
+import jkcemu.text.TextUtil;
 
 
 public class LineAddrRowHeader extends JComponent
 {
-  private static final int MARGIN = 5;
+  private static final int DEFAULT_CLOSE_W = 16;
+  private static final int DEFAULT_CLOSE_H = 16;
+  private static final int MARGIN          = 5;
 
   private JTextArea            textArea;
   private Map<Integer,Integer> lineAddrMap;
-  private Image                closeImg;
+  private boolean              mouseBtnDown;
+  private boolean              overClose;
   private int                  closeX;
   private int                  closeY;
   private int                  closeW;
@@ -46,25 +50,62 @@ public class LineAddrRowHeader extends JComponent
 
   public LineAddrRowHeader(
 		JTextArea            textArea,
-		Map<Integer,Integer> lineAddrMap )
+		Map<Integer,Integer> lineAddrMap,
+		Dimension            closeBtnSize )
   {
-    this.textArea    = textArea;
-    this.lineAddrMap = lineAddrMap;
-    this.closeImg    = Main.getImage( this, "/images/file/close.png" );
-    this.closeX      = 0;
-    this.closeY      = 0;
-    this.closeW      = 0;
-    this.closeH      = 0;
+    this.textArea     = textArea;
+    this.lineAddrMap  = lineAddrMap;
+    this.mouseBtnDown = false;
+    this.overClose    = false;
+    this.closeX       = -1;
+    this.closeY       = -1;
+    this.closeW       = DEFAULT_CLOSE_W;
+    this.closeH       = DEFAULT_CLOSE_H;
+    if( closeBtnSize != null ) {
+      if( (closeBtnSize.width > 0) && (closeBtnSize.height > 0) ) {
+	this.closeW = closeBtnSize.width;
+	this.closeH = closeBtnSize.height;
+      }
+    }
     setToolTipText( "Adressen im Arbeitsspeicher" );
+
     addMouseListener(
-	new MouseAdapter()
-	{
-	  @Override
-	  public void mouseClicked( MouseEvent e )
-	  {
-	    mouseClickedInternal( e );
-	  }
-	} );
+		new MouseAdapter()
+		{
+		  @Override
+		  public void mouseClicked( MouseEvent e )
+		  {
+		    mouseClickedInternal( e );
+		  }
+
+		  @Override
+		  public void mousePressed( MouseEvent e )
+		  {
+		    updMouseBtnDown( e );
+		  }
+
+		  @Override
+		  public void mouseReleased( MouseEvent e )
+		  {
+		    updMouseBtnDown( e );
+		  }
+		} );
+
+    addMouseMotionListener(
+		new MouseMotionAdapter()
+		{
+		  @Override
+		  public void mouseDragged( MouseEvent e )
+		  {
+		    mouseMovedInternal( e );
+		  }
+
+		  @Override
+		  public void mouseMoved( MouseEvent e )
+		  {
+		    mouseMovedInternal( e );
+		  }
+		} );
   }
 
 
@@ -112,7 +153,9 @@ public class LineAddrRowHeader extends JComponent
       if( size != null ) {
 	h = size.height;
       }
-      rv = new Dimension( w, h );
+      rv = new Dimension(
+			Math.max( w, (2 * MARGIN) + DEFAULT_CLOSE_W ),
+			Math.max( h, (2 * MARGIN) + DEFAULT_CLOSE_H ) );
     }
     return rv;
   }
@@ -130,6 +173,8 @@ public class LineAddrRowHeader extends JComponent
   @Override
   public void paintComponent( Graphics g )
   {
+    super.paintComponent( g );
+
     int w = getWidth();
 
     // sichtbarer Bereich ermitteln
@@ -153,7 +198,7 @@ public class LineAddrRowHeader extends JComponent
       g.setColor( getBackground() );
       g.setPaintMode();
       g.fillRect( 0, yVisible, w, yVisible + hVisible );
-      g.setColor( Color.gray );
+      g.setColor( Color.GRAY );
       g.drawLine( w - 1, yVisible, w - 1, yVisible + hVisible );
 
       // Adressliste
@@ -169,11 +214,14 @@ public class LineAddrRowHeader extends JComponent
 	  int    begLine = 0;
 	  int    endLine = 0;
 
-	  int pos = this.textArea.viewToModel( new Point( x, yVisible ) );
+	  int pos = TextUtil.viewToModel(
+				this.textArea,
+				new Point( x, yVisible ) );
 	  if( pos >= 0 ) {
 	    begLine = this.textArea.getLineOfOffset( pos );
 	  }
-	  pos = this.textArea.viewToModel(
+	  pos = TextUtil.viewToModel(
+				this.textArea,
 				new Point( x, yVisible + hVisible) );
 	  if( pos >= 0 ) {
 	    endLine = this.textArea.getLineOfOffset( pos ) + 1;
@@ -187,10 +235,11 @@ public class LineAddrRowHeader extends JComponent
 	  for( int line = begLine; line < endLine; line++ ) {
 	    Integer addr = this.lineAddrMap.get( line + 1 );
 	    if( addr != null ) {
-	      Rectangle r = this.textArea.modelToView(
+	      Rectangle2D r = TextUtil.modelToView(
+				this.textArea,
 				this.textArea.getLineStartOffset( line ) );
 	      if( r != null ) {
-		int y = r.y + r.height - 5;
+		int y = (int) Math.round( r.getY() + r.getHeight() - 5.0 );
 		if( (y >= yVisible)
 		  && ((y - font.getSize()) < (yVisible + hVisible)) )
 		{
@@ -205,24 +254,55 @@ public class LineAddrRowHeader extends JComponent
       catch( BadLocationException ex ) {}
 
       // Close-Button
-      if( this.closeImg != null ) {
-	int closeW = this.closeImg.getWidth( this );
-	int closeH = this.closeImg.getHeight( this );
-	if( (closeW > 0) && (closeH > 0) && (closeW < (w - (2 * MARGIN))) ) {
-	  this.closeX = w - MARGIN - closeW - 1;
-	  this.closeY = yVisible + 1;
-	  this.closeW = closeW;
-	  this.closeH = closeH;
-	  g.setColor( getBackground() );
-	  g.fillRect(
+      if( this.closeX < 0 ) {
+	this.closeX = w - MARGIN - this.closeW;
+      }
+      this.closeY = yVisible + MARGIN;
+      Color bg = getBackground();
+      if( bg == null ) {
+	bg = Color.WHITE;
+      }
+      g.setColor( new Color(
+			bg.getRed(),
+			bg.getGreen(),
+			bg.getBlue(),
+			bg.getAlpha() / 2 ) );
+      g.fillRect(
+		this.closeX - MARGIN,
+		this.closeY - MARGIN,
+		(2 * MARGIN) + this.closeW,
+		(2 * MARGIN) + this.closeH );
+      g.setColor( bg );
+      g.fillRect(
 		this.closeX - 1,
 		this.closeY - 1,
 		this.closeW + 2,
 		this.closeH + 2 );
-	  g.drawImage( this.closeImg, this.closeX, this.closeY, this );
-	}
+      if( this.overClose ) {
+	RolloverCloseBtn.paintBorder(
+				g,
+				this.closeX,
+				this.closeY,
+				this.closeW,
+				this.closeH );
       }
+      RolloverCloseBtn.paintComponent(
+				g,
+				this.closeX,
+				this.closeY,
+				this.closeW,
+				this.closeH,
+				true,
+				this.overClose && this.mouseBtnDown );
     }
+  }
+
+
+  @Override
+  public void validate()
+  {
+    this.closeX = -1;
+    super.validate();
   }
 
 
@@ -231,7 +311,7 @@ public class LineAddrRowHeader extends JComponent
   private boolean isOverClose( MouseEvent e )
   {
     boolean rv = false;
-    if( (this.closeW > 0) && (this.closeH > 0) ) {
+    if( (this.closeX >= 0) && (this.closeY >= 0) ) {
       int x = e.getX();
       int y = e.getY();
       if( (x >= this.closeX) && (x < (this.closeX + this.closeW))
@@ -246,6 +326,7 @@ public class LineAddrRowHeader extends JComponent
 
   private void mouseClickedInternal( MouseEvent e )
   {
+    updMouseBtnDown( e );
     if( isOverClose( e ) ) {
       JScrollPane sp = null;
       Component   c  = this;
@@ -260,6 +341,28 @@ public class LineAddrRowHeader extends JComponent
 	sp.setRowHeader( null );
       }
       e.consume();
+    }
+  }
+
+
+  private void mouseMovedInternal( MouseEvent e )
+  {
+    boolean newState = isOverClose( e );
+    if( newState != this.overClose ) {
+      this.overClose = newState;
+      repaint();
+    }
+    updMouseBtnDown( e );
+  }
+
+
+  private void updMouseBtnDown( MouseEvent e )
+  {
+    boolean newState = ((e.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK)
+						!= 0);
+    if( newState != this.mouseBtnDown ) {
+      this.mouseBtnDown = newState;
+      repaint();
     }
   }
 }

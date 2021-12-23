@@ -1,7 +1,8 @@
 <html>
 <body>
  <h1>Abbilddatei auf Datentr&auml;ger schreiben</h1>
-  JKCEMU kann einfache Abbilddateien auf einen Datentr&auml;ger schreiben,
+  JKCEMU kann einfache Abbilddateien sowie ISO-Dateien
+  auf einen Datentr&auml;ger schreiben,
   wenn im oder am Emulatorrechner ein entsprechendes Laufwerk
   vorhanden bzw. eingebaut ist und vom Betriebssystem unterst&uuml;tzt wird.
   Bei Diskettenlaufwerken ist besonders wichtig,
@@ -14,8 +15,8 @@
   Wenn die Gr&ouml;&szlig;e der Abbilddatei nicht ann&auml;hernd
   duch 512 teilbar ist, wird davon ausgegangen,
   dass es sich um eine einfache Festplattenabbilddatei mit einem
-  256&nbsp;Byte gro&szlig;en Kopfblock handelt
-  (siehe <a href="../gide.htm#fileformats">hier</a>).
+  256&nbsp;Byte gro&szlig;en Kopfblock handelt (siehe
+  <a href="../gide.htm#fileformats">Dateiformate für Festplattenabbilddateien</a>).
   In dem Fall wird der Kopfblock &uuml;bersprungen und nur die Daten
   hinter dem Kopfblock auf den Datentr&auml;ger geschrieben.
   Abbilddateien in anderen Formaten m&uuml;ssen erst in eine
@@ -26,7 +27,13 @@
   <b>Achtung!</b> Der Zugriff auf physische Laufwerke h&auml;ngt
   von verschiedenen Faktoren ab und kann deshalb nicht auf
   allen Plattformen und Betriebssystemumgebungen garantiert werden.
-  M&ouml;glicherweise steht die Funktion auf Ihrem System
+  Abh&auml;ngig vom Betriebssystem und der Art des Datentr&auml;gers,
+  z.B. ob dieser partitioniert ist,
+  muss JKCEMU eventuell unter einem Benutzer mit besonderen
+  Berechtigungen (z.B. Administrator) laufen.
+  M&ouml;glicherweise wird aber auch trotz Administratorberechtigungen
+  der Zugriff auf den Datentr&auml;ger verweigert oder
+  die Funktion steht auf Ihrem System grunds&auml;tzlich
   nicht zur Verf&uuml;gung.
 </body>
 </html>

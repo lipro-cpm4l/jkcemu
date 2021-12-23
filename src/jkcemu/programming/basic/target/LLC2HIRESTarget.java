@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,8 +13,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
-import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.LLC2;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
@@ -41,6 +39,8 @@ public class LLC2HIRESTarget extends SCCHTarget
     setNamedValue( "LASTSCREEN", 1 );
   }
 
+
+	/* --- ueberschriebene Methoden --- */
 
   @Override
   public void appendBssTo( AsmCodeBuf buf )
@@ -80,7 +80,7 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "X_SSZP:\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tDEC\tA\n"
 		+ "\tRET\tZ\n"
-		+ "\tLD\tHL,00H\n"
+		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
       } else {
 	buf.append( "X_HPIX:\n"
@@ -162,18 +162,21 @@ public class LLC2HIRESTarget extends SCCHTarget
     if( this.usesScreens ) {
       buf.append( "XCLS:\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\t01\n"
-		+ "\tJR\tZ,XCLS1\n"
+		+ "\tJR\tZ,X_CLS_1\n"
 		+ "\tLD\tA,0CH\n"
 		+ "\tJR\tXOUTCH\n"
-		+ "XCLS1:\tLD\tHL,8000H\n"
+		+ "X_CLS_1:\n"
+		+ "\tLD\tHL,8000H\n"
 		+ "\tXOR\tA\n"
 		+ "\tLD\tC,40H\n"
-		+ "XCLS2:\tLD\tB,00H\n"
-		+ "XCLS3:\tLD\t(HL),A\n"
+		+ "X_CLS_2:\n"
+		+ "\tLD\tB,00H\n"
+		+ "X_CLS_3:\n"
+		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
-		+ "\tDJNZ\tXCLS3\n"
+		+ "\tDJNZ\tX_CLS_3\n"
 		+ "\tDEC\tC\n"
-		+ "\tJR\tNZ,XCLS2\n"
+		+ "\tJR\tNZ,X_CLS_2\n"
 		+ "\tRET\n" );
     } else {
       buf.append( "XCLS:\tLD\tA,0CH\n"
@@ -184,29 +187,57 @@ public class LLC2HIRESTarget extends SCCHTarget
 
 
   /*
+   * Ermittlung der Cursor-Position
+   * Rueckgabe:
+   *   HL: Bit 0..5:  Spalte
+   *       Bit 6..10: Zeile
+   *   CY=1: Fehler -> HL=0FFFFH
+   */
+  @Override
+  protected void appendXGetCrsPosTo( AsmCodeBuf buf )
+  {
+    if( !this.xGetCrsPosAppended ) {
+      buf.append( "X_GET_CRS_POS:\n"
+		+ "\tLD\tHL,(1800H)\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t0F8H\n"
+		+ "\tCP\t0C0H\n"
+		+ "\tRET\tZ\n"		// CY=0
+		+ "\tCP\t0F8H\n"
+		+ "\tRET\tZ\n"		// CY=0
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tSCF\n"
+		+ "\tRET\n" );
+      this.xGetCrsPosAppended = true;
+    }
+  }
+
+
+  /*
    * Zeichnen einer horizontalen Linie
    * Parameter:
    *   BC: Laenge - 1
    *   DE: linke X-Koordinate, nicht kleiner 0
    *   HL: Y-Koordinate
    */
+  @Override
   public void appendXHLineTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XHLINE:\tBIT\t7,B\n"
 		+ "\tRET\tNZ\n"
 		+ "\tPUSH\tBC\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tBC\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE1:\n"
+		+ "X_HLINE_1:\n"
 		+ "\tOR\tD\n"
 		+ "\tLD\tD,A\n"
 		+ "\tSRL\tA\n"
-		+ "\tJR\tNC,XHLINE2\n"
+		+ "\tJR\tNC,X_HLINE_2\n"
 		+ "\tLD\tA,D\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tCALL\tXPSET_A\n" );
+      buf.append( "\tCALL\tX_PSET_A\n" );
     } else {
       buf.append( "\tOR\t(HL)\n"
 		+ "\tLD\t(HL),A\n" );
@@ -217,13 +248,13 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tRET\tZ\n"
 		+ "\tLD\tA,80H\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE2:\n"
+		+ "X_HLINE_2:\n"
 		+ "\tDEC\tBC\n"
 		+ "\tBIT\t7,B\n"
-		+ "\tJR\tZ,XHLINE1\n"
+		+ "\tJR\tZ,X_HLINE_1\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XPSET_A\n"
+		+ "\tJR\tNZ,X_PSET_A\n"
 		+ "\tRET\n" );
     appendXPSetTo( buf, compiler );
   }
@@ -257,49 +288,49 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tE\n"
-		+ "\tJR\tZ,XPAINT_LEFT6\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_6\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tDEC\tDE\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tDE\n"
-		+ "\tJR\tC,XPAINT_LEFT5\n"
+		+ "\tJR\tC,X_PAINT_LEFT_5\n"
 		+ "\tLD\tC,A\n"
 		+ "\tLD\tB,(HL)\n"
-		+ "XPAINT_LEFT1:\n"
+		+ "X_PAINT_LEFT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_LEFT2:\n"
+		+ "X_PAINT_LEFT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_LEFT4\n"
+		+ "\tJR\tNZ,X_PAINT_LEFT_4\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tDEC\tDE\n"
 		+ "\tSLA\tC\n"
-		+ "\tJR\tNC,XPAINT_LEFT2\n"
+		+ "\tJR\tNC,X_PAINT_LEFT_2\n"
 		+ "\tLD\t(HL),B\n"
 		+ "\tDEC\tHL\n"
 		+ "\tBIT\t0,D\n"
-		+ "\tJR\tZ,XPAINT_LEFT3\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_3\n"
 		+ "\tLD\tA,E\n"
 		+ "\tINC\tA\n"
-		+ "\tJR\tZ,XPAINT_LEFT5\n"
-		+ "XPAINT_LEFT3:\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_5\n"
+		+ "X_PAINT_LEFT_3:\n"
 		+ "\tLD\tB,(HL)\n"
 		+ "\tLD\tC,01H\n"
-		+ "\tJR\tXPAINT_LEFT1\n"
-		+ "XPAINT_LEFT4:\n"
+		+ "\tJR\tX_PAINT_LEFT_1\n"
+		+ "X_PAINT_LEFT_4:\n"
 		+ "\tLD\t(HL),B\n"
-		+ "XPAINT_LEFT5:\n"
+		+ "X_PAINT_LEFT_5:\n"
 		+ "\tINC\tDE\n"
-		+ "XPAINT_LEFT6:\n"
+		+ "X_PAINT_LEFT_6:\n"
 		+ "\tLD\t(PAINT_M_X1),DE\n"
 		+ "\tRET\n"
 		+ "XPAINT_RIGHT:\n"
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tDE\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tC,A\n"
@@ -307,31 +338,31 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tAND\tB\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tJR\tXPAINT_RIGHT3\n"
-		+ "XPAINT_RIGHT1:\n"
+		+ "\tJR\tX_PAINT_RIGHT_3\n"
+		+ "X_PAINT_RIGHT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_RIGHT2:\n"
+		+ "X_PAINT_RIGHT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_RIGHT4\n"
-		+ "XPAINT_RIGHT3:\n"
+		+ "\tJR\tNZ,X_PAINT_RIGHT_4\n"
+		+ "X_PAINT_RIGHT_3:\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tINC\tDE\n"
 		+ "\tSRL\tC\n"
-		+ "\tJR\tNC,XPAINT_RIGHT2\n"
+		+ "\tJR\tNC,X_PAINT_RIGHT_2\n"
 		+ "\tLD\t(HL),B\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tA,D\n"
 		+ "\tAND\t01H\n"
 		+ "\tOR\tE\n"
-		+ "\tJR\tZ,XPAINT_RIGHT5\n"
+		+ "\tJR\tZ,X_PAINT_RIGHT_5\n"
 		+ "\tLD\tB,(HL)\n"
 		+ "\tLD\tC,80H\n"
-		+ "\tJR\tXPAINT_RIGHT1\n"
-		+ "XPAINT_RIGHT4:\n"
+		+ "\tJR\tX_PAINT_RIGHT_1\n"
+		+ "X_PAINT_RIGHT_4:\n"
 		+ "\tLD\t(HL),B\n"
-		+ "XPAINT_RIGHT5:\n"
+		+ "X_PAINT_RIGHT_5:\n"
 		+ "\tDEC\tDE\n"
 		+ "\tLD\t(PAINT_M_X2),DE\n"
 		+ "\tOR\tA\n"			// CY=0
@@ -345,8 +376,8 @@ public class LLC2HIRESTarget extends SCCHTarget
    * Die Rueckgabewerte sind identisch zur Funktion XPTEST
    *
    * Parameter:
-   *   DE: X-Koordinate (0...255)
-   *   HL: Y-Koordinate (0...255)
+   *   DE: X-Koordinate
+   *   HL: Y-Koordinate
    * Rueckgabe:
    *   HL >= 0: Farbcode des Pixels
    *   HL=-1:   Pixel exisitiert nicht
@@ -367,12 +398,17 @@ public class LLC2HIRESTarget extends SCCHTarget
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
-		+ "\tRET\tC\n"
-		+ "\tCPL\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
+		+ "\tRET\tC\n" );
+    if( this.usesX_M_PEN ) {
+      buf.append( "\tJR\tX_PSET_2\n" );
+      appendXPSetTo( buf, compiler );
+    } else {
+      buf.append( "\tCPL\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n" );
+    }
     appendPixUtilTo( buf, compiler );
   }
 
@@ -387,28 +423,31 @@ public class LLC2HIRESTarget extends SCCHTarget
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
-		+ "XPSET_A:\n" );
+		+ "X_PSET_A:\n" );
       if( this.usesX_M_PEN ) {
 	buf.append( "\tLD\tE,A\n"
 		+ "\tLD\tA,(X_M_PEN)\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+		+ "\tJR\tZ,X_PSET_3\n"		// Stift 1 (Normal)
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+		+ "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
 		+ "\tDEC\tA\n"
 		+ "\tRET\tNZ\n"
 		+ "\tLD\tA,(HL)\n"		// Stift 3 (XOR-Mode)
 		+ "\tXOR\tE\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n"
-		+ "XPSET1:\tLD\tA,E\n"		// Pixel loeschen
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tLD\tA,E\n"
+		+ "X_PSET_2:\n"
 		+ "\tCPL\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n"
-		+ "XPSET2\tLD\tA,E\n" );	// Pixel setzen
+		+ "X_PSET_3:\n"			// Pixel setzen
+		+ "\tLD\tA,E\n" );
       }
       buf.append( "\tOR\t(HL)\n"
 		+ "\tLD\t(HL),A\n"
@@ -437,15 +476,15 @@ public class LLC2HIRESTarget extends SCCHTarget
 	buf.append( "XPOINT:\n"
 		+ "XPTEST:\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\t01H\n"
-		+ "\tJR\tNZ,XPTEST1\n"
-		+ "\tCALL\tX_PST1\n"
-		+ "\tJR\tC,XPTEST1\n"
+		+ "\tJR\tNZ,X_PTEST_1\n"
+		+ "\tCALL\tX_PINFO_1\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "XPTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
 	appendPixUtilTo( buf, compiler );
@@ -472,19 +511,22 @@ public class LLC2HIRESTarget extends SCCHTarget
       buf.append( "XSCREEN:\n"
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XSCRN1\n"
+		+ "\tJR\tNZ,X_SCREEN_1\n"
 		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\tL\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XSCRN3\n"
+		+ "\tJR\tZ,X_SCREEN_3\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XSCRN2\n"
-		+ "XSCRN1:\tSCF\n"
+		+ "\tJR\tZ,X_SCREEN_2\n"
+		+ "X_SCREEN_1:\n"
+		+ "\tSCF\n"
 		+ "\tRET\n"
-		+ "XSCRN2:\tLD\tA,50H\n"	// HIRES, 8000h
-		+ "XSCRN3:\tOUT\t(0EEH),A\n"
+		+ "X_SCREEN_2:\n"
+		+ "\tLD\tA,50H\n"		// HIRES, 8000h
+		+ "X_SCREEN_3:\n"
+		+ "\tOUT\t(0EEH),A\n"
 		+ "\tLD\tA,L\n"
 		+ "\tLD\t(X_M_SCREEN),A\n"
 		+ "\tOR\tA\n"			// CY=0
@@ -597,9 +639,11 @@ public class LLC2HIRESTarget extends SCCHTarget
       /*
        * Pruefen der Parameter und
        * ermitteln von Informationen zu einem Pixel
+       *
        * Parameter:
        *   DE: X-Koordinate (0...512)
        *   HL: Y-Koordinate (0...255)
+       *
        * Rueckgabe:
        *   CY=1: Pixel ausserhalb des gueltigen Bereichs
        *   A:    Bitmuster mit einem gesetzten Bit,
@@ -607,27 +651,32 @@ public class LLC2HIRESTarget extends SCCHTarget
        *   HL:   Speicherzelle, in der sich das Pixel befindet
        */
       if( this.usesScreens ) {
-	buf.append( "X_PST:\tLD\tA,(X_M_SCREEN)\n"
+	buf.append( "X_PINFO:\n"
+		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\t01H\n"
-		+ "\tJR\tNZ,X_PST7\n"
-		+ "X_PST1:\tLD\tA,H\n"
+		+ "\tJR\tNZ,X_PINFO_7\n"
+		+ "X_PINFO_1:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tOR\tA\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,X_PST2\n"
+		+ "\tJR\tZ,X_PINFO_2\n"
 		+ "\tCP\t02H\n"
 		+ "\tCCF\n"
 		+ "\tRET\tC\n"
-		+ "X_PST2:\tLD\tA,E\n"
+		+ "X_PINFO_2:\n"
+		+ "\tLD\tA,E\n"
 		+ "\tAND\t07H\n"
 		+ "\tLD\tB,A\n"
 		+ "\tLD\tC,80H\n"
-		+ "\tJR\tZ,X_PST4\n"
-		+ "X_PST3:\tSRL\tC\n"
-		+ "\tDJNZ\tX_PST3\n"
-		+ "X_PST4:\tSRL\tD\n"
+		+ "\tJR\tZ,X_PINFO_4\n"
+		+ "X_PINFO_3:\n"
+		+ "\tSRL\tC\n"
+		+ "\tDJNZ\tX_PINFO_3\n"
+		+ "X_PINFO_4:\n"
+		+ "\tSRL\tD\n"
 		+ "\tRR\tE\n"
 		+ "\tSRL\tE\n"
 		+ "\tSRL\tE\n"
@@ -636,12 +685,14 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tLD\tA,L\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tAND\t07H\n"
-		+ "\tJR\tZ,X_PST6\n"
+		+ "\tJR\tZ,X_PINFO_6\n"
 		+ "\tLD\tDE,0800H\n"
-		+ "X_PST5:\tADD\tHL,DE\n"
+		+ "X_PINFO_5:\n"
+		+ "\tADD\tHL,DE\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tNZ,X_PST5\n"
-		+ "X_PST6:\tEX\tDE,HL\n"
+		+ "\tJR\tNZ,X_PINFO_5\n"
+		+ "X_PINFO_6:\n"
+		+ "\tEX\tDE,HL\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tA,L\n"
 		+ "\tAND\t0F8H\n"
@@ -659,9 +710,9 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tLD\tA,C\n"
 		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n"
-		+ "X_PST7:\n" );
+		+ "X_PINFO_7:\n" );
       } else {
-	buf.append( "X_PST:\n" );
+	buf.append( "X_PINFO:\n" );
       }
       appendExitNoGraphicsScreenTo( buf, compiler );
       this.pixUtilAppended = true;

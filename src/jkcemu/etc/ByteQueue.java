@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@ package jkcemu.etc;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.*;
 
 
 public class ByteQueue
@@ -94,7 +93,7 @@ public class ByteQueue
   {
     boolean rv = false;
     synchronized( this.modifyLock ) {
-      rv =this.empty;
+      rv = this.empty;
     }
     return rv;
   }

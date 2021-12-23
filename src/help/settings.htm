@@ -1,12 +1,18 @@
 <html>
 <body>
  <h1>Einstellungen</h1>
-  Die Einstellungen nehmen Sie in einem separaten Fenster vor,
-  dass Sie &uuml;ber das Men&uuml; <em>Extra</em> des Hauptfensters
-  aufrufen.
-  Die weiteren Ausf&uuml;hrungen beziehen sich auf dieses Fenster.
+  Die Einstellungen f&uuml;r den Emulator nehmen Sie in einem
+  separaten Fenster vor, dass Sie &uuml;ber das Men&uuml;
+  <em>Extra</em> &rarr; <em>Einstellungen...</em> des Hauptfensters aufrufen.
+  Daneben gibt es auch Einstellungen bei einigen in JKCEMU integrierten
+  Werkzeugen.
+  Diese Einstellungen erreichen Sie in dem jeweils betreffenden
+  Werkzeug &uuml;ber das dortige Men&uuml;.
  <br/><br/>
-  &Auml;nderungen an den Einstellungen werden erst wirksam,
+  Alle weiteren Ausf&uuml;hrungen hier auf dieser Hilfeseite
+  beziehen sich auf die Einstellungen f&uuml;r den Emulator,
+  die Sie in dem separaten Fenster finden.
+  &Auml;nderungen an diesen Einstellungen werden erst wirksam,
   nachdem sie &uuml;bernommen wurden.
   Dr&uuml;cken Sie dazu auf den Knopf <em>&Uuml;bernehmen</em>.
  <br/><br/>
@@ -16,39 +22,50 @@
     <ul>
      <li><a href="settings.htm#system">1.1. System</a></li>
      <li><a href="settings.htm#speed">1.2. Geschwindigkeit</a></li>
+     <li><a href="settings.htm#confirm">1.3. Best&auml;tigungen</a></li>
+
      <li>
-      <a href="settings.htm#screen">1.3. Bildschirmausgabe</a>
+      <a href="settings.htm#screen">1.4. Bildschirmausgabe</a>
       <ul>
        <li>
-	<a href="settings.htm#margin">1.3.1. Rand um Bildschirmausgabe</a>
+	<a href="settings.htm#margin">1.4.1. Rand um Bildschirmausgabe</a>
        </li>
        <li>
-	<a href="settings.htm#refresh">1.3.2. Zykluszeit f&uuml;r Bildschirmaktualisierung</a>
+	<a href="settings.htm#refresh">1.4.2. Zykluszeit f&uuml;r Bildschirmaktualisierung</a>
        </li>
       </ul>
      </li>
-     <li><a href="settings.htm#confirm">1.4. Best&auml;tigungen</a></li>
-     <li><a href="settings.htm#laf">1.5. Erscheinungsbild</a></li>
-     <li><a href="settings.htm#net">1.6. Netzwerk</a></li>
+     <li><a href="settings.htm#ui_scale">1.5. Fensterskalierung</a></li>
+     <li><a href="settings.htm#fonts">1.6. Schriften/Symbole</a></li>
+     <li><a href="settings.htm#laf">1.7. Erscheinungsbild</a></li>
+     <li><a href="settings.htm#net">1.8. Netzwerk</a></li>
      <li>
-      <a href="settings.htm#etc">1.7. Sonstiges</a>
+      <a href="settings.htm#etc">1.9. Sonstiges</a>
       <ul>
        <li>
-	<a href="settings.htm#filedialog">1.7.1. Dateiauswahldialog</a>
+	<a href="settings.htm#filedialog">1.9.1. Dateiauswahldialog</a>
        </li>
        <li>
-	<a href="settings.htm#config_dir">1.7.2. Konfigurationsverzeichnis</a>
+	<a href="settings.htm#config_dir">1.9.2. Konfigurationsverzeichnis</a>
        </li>
       </ul>
      </li>
     </ul>
    </li>
-   <li><a href="settings.htm#profiles">2. Einstellungen speichern</a></li>
+   <li>
+    <a href="settings.htm#profiles">2. Einstellungen speichern und laden</a>
+    <ul>
+     <li>
+      <a href="settings.htm#profile_exp_imp">2.1. Profile exportieren und importieren</a>
+     </li>
+    </ul>
+   </li>
    <li>
     <a href="settings.htm#reset">3. Einstellungen zur&uuml;cksetzen</a>
    </li>
   </ul>
  <br/>
+
 
  <h2><a name="groups">1. Gruppierung der einzelnen Einstellungen</a></h2>
   Die einzelnen Einstellm&ouml;glichkeiten sind thematisch gruppiert.
@@ -80,13 +97,18 @@
   wird eine entsprechend geringere Taktfrequenz emuliert.
  <br/><br/>
 
- <h3><a name="screen">1.3. Bildschirmausgabe</a></h3>
+ <h3><a name="confirm">1.3. Best&auml;tigungen</a></h3>
+  Hier geben Sie an, welche Aktionen erst nach der Bejahung einer
+  Sicherheitsabfrage ausgef&uuml;hrt werden sollen.
+ <br/><br/>
+
+ <h3><a name="screen">1.4. Bildschirmausgabe</a></h3>
   Helligkeit, Rand und alle anderen Einstellungen,
   die sich ausschlie&szlig;lich auf die Bildschirmausgabe beziehen,
   finden Sie in dieser Gruppe.
  <br/><br/>
 
- <h3><a name="margin">1.3.1. Rand um Bildschirmausgabe</a></h3>
+ <h3><a name="margin">1.4.1. Rand um Bildschirmausgabe</a></h3>
   Sie k&ouml;nnen einen Rand um die Bildschrirmausgabe erzeugen,
   indem Sie das Hauptfenster gr&ouml;&szlig;er ziehen.
   Wenn Sie nun jedoch eine andere Skalierung der Bildschirmausgabe
@@ -99,7 +121,7 @@
  <br/><br/>
 
  <h3>
-  <a name="refresh">1.3.2. Zykluszeit f&uuml;r Bildschirmaktualisierung</a>
+  <a name="refresh">1.4.2. Zykluszeit f&uuml;r Bildschirmaktualisierung</a>
  </h3>
   Der Emulator aktualisiert zyklisch die Bildschirmausgabe
   entsprechend den &Auml;nderungen im Bildwiederholspeicher
@@ -109,12 +131,47 @@
   Allerdings steigt damit auch der Bedarf an Rechenleistung.
  <br/><br/>
 
- <h3><a name="confirm">1.4. Best&auml;tigungen</a></h3>
-  Hier geben Sie an, welche Aktionen erst nach der Bejahung einer
-  Sicherheitsabfrage ausgef&uuml;hrt werden sollen.
+ <h3><a name="ui_scale">1.5. Fensterskalierung</a></h3>
+  Auf hochaufl&ouml;senden Bildschirmen sehen die Fenster
+  mitunter ziemlich klein aus.
+  JKCEMU bietet deshalb die M&ouml;glichkeit,
+  die Fenster gr&ouml;&szlig;er skalieren zu lassen.
+  Die Skalierung basiert auf einer Eigenschaft,
+  die mit Java&nbsp;9 eingef&uuml;hrt wurde.
+  Aus diesem Grund wird f&uuml;r die Skalierung eine Java-Laufzeitumgebung
+  in der Version&nbsp;9 oder eine h&ouml;here Version ben&ouml;tigt.
+ <br/><br/>
+  Standardm&auml;&szlig;ig skaliert Java ab Version&nbsp;9
+  die Fenster automatisch auf hochaufl&ouml;senden Bildschirmen.
+  JKCEMU bietet jedoch die M&ouml;glichkeit,
+  dieses Standardverhalten zu ver&auml;ndern.
+  So kann man die Skalierung ausschalten,
+  das Java-Standardverhalten belassen
+  oder eine feste Skalierung einstellen.
+  Bei der festen Skalierung gibt man in das entsprechende Eingabefeld
+  einen beliebigen Prozentwert ein und dr&uuml;ckt <em>Enter</em>.
+  Auf manchen Betriebssystemen werden allerdings nur Skalierungen
+  in 100%-Schritten unterst&uuml;tzt.
+ <br/><br/>
+  Die Skalierung kann jedoch etwas unsch&ouml;n aussehen,
+  wenn die zu skalierenden Objekte harte Kanten haben.
+  Das ist z.B. bei der Bildschirmausgabe der emulierten Systeme
+  sowie bei den Symbolen (Icons) der Fall.
+  Aus diesem Grund bietet JKCEMU noch eine andere Option
+  f&uuml;r hochaufl&ouml;sende Bildschirme,
+  n&auml;mlich die Gr&ouml;&szlig;e der Schriften und Symbole anzupassen.
  <br/><br/>
 
- <h3><a name="laf">1.5. Erscheinungsbild</a></h3>
+ <h3><a name="fonts">1.6. Schriften/Symbole</a></h3>
+  Schriften und Schriftgr&ouml;&szlig;en k&ouml;nnen
+  frei gew&auml;hlt werden.
+  Dazu sind die grafischen Objekte in verschiedene Gruppen
+  eingeteilt und pro Gruppe lassen sich die Schriften separat einstellen.
+  Des Weiteren kann man bei den Symbolen (Icons) zwischen zwei
+  Darstellungsgr&ouml;&szlig;en ausw&auml;hlen.
+ <br/><br/>
+
+ <h3><a name="laf">1.7. Erscheinungsbild</a></h3>
   JKCEMU wurde mit der Programmiersprache Java entwickelt,
   der ein plattform&uuml;bergreifendes Konzept zu Grunde liegt.
   Manche Leute w&uuml;nschen,
@@ -137,7 +194,7 @@
   erst gar nicht angeboten.
  <br/><br/>
 
- <h3><a name="net">1.6. Netzwerk</a></h3>
+ <h3><a name="net">1.8. Netzwerk</a></h3>
   Das Netzwerk muss konfiguriert werden, um es nutzen zu k&ouml;nnen
   (siehe <a href="kcnet.htm#cfg">hier</a>).
   Im Original geschieht das mit einem speziellen Programm.
@@ -150,20 +207,18 @@
   <em>IP-Adressen der leer gelassenen Felder automatisch ermitteln</em> aus.
  <br/><br/>
 
- <h3><a name="etc">1.7. Sonstiges</a></h3>
+ <h3><a name="etc">1.9. Sonstiges</a></h3>
   In dieser Gruppe finden Sie die Einstellungen,
   die sich in keine andere Gruppe sinnvoll einordnen lassen.
  <br/><br/>
 
- <h3><a name="filedialog">1.7.1. Dateiauswahldialog</a></h3>
+ <h3><a name="filedialog">1.9.1. Dateiauswahldialog</a></h3>
   JKCEMU kommt mit einem eigenen Dateiauswahldialog daher.
   Dieser hat den Vorteil,
   dass er auf die Bed&uuml;rfnisse des Emulators zugeschnitten ist.
-  So k&ouml;nnen Sie z.B. gleich in dem Dialog w&auml;hlen,
-  ob eine Datei nur geladen oder auch gestartet werden soll.
-  Ein anderer Vorteil ist, dass beim Anklicken einer Datei,
-  deren Typ von JKCEMU unterst&uuml;tzt wird,
-  die relevanten Informationen in der Statuszeile angezeigt werden.
+  So k&ouml;nnen Sie z.B. gleich beim Anklicken einer Datei
+  deren relevante Informationen in der Statuszeile sehen,
+  sofern der Dateityp von JKCEMU unterst&uuml;tzt wird.
   Des Weiteren bietet der JKCEMU-Dateiauswahldialog Dateifilter,
   d.h. die M&ouml;glichkeit zur Auswahl eines kontextabh&auml;ngigen
   Dateityps.
@@ -178,7 +233,8 @@
   Nachteilig k&ouml;nnte sein, dass m&ouml;glicherweise
   der JKCEMU-Dateiauswahldialog nicht auf spezielle Eigenheiten
   des Betriebssystems angepasst ist
-  (z.B. Schnellzugriff auf spezielle Bibliotheken oder Ordner).
+  (z.B. Schnellzugriff auf spezielle Bibliotheken und Ordner
+  oder direkter Zugriff auf das Netzwerk).
   Aus diesem Grund haben Sie die M&ouml;glichkeit,
   anstelle der JKCEMU-eigenen auch die standardm&auml;&szlig;ige
   Dateiauswahlbox des Betriebssystems zu verwenden.
@@ -191,22 +247,22 @@
   Dieser zeigt zwar beim Anklicken einer Datei ebenfalls keine
   relevanten Informationen an, bietet aber immerhin Dateifilter
   und somit beim Speichern auch die automatische Dateinamenerweiterung.
-  Der Java/Swing-Dateiauswahldialog ist zwischen dem JKCEMU-
+  Der Java/Swing-Dateiauswahldialog ist somit zwischen dem JKCEMU-
   und dem betriebssystemeigenen Dateiauswahldialog angesiedelt.
  <br/><br/>
-  <b>Achtung!</b> Der Java/Swing-Dateiauswahldialog passt sich
-  vom Aussehen her dem eingestellten Erscheinungsbild an.
+  <b>Achtung!</b> Der Java/Swing-Dateiauswahldialog versucht den
+  originalen Dateiauswahldialog des eingestellten Erscheinungsbildes
+  nachzubilden, sowohl vom Aussehen her als auch von der Funktion.
   Wenn Sie z.B. unter Windows das Windows-Erscheinungsbild
   eingestellt haben,
-  sieht der Java/Swing-Dateiauswahldialog sehr &auml;hnlich
-  dem von Windows aus.
+  sieht der Java/Swing-Dateiauswahldialog demzufolge sehr &auml;hnlich
+  dem nativen Auswahldialog von Windows aus.
   Haben Sie ein anderes Erscheinungsbild eingestellt,
-  kann der Java/Swing-Dateiauswahldialog ein v&ouml;llig anderes
-  Aussehen und evtl. auch eine andere Bedienung haben.
+  pr&auml;sentiert sich der Java/Swing-Dateiauswahldialog v&ouml;llig anders.
  <br/><br/>
 
  <h3>
-  <a name="config_dir">1.7.2. Konfigurationsverzeichnis</a>
+  <a name="config_dir">1.9.2. Konfigurationsverzeichnis</a>
  </h3>
   Hier sehen Sie zur Information den vollst&auml;ndigen Pfad
   des Konfigurationsverzeichnisses, d.h. des Verzeichnisses,
@@ -217,12 +273,14 @@
   Ist diese Umgebungsvariable nicht gesetzt,
   wird der Speicherort f&uuml;r die eigenen Dateien verwendet.
  <br/><br/>
-  Sie k&ouml;nnen das Verzeichnis auch l&ouml;schen.
+  Sie k&ouml;nnen das Verzeichnis auch l&ouml;schen (Schaltfl&auml;che
+  <em>Alle Einstellungen l&ouml;schen und JKCEMU zur&uuml;cksetzen...</em>).
   JKCEMU meldet sich dann beim n&auml;chsten Start so,
   als w&uuml;rde er auf dem Computer das erste mal gestartet werden.
  <br/><br/>
 
- <h2><a name="profiles">2. Einstellungen speichern</a></h2>
+
+ <h2><a name="profiles">2. Einstellungen speichern und laden</a></h2>
   Sie k&ouml;nnen Ihre Einstellungen in Form von Profilen
   speichern und wieder laden.
   Das Speichern ist erst m&ouml;glich, nachdem die Einstellungen
@@ -230,22 +288,47 @@
  <br/><br/>
   Wird beim Start des Emulators der Name eines solchen Profils
   als Argument angegeben, startet JKCEMU gleich mit diesen Einstellungen.
-  Anderenfalls versucht der Emulator, das Profil &quot;standard&quot; zu laden.
+  Anderenfalls versucht der Emulator, das Profil <em>standard</em> zu laden.
   Sie sollten deshalb Ihre am h&auml;ufigsten verwendeten Einstellungen
   unter diesem Namen speichern.
  <br/><br/>
   Ein Profil kann auch noch angewendet werden,
   nachdem der Emulator gestartet wurde.
   Den entsprechenden Men&uuml;punkt daf&uuml;r finden Sie
-  im JKCEMU-Hauptfenster, Men&uuml; <em>Extra</em>.
+  im JKCEMU-Hauptfenster unter
+  <em>Extra</em> &rarr; <em>Profil anwenden...</em>.
  <br/><br/>
-  Beim Speichern eines Profils werden auch die Positionen
-  und Gr&ouml;&szlig;en der gerade ge&ouml;ffneten Fenster gespeichert.
-  Wenn Sie sp&auml;ter so ein Profil anwenden,
-  &ouml;ffnen die Fenster dann wieder an den gespeicherten Positionen.
-  Fenster, die bereits offen sind,
-  werden davon allerdings nicht ber&uuml;hrt.
+  <b>Achtung!</b> Beim Speichern eines Profils werden alle Einstellungen
+  gespeichert, sowohl die Einstellungen f&uuml;r den eigentlichen Emulator
+  als auch die Positionen, Gr&ouml;&szlig;en und Einstellungen aller
+  gerade ge&ouml;ffneten Fenster und Werkzeuge.
+  Ebenfalls wird gespeichert, welche Audiofunktionen gerade aktiv sind.
+  Wenn Sie JKCEMU mit so einem gespeicherten Profil wieder starten,
+  werden alle diese Einstellungen angewendet.
+  Allerdings werden au&szlig;er f&uuml;r die eigentliche Emulation
+  notwendigen Fenster keine weiteren Fenster ge&ouml;ffnet.
  <br/><br/>
+  <b>Achtung!</b> Wenn Sie ein Profil nachtr&auml;glich &uuml;ber den
+  Men&uuml;punkt <em>Extra</em> &rarr; <em>Profil anwenden...</em>
+  laden, werden nicht alle Einstellungen angewendet.
+  Konkret werden die gespeicherten Fensterpositionen f&uuml;r bereits
+  ge&ouml;ffnete Fenster nicht angewendet,
+  da das zum Springen der Fenster f&uuml;hren kann,
+  was sehr verwirrend w&auml;re.
+  Des Weiteren werden die im Profil gespeicherten Audiofunktionen
+  nicht automatisch aktiviert, da das m&ouml;glicherweise
+  auch st&ouml;ren k&ouml;nnte.
+ <br/><br/>
+
+ <h3>
+  <a name="profile_exp_imp">2.1. Profile exportieren und importieren</a>
+ </h3>
+  Profile k&ouml;nnen exportiert und importiert werden,
+  um sie z.B. mit anderen JKCEMU-Anwendern austauschen zu k&ouml;nnen.
+  Die Export- und Importfunktionen stehen im Dialog zum Laden bzw.
+  Anwenden eines Profils zur Verf&uuml;gung.
+ <br/><br/>
+
 
  <h2><a name="reset">3. Einstellungen zur&uuml;cksetzen</a></h2>
   Sollten Sie einmal Einstellungen verstellt haben und Sie wissen nicht,
@@ -253,18 +336,19 @@
   dann m&uuml;ssen Sie die Einstellungen zur&uuml;cksetzen.
   Das erledigen Sie durch L&ouml;schen des entsprechenden Profils
   und anschlie&szlig;endem Schlie&szlig;en des Emulators.
-  Das gilt insbesondere auch f&uuml;r das Profil &quot;standard&quot;.
+  Das gilt insbesondere auch f&uuml;r das Profil <em>standard</em>.
  <br/><br/>
   Zum L&ouml;schen eines Profils dr&uuml;cken Sie auf den Knopf
   <em>Profil laden...</em>.
   In dem dann erscheinenden Auswahldialog finden Sie den Knopf
-  zum l&ouml;schen.
+  zum L&ouml;schen.
  <br/><br/>
   Eine weitergehende M&ouml;glichkeit zum Zur&uuml;cksetzen
   der Einstellungen ist das L&ouml;schen des gesamten
-  Konfigurationsverzeichnisses.
+  Konfigurationsverzeichnisses (Schaltfl&auml;che
+  <em>Alle Einstellungen l&ouml;schen und JKCEMU zur&uuml;cksetzen...</em>).
   Wenn Sie dieses Verzeichnis l&ouml;schen,
-  startet JKCEMU beim n&auml;chsten Mal so,
-  als w&uuml;rde er das erste Mal auf dem Computer gestartet werden.
+  startet JKCEMU beim n&auml;chsten mal so,
+  als w&uuml;rde er das erste mal auf dem Computer gestartet werden.
 </body>
 </html>

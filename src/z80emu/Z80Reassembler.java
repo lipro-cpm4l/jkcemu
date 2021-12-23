@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2018 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -7,8 +7,6 @@
  */
 
 package z80emu;
-
-import java.lang.*;
 
 
 public class Z80Reassembler
@@ -1279,7 +1277,12 @@ public class Z80Reassembler
 
   private static String getIXYMem( String ixy, int d )
   {
-    return "(" + ixy + "+" + getByteText( d ) + ")";
+    d &= 0xFF;
+    return String.format(
+		"(%s%c%02XH)",
+		ixy,
+		d >= 0x80 ? '-' : '+',
+		d >= 0x80 ? (0x100 - d) : d );
   }
 
 

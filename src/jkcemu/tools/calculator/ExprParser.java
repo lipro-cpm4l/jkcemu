@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.tools.calculator;
 
-import java.lang.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -59,6 +58,11 @@ public class ExprParser
       }
       fireError( msg );
     }
+    catch( NumberFormatException ex ) {
+      fireError( "Ergebnis kann nicht berechnet werden.\n"
+		+ "M\u00F6glicherweise ist das Ergebnis"
+		+ " oder ein Zwischenergebnis unendlich." );
+    }
     return value;
   }
 
@@ -81,9 +85,21 @@ public class ExprParser
   }
 
 
+  private void fireDivisionByZero() throws ParseException
+  {
+    fireError( "Division durch 0" );
+  }
+
+
   private void fireError( String msg ) throws ParseException
   {
     throw new ParseException( msg, this.iter.getIndex() );
+  }
+
+
+  private void fireHexOverflow() throws ParseException
+  {
+    fireError( "Hexadezimalzahl zu gro\u00DF" );
   }
 
 
@@ -98,12 +114,6 @@ public class ExprParser
     return ((ch >= 'A') && (ch <= 'F'))
 		|| ((ch >= 'a') && (ch <= 'f'))
 		|| ((ch >= '0') && (ch <= '9'));
-  }
-
-
-  private void fireHexOverflow() throws ParseException
-  {
-    fireError( "Hexadezimalzahl zu gro\u00DF" );
   }
 
 
@@ -187,7 +197,7 @@ public class ExprParser
 	value = value.multiply( v2 );
       } else if( ch == '/' ) {
 	if( v2.compareTo( BigDecimal.ZERO ) == 0 ) {
-	  fireError( "Division durch 0" );
+	  fireDivisionByZero();
 	}
 	int scale1 = Math.max( value.precision(), value.scale() );
 	int scale2 = Math.max( v2.precision(), v2.scale() );
@@ -199,7 +209,7 @@ public class ExprParser
       } else if( ch == '%' ) {
 	long l2 = toLong( v2 );
 	if( l2 == 0 ) {
-	  fireError( "Module durch 0" );
+	  fireDivisionByZero();
 	}
 	value = new BigDecimal( toLong( value ) % l2 );
       }

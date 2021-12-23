@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -10,7 +10,6 @@
 
 package z80emu;
 
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -179,6 +178,13 @@ public class Z80SIO implements Z80InterruptSource
   }
 
 
+  public void reset( boolean powerOn )
+  {
+    this.a.reset( powerOn );
+    this.b.reset( powerOn );
+  }
+
+
   public void setClearToSendA( boolean state )
   {
     this.a.setCTS( state );
@@ -278,10 +284,10 @@ public class Z80SIO implements Z80InterruptSource
 	synchronized ( channel ) {
 	  int n = channel.recvFifoLen;
 	  if( n > 0 ) {
-	    buf.append( (char) ':' );
+	    buf.append( ':' );
 	    for( int k = 0; k < n; k++ ) {
 	      if( k > 0 ) {
-		buf.append( (char) ',' );
+		buf.append( ',' );
 	      }
 	      int b = channel.recvFifo[ i ];
 	      buf.append( String.format( " %02Xh", b & 0xFF ) );
@@ -442,26 +448,34 @@ public class Z80SIO implements Z80InterruptSource
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
+    boolean rv = false;
     if( (this.a.interruptAccepted & RECEIVER_INTERRUPT) != 0 ) {
       this.a.interruptAccepted &= ~RECEIVER_INTERRUPT;
+      rv = true;
     }
     else if( (this.a.interruptAccepted & SENDER_INTERRUPT) != 0 ) {
       this.a.interruptAccepted &= ~SENDER_INTERRUPT;
+      rv = true;
     }
     else if( (this.a.interruptAccepted & EXTERNAL_INTERRUPT) != 0 ) {
       this.a.interruptAccepted &= ~EXTERNAL_INTERRUPT;
+      rv = true;
     }
     else if( (this.b.interruptAccepted & RECEIVER_INTERRUPT) != 0 ) {
       this.b.interruptAccepted &= ~RECEIVER_INTERRUPT;
+      rv = true;
     }
     else if( (this.b.interruptAccepted & SENDER_INTERRUPT) != 0 ) {
       this.b.interruptAccepted &= ~SENDER_INTERRUPT;
+      rv = true;
     }
     else if( (this.b.interruptAccepted & EXTERNAL_INTERRUPT) != 0 ) {
       this.b.interruptAccepted &= ~EXTERNAL_INTERRUPT;
+      rv = true;
     }
+    return rv;
   }
 
 
@@ -493,20 +507,12 @@ public class Z80SIO implements Z80InterruptSource
   }
 
 
-  @Override
-  public void reset( boolean powerOn )
-  {
-    this.a.reset( powerOn );
-    this.b.reset( powerOn );
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public String toString()
   {
-    return this.title;
+    return this.title != null ? this.title : "SIO";
   }
 
 
@@ -921,7 +927,7 @@ public class Z80SIO implements Z80InterruptSource
 	      break;
 	    case 0x38:			// RETI (nur Kanal A)
 	      if( this.channelNum == 0 ) {
-		interruptFinish();
+		interruptFinish( 0 );	// Argument wird nicht ausgewertet
 	      }
 	      break;
 	  }

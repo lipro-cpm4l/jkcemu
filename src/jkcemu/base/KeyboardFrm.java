@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,68 +11,61 @@ package jkcemu.base;
 import java.awt.BorderLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JSeparator;
 import jkcemu.Main;
-import jkcemu.base.BaseFrm;
 
 
 public class KeyboardFrm extends BaseFrm
 {
   private static final String HELP_PAGE = "/help/keyboard.htm";
 
-  private ScreenFrm           screenFrm;
-  private AbstractKeyboardFld keyboardFld;
-  private JMenuItem           mnuClose;
-  private JCheckBoxMenuItem   mnuHoldShiftBtn;
-  private JSeparator          mnuHoldShiftSep;
-  private JMenuItem           mnuHelpContent;
+  private ScreenFrm                             screenFrm;
+  private AbstractKeyboardFld<? extends EmuSys> keyboardFld;
+  private JMenuItem                             mnuClose;
+  private JCheckBoxMenuItem                     mnuHoldShiftBtn;
+  private JSeparator                            mnuHoldShiftSep;
+  private JMenuItem                             mnuHelpContent;
 
 
   public KeyboardFrm(
-		ScreenFrm           screenFrm,
-		EmuSys              emuSys,
-		AbstractKeyboardFld keyboardFld )
+		ScreenFrm                             screenFrm,
+		EmuSys                                emuSys,
+		AbstractKeyboardFld<? extends EmuSys> keyboardFld )
   {
     this.screenFrm   = screenFrm;
     this.keyboardFld = keyboardFld;
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuHoldShiftBtn = new JCheckBoxMenuItem(
+    this.mnuHoldShiftBtn = GUIFactory.createCheckBoxMenuItem(
 			"Shift- und Control-Tasten gedr\u00FCckt halten",
 			this.keyboardFld.getHoldShift() );
     this.mnuHoldShiftBtn.addActionListener( this );
     mnuFile.add( this.mnuHoldShiftBtn );
 
-    this.mnuHoldShiftSep = new JSeparator();
+    this.mnuHoldShiftSep = GUIFactory.createSeparator();
     mnuFile.add( this.mnuHoldShiftSep );
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
+    JMenu mnuHelp = createMenuHelp();
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    this.mnuHelpContent = createMenuItem( "Hilfe zur Tastatur..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menuleiste
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuHelp ) );
 
 
     // Fensterinhalt
@@ -87,10 +80,10 @@ public class KeyboardFrm extends BaseFrm
 
     // sonstiges
     pack();
-    if( !applySettings( Main.getProperties(), false ) ) {
+    setResizable( false );
+    if( !applySettings( Main.getProperties() ) ) {
       setScreenCentered();
     }
-    setResizable( false );
     updWindowElements( emuSys );
   }
 
@@ -131,7 +124,7 @@ public class KeyboardFrm extends BaseFrm
 	}
 	else if( src == this.mnuHelpContent ) {
 	  rv = true;
-	  HelpFrm.open( HELP_PAGE );
+	  HelpFrm.openPage( HELP_PAGE );
 	}
       }
     }
@@ -192,9 +185,17 @@ public class KeyboardFrm extends BaseFrm
 
 
   @Override
-  public void resetFired()
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
-    this.keyboardFld.reset();
+    if( newEmuSys != null ) {
+      if( this.keyboardFld.accepts( newEmuSys ) ) {
+	this.keyboardFld.reset();
+      } else {
+	doClose();
+      }
+    } else {
+      this.keyboardFld.reset();
+    }
   }
 
 

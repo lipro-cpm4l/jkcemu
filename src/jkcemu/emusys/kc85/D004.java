@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,44 +8,56 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
+import java.awt.Component;
 import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.base.ScreenFrm;
+import jkcemu.base.EmuUtil;
 import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.emusys.KC85;
+import jkcemu.file.FileUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80Memory;
 
 
 public class D004 extends AbstractKC85Module
 {
-  private byte[]      rom;
-  private int         romAddr;
-  private boolean     connected;
-  private boolean     cpuEnableValue;
-  private boolean     cpuStopValue;
-  private boolean     cpuResetValue;
-  private boolean     cpuNMIValue;
-  private D004ProcSys procSys;
-  private Thread      thread;
+  protected KC85        kc85;
+  protected String      propPrefix;
+  protected D004ProcSys procSys;
+  protected String      romProp;
+  protected byte[]      romBytes;
+  protected int         romAddr;
+
+  private static final String TEXT_D004_ROM_FILE = "D004-ROM-Datei";
+
+  private static byte[] romD004_20    = null;
+  private static byte[] romD004_331_2 = null;
+  private static byte[] romD004_331_4 = null;
+
+  private volatile boolean connected;
+  private boolean          cpuEnableValue;
+  private boolean          cpuStopValue;
+  private boolean          cpuResetValue;
+  private boolean          cpuNMIValue;
+  private boolean          pendingStartUp;
+  private Thread           thread;
 
 
   public D004(
-		ScreenFrm  screenFrm,
-		Properties props,
-		String     propPrefix,
-		byte[]     rom )
+	KC85       kc85,
+	Properties props,
+	String     propPrefix )
   {
     super( 0xFC );
-    this.rom            = rom;
-    this.romAddr        = 0xC000;
-    this.connected      = false;
-    this.cpuEnableValue = false;
-    this.cpuStopValue   = false;
-    this.cpuResetValue  = false;
-    this.cpuNMIValue    = false;
-    this.procSys        = new D004ProcSys( screenFrm, props, propPrefix );
-    this.thread         = null;
+    this.kc85       = kc85;
+    this.propPrefix = propPrefix;
+    this.romProp    = EmuUtil.getProperty(
+				props,
+				propPrefix + KC85.PROP_DISKSTATION_ROM );
+    this.romBytes = loadROM( kc85 );
+    this.thread   = null;
+    this.procSys  = createProcSys( props, propPrefix );
+    reset( false );
   }
 
 
@@ -57,7 +69,48 @@ public class D004 extends AbstractKC85Module
 
   public boolean canApplySettings( Properties props )
   {
-    return this.procSys.canApplySettings( props );
+    return this.procSys.canApplySettings( props )
+		&& this.romProp.equals(
+			EmuUtil.getProperty(
+				props,
+				propPrefix + KC85.PROP_DISKSTATION_ROM ) )
+		&& EmuUtil.getProperty(
+			props,
+			this.propPrefix + KC85.PROP_DISKSTATION ).equals(
+				getDiskStationPropValue() );
+  }
+
+
+  protected D004ProcSys createProcSys(
+				Properties props,
+				String     propPrefix )
+  {
+    return new D004ProcSys(
+			this,
+			this.kc85.getScreenFrm(),
+			props,
+			propPrefix );
+  }
+
+
+  public synchronized void fireStop()
+  {
+    if( this.thread != null ) {
+      this.procSys.fireStop();
+      this.thread = null;
+    }
+  }
+
+
+  protected String getDiskStationPropValue()
+  {
+    return KC85.VALUE_D004;
+  }
+
+
+  public KC85 getKC85()
+  {
+    return this.kc85;
   }
 
 
@@ -73,18 +126,21 @@ public class D004 extends AbstractKC85Module
   }
 
 
-  public synchronized void fireStop()
-  {
-    if( this.thread != null ) {
-      this.procSys.fireStop();
-      this.thread = null;
-    }
-  }
-
-
   public int getSupportedFloppyDiskDriveCount()
   {
     return this.procSys.getSupportedFloppyDiskDriveCount();
+  }
+
+
+  public boolean isConnected()
+  {
+    return this.connected;
+  }
+
+
+  public boolean isLEDofGIDEon()
+  {
+    return this.procSys.isLEDofGIDEon();
   }
 
 
@@ -94,15 +150,58 @@ public class D004 extends AbstractKC85Module
   }
 
 
-  public void loadIntoRAM( byte[] loadData, int loadAddr, int startAddr )
+  public void loadIntoRAM(
+			byte[] dataBytes,
+			int    dataOffs,
+			int    begAddr )
   {
-    this.procSys.loadIntoRAM( loadData, loadAddr, startAddr );
+    this.procSys.loadIntoRAM( dataBytes, dataOffs, begAddr );
+  }
+
+
+  protected byte[] loadROM( KC85 kc85 )
+  {
+    byte[] romBytes = null;
+    if( (this.romProp.length() > KC85.VALUE_PREFIX_FILE.length())
+	&& this.romProp.startsWith( KC85.VALUE_PREFIX_FILE ) )
+    {
+      romBytes = FileUtil.readFile(
+		kc85.getScreenFrm(),
+		this.romProp.substring( KC85.VALUE_PREFIX_FILE.length() ),
+		true,
+		0x2000,
+		TEXT_D004_ROM_FILE );
+    }
+    if( romBytes == null ) {
+      if( this.romProp.equals( KC85.VALUE_ROM_20 ) ) {
+	romBytes = getROMBytes20();
+      } else if( this.romProp.equals( KC85.VALUE_ROM_33 ) ) {
+	if( kc85.getKCTypeNum() >= 4 ) {
+	  romBytes = getROMBytes331_4();
+	} else {
+	  romBytes = getROMBytes331_2();
+	}
+      } else {
+	if( kc85.getKCTypeNum() >= 4 ) {
+	  romBytes = getROMBytes331_4();
+	} else {
+	  romBytes = getROMBytes20();
+	}
+      }
+    }
+    return romBytes;
   }
 
 
   public void setDrive( int idx, FloppyDiskDrive drive )
   {
     this.procSys.setDrive( idx, drive );
+  }
+
+
+  public boolean supportsHDDisks()
+  {
+    return false;
   }
 
 
@@ -120,13 +219,6 @@ public class D004 extends AbstractKC85Module
   public int getBegAddr()
   {
     return this.romAddr;
-  }
-
-
-  @Override
-  public void clearRAM()
-  {
-    this.procSys.clearRAM();
   }
 
 
@@ -155,10 +247,10 @@ public class D004 extends AbstractKC85Module
   public int readMemByte( int addr )
   {
     int rv = -1;
-    if( this.enabled && (this.rom != null) ) {
+    if( this.enabled && (this.romBytes != null) ) {
       int idx = addr - this.romAddr;
-      if( (idx >= 0) && (idx < this.rom.length) ) {
-	rv = (int) this.rom[ idx ] & 0xFF;
+      if( (idx >= 0) && (idx < this.romBytes.length) ) {
+	rv = (int) this.romBytes[ idx ] & 0xFF;
       }
     }
     return rv;
@@ -178,6 +270,41 @@ public class D004 extends AbstractKC85Module
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void reload( Component owner )
+  {
+    if( (this.romProp.length() > KC85.VALUE_PREFIX_FILE.length())
+	&& this.romProp.startsWith( KC85.VALUE_PREFIX_FILE ) )
+    {
+      byte[] romBytes = FileUtil.readFile(
+		owner,
+		this.romProp.substring( KC85.VALUE_PREFIX_FILE.length() ),
+		true,
+		0x2000,
+		TEXT_D004_ROM_FILE );
+      if( romBytes != null ) {
+	this.romBytes = romBytes;
+      }
+    }
+  }
+
+
+  @Override
+  public void reset( boolean powerOn )
+  {
+    if( powerOn ) {
+      fireStop();
+      this.procSys.clearRAM( Main.getProperties() );
+    }
+    this.connected      = false;
+    this.cpuEnableValue = false;
+    this.cpuStopValue   = false;
+    this.cpuResetValue  = false;
+    this.cpuNMIValue    = false;
+    this.romAddr        = 0xC000;
   }
 
 
@@ -248,5 +375,38 @@ public class D004 extends AbstractKC85Module
       this.thread = t;
       t.start();
     }
+  }
+
+
+  private byte[] getROMBytes20()
+  {
+    if( romD004_20 == null ) {
+      romD004_20 = EmuUtil.readResource(
+				this.kc85.getScreenFrm(),
+				"/rom/kc85/d004_20.bin" );
+    }
+    return romD004_20;
+  }
+
+
+  private byte[] getROMBytes331_2()
+  {
+    if( romD004_331_2 == null ) {
+      romD004_331_2 = EmuUtil.readResource(
+				this.kc85.getScreenFrm(),
+				"/rom/kc85/d004_331_2.bin" );
+    }
+    return romD004_331_2;
+  }
+
+
+  private byte[] getROMBytes331_4()
+  {
+    if( romD004_331_4 == null ) {
+      romD004_331_4 = EmuUtil.readResource(
+				this.kc85.getScreenFrm(),
+				"/rom/kc85/d004_331_4.bin" );
+    }
+    return romD004_331_4;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 package jkcemu.disk;
 
 import java.awt.Window;
-import java.lang.*;
 import java.util.Collections;
 import java.util.ArrayList;
 import javax.swing.table.AbstractTableModel;

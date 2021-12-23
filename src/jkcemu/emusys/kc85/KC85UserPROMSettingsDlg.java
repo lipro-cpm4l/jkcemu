@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,7 +20,6 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -30,7 +29,9 @@ import javax.swing.JRadioButton;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileNameFld;
+import jkcemu.base.GUIFactory;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
 
 
 public class KC85UserPROMSettingsDlg
@@ -38,14 +39,18 @@ public class KC85UserPROMSettingsDlg
 			implements DropTargetListener
 {
   private static String[][] moduleTable = {
-		{ "M025", "F7: 8K User PROM/EPROM", "FB: 8K ROM" },
+		{ "M025", "01: Autostart", "F7: 8K User PROM/EPROM",
+					"FB: 8K ROM" },
 		{ "M028", "F8: 16K User PROM/EPROM", "FC: 16K ROM" },
 		{ "M040", "01: Autostart", "F7: 8K User PROM/EPROM",
 					"F8: 16K User PROM/EPROM" },
-		{ "M045", "70" },
-		{ "M046", "71" },
-		{ "M047", "72" },
-		{ "M048", "73" } };
+		{ "M041", "01: Autostart", "F1: 16K EEPROM",
+					"F8: 16K User PROM/EPROM",
+					"FC: 16K ROM" },
+		{ "M045", "01: Autostart", "70: 4x8K PROM/EPROM" },
+		{ "M046", "01: Autostart", "71: 8x8K PROM/EPROM" },
+		{ "M047", "01: Autostart", "72: 16x8K PROM/EPROM" },
+		{ "M048", "01: Autostart", "73: 16x16K PROM/EPROM" } };
 
   private Frame          owner;
   private String         approvedFileName;
@@ -71,7 +76,7 @@ public class KC85UserPROMSettingsDlg
     this.approvedTypeByteText = null;
     this.moduleName           = moduleName;
     this.moduleTableRow       = null;
-    for( String[] moduleTableRow : this.moduleTable ) {
+    for( String[] moduleTableRow : moduleTable ) {
       if( moduleTableRow.length > 1 ) {
 	if( moduleTableRow[ 0 ].equals( moduleName ) ) {
 	  this.moduleTableRow = moduleTableRow;
@@ -96,7 +101,7 @@ public class KC85UserPROMSettingsDlg
     this.typeByteBtns = null;
     if( this.moduleTableRow != null ) {
       if( this.moduleTableRow.length > 2 ) {
-	add( new JLabel( "Strukturbyte:" ), gbc );
+	add( GUIFactory.createLabel( "Strukturbyte:" ), gbc );
 
 	ButtonGroup grpTypeByte = new ButtonGroup();
 	boolean     selected    = false;
@@ -106,11 +111,11 @@ public class KC85UserPROMSettingsDlg
 					this.moduleTableRow.length - 1 ];
 	for( int i = 0; i < this.typeByteBtns.length; i++ ) {
 	  String       text = this.moduleTableRow[ i + 1 ];
-	  JRadioButton btn  = new JRadioButton( text );
-	  grpTypeByte.add( btn );
+	  JRadioButton rb   = GUIFactory.createRadioButton( text );
+	  grpTypeByte.add( rb );
 	  if( typeByteText != null ) {
 	    if( text.startsWith( typeByteText ) ) {
-	      btn.setSelected( true );
+	      rb.setSelected( true );
 	      selected = true;
 	    }
 	  }
@@ -122,8 +127,8 @@ public class KC85UserPROMSettingsDlg
 	    gbc.insets.bottom = 5;
 	  }
 	  gbc.gridy++;
-	  add( btn, gbc );
-	  this.typeByteBtns[ i ] = btn;
+	  add( rb, gbc );
+	  this.typeByteBtns[ i ] = rb;
 	}
 	if( !selected ) {
 	  this.typeByteBtns[ 0 ].setSelected( true );
@@ -135,7 +140,7 @@ public class KC85UserPROMSettingsDlg
     gbc.insets.top  = 10;
     gbc.insets.left = 5;
     gbc.gridy++;
-    add( new JLabel( "ROM-Datei:" ), gbc );
+    add( GUIFactory.createLabel( "ROM-Datei:" ), gbc );
 
     this.fileNameFld = new FileNameFld();
     if( fileName != null ) {
@@ -148,18 +153,20 @@ public class KC85UserPROMSettingsDlg
     gbc.gridy++;
     add( this.fileNameFld, gbc );
 
-    this.btnSelect = createImageButton(
-				"/images/file/open.png",
-				"ROM-Datei ausw\u00E4hlen" );
-    this.btnSelect.addKeyListener( this );
+    this.btnSelect = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_SELECT_ROM_FILE );
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;
     gbc.insets.left = 0;
     gbc.gridx++;
     add( this.btnSelect, gbc );
 
+
     // Knoepfe
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn   = GUIFactory.createPanel(
+					new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor        = GridBagConstraints.CENTER;
     gbc.insets.top    = 10;
     gbc.insets.left   = 5;
@@ -169,20 +176,24 @@ public class KC85UserPROMSettingsDlg
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
+    this.btnOK = GUIFactory.createButtonOK();
     this.btnOK.setEnabled( this.fileNameFld.getFile() != null );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
+
 
     // Fenstergroesse
     pack();
     setParentCentered();
+
+
+    // Listener
+    this.btnSelect.addActionListener( this );
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
+
 
     // Drag&Drop ermoeglichen
     (new DropTarget( this.fileNameFld, this )).setActive( true );
@@ -206,7 +217,7 @@ public class KC85UserPROMSettingsDlg
   @Override
   public void dragEnter( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
+    if( !FileUtil.isFileDrop( e ) )
       e.rejectDrag();
   }
 
@@ -232,17 +243,15 @@ public class KC85UserPROMSettingsDlg
     DropTargetContext context = e.getDropTargetContext();
     if( context != null ) {
       if( context.getComponent() == this.fileNameFld ) {
-	File file = EmuUtil.fileDrop( this, e );
+	File file = FileUtil.fileDrop( this, e );
 	if( file != null ) {
 	  this.fileNameFld.setFile( file );
 	  this.btnOK.setEnabled( true );
-	  done = true;
 	}
+	done = true;
       }
     }
-    if( done ) {
-      e.dropComplete( true );
-    } else {
+    if( !done ) {
       e.rejectDrop();
     }
   }
@@ -251,8 +260,7 @@ public class KC85UserPROMSettingsDlg
   @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
+    // leer
   }
 
 
@@ -290,9 +298,9 @@ public class KC85UserPROMSettingsDlg
     File file = this.fileNameFld.getFile();
     if( file != null ) {
       if( this.typeByteBtns != null ) {
-	for( JRadioButton btn : this.typeByteBtns ) {
-	  if( btn.isSelected() ) {
-	    String text = btn.getText();
+	for( JRadioButton rb : this.typeByteBtns ) {
+	  if( rb.isSelected() ) {
+	    String text = rb.getText();
 	    if( text != null ) {
 	      int pos = text.indexOf( ':' );
 	      if( pos >= 0 ) {
@@ -326,11 +334,11 @@ public class KC85UserPROMSettingsDlg
     if( file == null ) {
       file = Main.getLastDirFile( Main.FILE_GROUP_ROM );
     }
-    file = EmuUtil.showFileOpenDlg(
+    file = FileUtil.showFileOpenDlg(
 			this.owner,
-			"ROM-Datei ausw\u00E4hlen",
+			EmuUtil.TEXT_SELECT_ROM_FILE,
 			file,
-			EmuUtil.getROMFileFilter() );
+			FileUtil.getROMFileFilter() );
     if( file != null ) {
       this.fileNameFld.setFile( file );
       this.btnOK.setEnabled( true );

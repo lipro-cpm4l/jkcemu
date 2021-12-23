@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,24 +9,35 @@
 package jkcemu.emusys.ac1_llc2;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
+import java.util.ArrayList;
 import java.util.Properties;
+import jkcemu.audio.AbstractSoundDevice;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
 import jkcemu.base.SourceUtil;
+import jkcemu.disk.GIDE;
+import jkcemu.etc.CPUSynchronSoundDevice;
+import jkcemu.etc.K1520Sound;
+import jkcemu.etc.PSG8910;
+import jkcemu.net.KCNet;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80MemView;
 import z80emu.Z80PCListener;
 import z80emu.Z80PIO;
 
 
 public abstract class AbstractSCCHSys
-			extends EmuSys
-			implements Z80PCListener
+				extends EmuSys
+				implements
+					Z80MaxSpeedListener,
+					Z80PCListener
 {
   public static final String PROP_JOYSTICK_ENABLED = "joystick.enabled";
   public static final String PROP_SCCH_PREFIX      = "scch.";
@@ -46,7 +57,7 @@ public abstract class AbstractSCCHSys
 		= PROP_SCCH_PREFIX + PROP_ROMDISK_PREFIX + PROP_FILE;
 
   // Einprung zum Lesen eines Zeichens von der Tastatur
-  private static int ADDR_INCH = 0x1802;
+  private static final int ADDR_INCH = 0x1802;
 
   /*
    * Diese Tabelle mappt die Tokens des SCCH-BASIC-Interpreters
@@ -155,35 +166,43 @@ public abstract class AbstractSCCHSys
 		'\u2581', '\u2582', '\u2583', '\u2584',
 		'\u2585', '\u2586', '\u2587', '\u2588' };
 
-  protected Z80PIO           pio1;
-  protected volatile boolean joystickEnabled;
-  protected volatile boolean joystickSelected;
-  protected int              joystickValue;
-  protected int              keyboardValue;
-  protected boolean          rf32KActive;
-  protected boolean          rf32NegA15;
-  protected boolean          rfReadEnabled;
-  protected boolean          rfWriteEnabled;
-  protected int              rfAddr16to19;
-  protected byte[]           ramModule3;
-  protected byte[]           scchBasicRomBytes;
-  protected byte[]           scchPrgXRomBytes;
-  protected byte[]           scchRomdiskBytes;
-  protected String           scchBasicRomFile;
-  protected String           scchPrgXRomFile;
-  protected String           scchRomdiskFile;
-  protected boolean          scchBasicRomEnabled;
-  protected int              scchBasicRomBegAddr;
-  protected boolean          scchPrgXRomEnabled;
-  protected boolean          scchRomdiskEnabled;
-  protected int              scchRomdiskBegAddr;
-  protected int              scchRomdiskBankAddr;
-  protected volatile boolean pasteFast;
-  protected boolean          v24BitOut;
-  protected int              v24BitNum;
-  protected int              v24ShiftBuf;
-  protected int              v24TStateCounter;
-  protected int              v24TStatesPerBit;
+  protected Z80PIO                 pio1;
+  protected GIDE                   gide;
+  protected CPUSynchronSoundDevice loudspeaker;
+  protected K1520Sound             k1520Sound;
+  protected KCNet                  kcNet;
+  protected VDIP                   vdip;
+  protected volatile boolean       joystickEnabled;
+  protected volatile boolean       joystickSelected;
+  protected int                    joystickValue;
+  protected int                    keyboardValue;
+  protected boolean                rf32KActive;
+  protected boolean                rf32NegA15;
+  protected boolean                rfReadEnabled;
+  protected boolean                rfWriteEnabled;
+  protected int                    rfAddr16to19;
+  protected byte[]                 ramModule3;
+  protected byte[]                 scchBasicRomBytes;
+  protected byte[]                 scchPrgXRomBytes;
+  protected byte[]                 scchRomdiskBytes;
+  protected String                 scchBasicRomFile;
+  protected String                 scchPrgXRomFile;
+  protected String                 scchRomdiskFile;
+  protected boolean                scchBasicRomEnabled;
+  protected int                    scchBasicRomBegAddr;
+  protected boolean                scchPrgXRomEnabled;
+  protected boolean                scchRomdiskEnabled;
+  protected int                    scchRomdiskBegAddr;
+  protected int                    scchRomdiskBankAddr;
+  protected volatile boolean       pasteFast;
+  protected boolean                v24BitOut;
+  protected int                    v24BitNum;
+  protected int                    v24ShiftBuf;
+  protected int                    v24TStateCounter;
+  protected int                    v24TStatesPerBit;
+
+
+  private static AutoInputCharSet autoInputCharSet = null;
 
   private byte[] gsbasic;
 
@@ -205,8 +224,75 @@ public abstract class AbstractSCCHSys
     this.scchRomdiskFile     = null;
     this.scchRomdiskBegAddr  = getScchRomdiskBegAddr( props );
     this.scchRomdiskBankAddr = 0;
-    this.pasteFast           = false;
+    this.pasteFast           = true;
     this.gsbasic             = null;
+    this.loudspeaker         = new CPUSynchronSoundDevice( "Lautsprecher" );
+    this.k1520Sound          = null;
+    this.kcNet               = null;
+    this.vdip                = null;
+    if( emulatesK1520Sound( props ) ) {
+      this.k1520Sound = new K1520Sound( this, 0x38 );
+    }
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0h-C3h)" );
+    }
+    if( emulatesVDIP( props ) ) {
+      this.vdip = new VDIP(
+			0,
+			this.emuThread.getZ80CPU(),
+			"USB-PIO (E/A-Adressen DCh-DFh, FCh-FFh)" );
+      this.vdip.applySettings( props );
+    }
+    this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
+  }
+
+
+  public static AutoInputCharSet getAutoInputCharSet()
+  {
+    if( autoInputCharSet == null ) {
+      autoInputCharSet = new AutoInputCharSet();
+      autoInputCharSet.addAsciiChars();
+      autoInputCharSet.addCursorChars();
+      autoInputCharSet.addEnterChar();
+      autoInputCharSet.addDelChar();
+      autoInputCharSet.addEscChar();
+      autoInputCharSet.addCtrlCodes();
+    }
+    return autoInputCharSet;
+  }
+
+
+  protected boolean canApplyScchSettings( Properties props )
+  {
+    boolean rv = (emulatesJoystick( props ) == this.joystickEnabled);
+    if( rv ) {
+      rv = TextUtil.equals(
+	this.scchBasicRomFile,
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_SCCH_BASIC_FILE ) );
+    }
+    if( rv && (this.scchBasicRomFile != null)) {
+      rv = (this.scchBasicRomBegAddr == getScchBasicRomBegAddr( props ));
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+	this.scchPrgXRomFile,
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_SCCH_PROGRAM_X_FILE ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+	this.scchRomdiskFile,
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_SCCH_ROMDISK_FILE ) );
+    }
+    if( rv && (this.scchRomdiskFile != null)) {
+      rv = (this.scchRomdiskBegAddr == getScchRomdiskBegAddr( props ));
+    }
+    return rv;
   }
 
 
@@ -217,7 +303,7 @@ public abstract class AbstractSCCHSys
       boolean pasteFast = EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + PROP_PASTE_FAST,
-				false );
+				true );
       if( pasteFast != this.pasteFast ) {
 	this.pasteFast = pasteFast;
 	if( pasteFast ) {
@@ -230,38 +316,11 @@ public abstract class AbstractSCCHSys
   }
 
 
-  protected boolean emulatesFloppyDisk( Properties props )
-  { 
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_FDC_ENABLED,
-			false );
-  }
-
-
   protected boolean emulatesJoystick( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + PROP_JOYSTICK_ENABLED,
-			false );
-  }
-
-
-  protected boolean emulatesKCNet( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_KCNET_ENABLED,
-			false );
-  }
-
-
-  protected boolean emulatesUSB( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_VDIP_ENABLED,
 			false );
   }
 
@@ -332,7 +391,7 @@ public abstract class AbstractSCCHSys
   }
 
 
-  protected void loadROMs( Properties props, String basicResource )
+  protected void loadScchROMs( Properties props, String basicResource )
   {
     // SCCH BASIC-ROM
     this.scchBasicRomFile = EmuUtil.getProperty(
@@ -418,6 +477,21 @@ public abstract class AbstractSCCHSys
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.loudspeaker.z80MaxSpeedChanged( cpu );
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80MaxSpeedChanged( cpu );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
 	/* --- Z80PCListener --- */
 
   @Override
@@ -446,37 +520,64 @@ public abstract class AbstractSCCHSys
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
+  }
+
+
+  @Override
   public boolean canApplySettings( Properties props )
   {
-    boolean rv = (emulatesJoystick( props ) == this.joystickEnabled);
-    if( rv ) {
-      rv = TextUtil.equals(
-	this.scchBasicRomFile,
-	EmuUtil.getProperty(
-		props,
-		this.propPrefix + PROP_SCCH_BASIC_FILE ) );
+    boolean rv = GIDE.complies( this.gide, props, this.propPrefix );
+    if( rv && (emulatesK1520Sound( props ) != (this.k1520Sound != null)) ) {
+      rv = false;
     }
-    if( rv && (this.scchBasicRomFile != null)) {
-      rv = (this.scchBasicRomBegAddr == getScchBasicRomBegAddr( props ));
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
     }
-    if( rv ) {
-      rv = TextUtil.equals(
-	this.scchPrgXRomFile,
-	EmuUtil.getProperty(
-		props,
-		this.propPrefix + PROP_SCCH_PROGRAM_X_FILE ) );
-    }
-    if( rv ) {
-      rv = TextUtil.equals(
-	this.scchRomdiskFile,
-	EmuUtil.getProperty(
-		props,
-		this.propPrefix + PROP_SCCH_ROMDISK_FILE ) );
-    }
-    if( rv && (this.scchRomdiskFile != null)) {
-      rv = (this.scchRomdiskBegAddr == getScchRomdiskBegAddr( props ));
+    if( rv && (emulatesVDIP( props ) != (this.vdip != null)) ) {
+      rv = false;
     }
     return rv;
+  }
+
+
+  @Override
+  public void die()
+  {
+    if( this.vdip != null ) {
+      this.vdip.die();
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.die();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.die();
+    }
+    if( this.gide != null ) {
+      this.gide.die();
+    }
+    if( this.pasteFast ) {
+      this.emuThread.getZ80CPU().removePCListener( this );
+      this.pasteFast = false;
+    }
+    this.loudspeaker.fireStop();
+    super.die();
+  }
+
+
+  @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return this.k1520Sound != null ?
+		new AbstractSoundDevice[] {
+				this.loudspeaker,
+				this.k1520Sound.getSoundDevice() }
+		: new AbstractSoundDevice[] { this.loudspeaker };
   }
 
 
@@ -484,6 +585,15 @@ public abstract class AbstractSCCHSys
   public int getSupportedJoystickCount()
   {
     return this.joystickEnabled ? 1 : 0;
+  }
+
+
+  @Override
+  public VDIP[] getVDIPs()
+  {
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -591,6 +701,51 @@ public abstract class AbstractSCCHSys
 
 
   @Override
+  public int readIOByte( int port, int tStates )
+  {
+    int rv = 0xFF;
+    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      int value = this.gide.read( port );
+      if( value >= 0 ) {
+	rv = value;
+      }
+    } else {
+      switch( port & 0xFF ) {
+	case 0xC0:
+	case 0xC1:
+	case 0xC2:
+	case 0xC3:
+	  if( this.kcNet != null ) {
+	    rv = this.kcNet.read( port );
+	  }
+	  break;
+
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.vdip != null ) {
+	    rv = this.vdip.read( port );
+	  }
+	  break;
+
+	default:
+	  if( (this.k1520Sound != null)
+	      && (port >= 0x38) && (port < 0x40) )
+	  {
+	    rv = this.k1520Sound.read( port, tStates );
+	  }
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   public int reassembleSysCall(
 			Z80MemView    memory,
 			int           addr,
@@ -684,9 +839,9 @@ public abstract class AbstractSCCHSys
 	  appendSpacesToCol( buf, bol, colArgs );
 	  buf.append( String.format( "%04XH", w ) );
 	  appendSpacesToCol( buf, bol, colRemark );
-	  buf.append( (char) ';' );
+	  buf.append( ';' );
 	  buf.append( s );
-	  buf.append( (char) '\n' );
+	  buf.append( '\n' );
 	  rv = 3;
 	}
 	break;
@@ -764,9 +919,9 @@ public abstract class AbstractSCCHSys
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
+    super.reset( powerOn, props );
     this.joystickSelected    = false;
     this.joystickValue       = 0;
     this.keyboardValue       = 0;
@@ -783,6 +938,19 @@ public abstract class AbstractSCCHSys
     this.v24BitNum           = 0;
     this.v24ShiftBuf         = 0;
     this.v24TStateCounter    = 0;
+    this.loudspeaker.reset();
+    if( this.gide != null ) {
+      this.gide.reset();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.reset( powerOn );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.reset( powerOn );
+    }
+    if( this.vdip != null ) {
+      this.vdip.reset( powerOn );
+    }
   }
 
 
@@ -794,6 +962,7 @@ public abstract class AbstractSCCHSys
       if( !text.isEmpty() ) {
 	if( this.pasteFast ) {
 	  cancelPastingText();
+	  informPastingTextStatusChanged( true );
 	  CharacterIterator iter = new StringCharacterIterator( text );
 	  char              ch   = iter.first();
 	  if( ch != CharacterIterator.DONE ) {
@@ -833,7 +1002,7 @@ public abstract class AbstractSCCHSys
       }
     }
     if( !done ) {
-      this.screenFrm.firePastingTextFinished();
+      informPastingTextStatusChanged( false );
     }
   }
 
@@ -849,6 +1018,61 @@ public abstract class AbstractSCCHSys
   public boolean supportsPasteFromClipboard()
   {
     return true;
+  }
+
+
+  @Override
+  public void writeIOByte( int port, int value, int tStates )
+  {
+    port &= 0xFF;
+    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      this.gide.write( port, value );
+    } else {
+      switch( port ) {
+	case 0xC0:
+	case 0xC1:
+	case 0xC2:
+	case 0xC3:
+	  if( this.kcNet != null ) {
+	    this.kcNet.write( port, value );
+	  }
+	  break;
+
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.vdip != null ) {
+	    this.vdip.write( port, value );
+	  }
+	  break;
+
+	default:
+	  if( (this.k1520Sound != null)
+	      && (port >= 0x38) && (port < 0x40) )
+	  {
+	    this.k1520Sound.write( port, value, tStates );
+	  }
+      }
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    this.loudspeaker.z80TStatesProcessed( cpu, tStates );
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
   }
 
 

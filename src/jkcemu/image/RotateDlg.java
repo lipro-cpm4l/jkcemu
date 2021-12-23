@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,16 +17,13 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
@@ -37,6 +34,7 @@ import javax.swing.event.ChangeListener;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class RotateDlg extends BaseDlg implements ChangeListener
@@ -50,11 +48,10 @@ public class RotateDlg extends BaseDlg implements ChangeListener
 			{ "grau",        Color.GRAY },
 			{ "schwarz",     Color.BLACK } };
 
-  private static boolean suppressIndexedColorsMsg = false;
-  private static int     lastBgColorIdx           = 0;
+  private static int lastBgColorIdx = 0;
 
   private ImageFrm          imageFrm;
-  private ImgFld            imgFld;
+  private ImageFld          imageFld;
   private BufferedImage     appliedImg;
   private BufferedImage     orgImg;
   private BufferedImage     previewImg;
@@ -115,16 +112,31 @@ public class RotateDlg extends BaseDlg implements ChangeListener
   }
 
 
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.slider.removeChangeListener( this );
+      this.spinner.removeChangeListener( this );
+      this.comboBackground.removeActionListener( this );
+      this.btnApply.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
 	/* --- Konstruktor --- */
 
   private RotateDlg( ImageFrm imageFrm )
   {
     super( imageFrm, "Drehen" );
     this.imageFrm   = imageFrm;
-    this.imgFld     = imageFrm.getImgFld();
+    this.imageFld   = imageFrm.getImageFld();
     this.appliedImg = null;
-    this.orgImg     = imgFld.getImage();
-    this.previewImg = imgFld.getNewPreviewImage();
+    this.orgImg     = imageFld.getImage();
+    this.previewImg = imageFld.getNewPreviewImage();
 
 
     // Fensterinhalt
@@ -141,14 +153,14 @@ public class RotateDlg extends BaseDlg implements ChangeListener
 
 
     // Spinner-Eingabefeld
-    JPanel panelSpinner = new JPanel();
+    JPanel panelSpinner = GUIFactory.createPanel();
     panelSpinner.setLayout( new BoxLayout( panelSpinner, BoxLayout.X_AXIS ) );
     add( panelSpinner, gbc );
 
-    panelSpinner.add( new JLabel( "Winkel:" ) );
+    panelSpinner.add( GUIFactory.createLabel( "Winkel:" ) );
     panelSpinner.add( Box.createHorizontalStrut( 5 ) );
 
-    this.spinner = new JSpinner(
+    this.spinner = GUIFactory.createSpinner(
 		new SpinnerNumberModel(
 				0F,
 				(float) MIN_DEGREES,
@@ -157,11 +169,11 @@ public class RotateDlg extends BaseDlg implements ChangeListener
     panelSpinner.add( this.spinner );
 
     panelSpinner.add( Box.createHorizontalStrut( 5 ) );
-    panelSpinner.add( new JLabel( "Grad" ) );
+    panelSpinner.add( GUIFactory.createLabel( "Grad" ) );
 
 
     // Schieberegler
-    this.slider = new JSlider(
+    this.slider = GUIFactory.createSlider(
 			SwingConstants.HORIZONTAL,
 			MIN_DEGREES,
 			MAX_DEGREES,
@@ -179,7 +191,7 @@ public class RotateDlg extends BaseDlg implements ChangeListener
 
 
     // Hintergrund
-    JPanel panelBackground = new JPanel();
+    JPanel panelBackground = GUIFactory.createPanel();
     panelBackground.setLayout(
 		new BoxLayout( panelBackground, BoxLayout.X_AXIS ) );
     gbc.insets.top = 10;
@@ -188,10 +200,10 @@ public class RotateDlg extends BaseDlg implements ChangeListener
     gbc.gridy++;
     add( panelBackground, gbc );
 
-    panelBackground.add( new JLabel( "Hintergrund:" ) );
+    panelBackground.add( GUIFactory.createLabel( "Hintergrund:" ) );
     panelBackground.add( Box.createHorizontalStrut( 5 ) );
 
-    this.comboBackground = new JComboBox<>();
+    this.comboBackground = GUIFactory.createComboBox();
     this.comboBackground.setEditable( false );
     for( Object[] bg : backgrounds ) {
       this.comboBackground.addItem( bg[ 0 ] );
@@ -203,15 +215,16 @@ public class RotateDlg extends BaseDlg implements ChangeListener
     }
     catch( IllegalArgumentException ex ) {}
 
+
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnApply = new JButton( "Anwenden" );
+    this.btnApply = GUIFactory.createButtonApply();
     panelBtn.add( this.btnApply );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -222,7 +235,7 @@ public class RotateDlg extends BaseDlg implements ChangeListener
 
 
     // Bild anzeigen
-    this.imgFld.setRotation( ImgFld.Rotation.NONE );
+    this.imageFld.setRotation( ImageFld.Rotation.NONE );
     updPreview();
     imageFrm.fireFitImage();
 
@@ -259,9 +272,9 @@ public class RotateDlg extends BaseDlg implements ChangeListener
 	}
       }
       if( bgColor == null ) {
-	bgColor = ImgUtil.transparentColor;
+	bgColor = ImageUtil.TRANSPARENT_COLOR;
       }
-      IndexColorModel icm = ImgUtil.getIndexColorModel( srcImg );
+      IndexColorModel icm = ImageUtil.getIndexColorModel( srcImg );
       if( icm != null ) {
 	/*
 	 * Wenn die Hintergrundfarbe im IndexColorModel enthalten ist,
@@ -321,7 +334,6 @@ public class RotateDlg extends BaseDlg implements ChangeListener
        */
       int w     = this.orgImg.getWidth();
       int h     = this.orgImg.getHeight();
-      int xOffs = -(w / 2);
       int yOffs = -(h / 2);
       int mOffs = (int) Math.round(
 		Math.sqrt( (double) ((w * w / 4) + (h * h / 4)) ) );
@@ -366,35 +378,22 @@ public class RotateDlg extends BaseDlg implements ChangeListener
       doClose();
 
       // Hinweis bzgl. indexiertem Farbmodell
-      IndexColorModel orgICM = ImgUtil.getIndexColorModel( this.orgImg );
+      IndexColorModel orgICM = ImageUtil.getIndexColorModel( this.orgImg );
       if( (orgICM != null)
-	  && (ImgUtil.getIndexColorModel( rotatedImg ) == null)
-	  && !suppressIndexedColorsMsg )
+	  && (ImageUtil.getIndexColorModel( rotatedImg ) == null) )
       {
-	StringBuilder buf = new StringBuilder( 512 );
-	buf.append( "Das urspr\u00FCngliche Bild hat ein indexiertes"
-		+ " Farbmodell mit " );
-	buf.append( orgICM.getMapSize() );
-	buf.append( " Farben.\n"
-		+ "Durch die Drehung ist eine zus\u00E4tzliche Farbe"
-		+ " f\u00FCr den Hintergrund hinzugekommen.\n"
-		+ "Dadurch hat das gedrehte Bild kein indexiertes Farbmodel"
-		+ " mehr.\n"
-		+ "Falls Sie jedoch eins ben\u00F6tigen,"
-		+ " k\u00F6nnen Sie mit dem Men\u00FCpunkt\n" );
-	buf.append( this.imageFrm.getMenuPathTextReduceColors() );
-	buf.append( "\nwieder eins erzeugen." );
-
-	JCheckBox cb = new JCheckBox(
-			"Diesen Hinweis zuk\u00FCnftig nicht mehr anzeigen",
-			false );
-
-	JOptionPane.showMessageDialog(
-			this.imageFrm,
-			new Object[] { buf.toString(), cb },
-			"Hinweis",
-			JOptionPane.INFORMATION_MESSAGE );
-	suppressIndexedColorsMsg = cb.isSelected();
+	showSuppressableInfoDlg(
+		this,
+		"Das urspr\u00FCngliche Bild hat ein indexiertes"
+			+ " Farbmodell.\n"
+			+ "Durch die Drehung ist eine zus\u00E4tzliche"
+			+ " Farbe f\u00FCr den Hintergrund hinzugekommen.\n"
+			+ "Dadurch hat das gedrehte Bild kein"
+			+ " indexiertes Farbmodel mehr.\n"
+			+ "Falls Sie jedoch eins ben\u00F6tigen,"
+			+ " k\u00F6nnen Sie mit dem Men\u00FCpunkt\n"
+			+ this.imageFrm.getMenuPathTextReduceColors()
+			+ " wieder eins erzeugen." );
       }
     }
   }
@@ -414,8 +413,8 @@ public class RotateDlg extends BaseDlg implements ChangeListener
      */
     BufferedImage rotatedImg = createRotatedImage( this.previewImg );
     if( rotatedImg != null ) {
-      this.imgFld.setImage( rotatedImg );
-      this.imgFld.repaint();
+      this.imageFld.setImage( rotatedImg );
+      this.imageFld.repaint();
     }
   }
 }

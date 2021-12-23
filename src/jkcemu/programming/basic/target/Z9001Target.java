@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
-import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.Z9001;
 import jkcemu.programming.basic.AbstractTarget;
@@ -49,6 +47,9 @@ public class Z9001Target extends AbstractTarget
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
   public void appendBssTo( AsmCodeBuf buf )
   {
     super.appendBssTo( buf );
@@ -60,9 +61,13 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendExitTo( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf, boolean isAppTypeSub )
   {
-    buf.append( "\tJP\t0000H\n" );
+    if( isAppTypeSub ) {
+      buf.append( "\tRET\n" );
+    } else {
+      buf.append( "\tJP\t0000H\n" );
+    }
   }
 
 
@@ -80,6 +85,7 @@ public class Z9001Target extends AbstractTarget
   }
 
 
+  @Override
   public void appendInitTo( AsmCodeBuf buf )
   {
     super.appendInitTo( buf );
@@ -93,21 +99,21 @@ public class Z9001Target extends AbstractTarget
   @Override
   public void appendInputTo(
 			AsmCodeBuf buf,
-			boolean    xckbrk,
-			boolean    xinkey,
-			boolean    xinch,
+			boolean    xCheckBreak,
+			boolean    xInkey,
+			boolean    xInch,
 			boolean    canBreakOnInput )
   {
-    if( xckbrk ) {
-      buf.append( "XCKBRK:\n" );
-      if( xinkey ) {
-	buf.append( "\tCALL\tXINKE1\n"
+    if( xCheckBreak ) {
+      buf.append( "XCHECK_BREAK:\n" );
+      if( xInkey ) {
+	buf.append( "\tCALL\tX_INKEY_1\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\t(X_M_INKEY),A\n"
 		+ "\tRET\n"
 		+ "XINKEY:\tLD\tA,(X_M_INKEY)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE1\n"
+		+ "\tJR\tZ,X_INKEY_1\n"
 		+ "\tPUSH\tAF\n"
 		+ "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n"
@@ -115,51 +121,55 @@ public class Z9001Target extends AbstractTarget
 		+ "\tRET\n" );
 	this.usesX_M_INKEY = true;
       }
-      buf.append( "XINKE1:\tLD\tC,0BH\n"
+      buf.append( "X_INKEY_1:\n"
+		+ "\tLD\tC,0BH\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINKE2\n"
+		+ "\tJR\tC,X_INKEY_2\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tC,01H\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINKE2\n"
+		+ "\tJR\tC,X_INKEY_2\n"
 		+ "\tCP\t03H\n"
 		+ "\tJR\tZ,XBREAK\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\n"
-		+ "XINKE2:\tXOR\tA\n"
+		+ "X_INKEY_2:\n"
+		+ "\tXOR\tA\n"
 		+ "\tRET\n" );
     } else {
-      if( xinkey ) {
+      if( xInkey ) {
 	buf.append( "XINKEY:\tLD\tC,0BH\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINKE1\n"
+		+ "\tJR\tC,X_INKEY_1\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tC,01H\n"
 		+ "\tCALL\t0005H\n" );
 	if( canBreakOnInput ) {
-	  buf.append( "\tJR\tC,XINKE1\n"
+	  buf.append( "\tJR\tC,X_INKEY_1\n"
 		+ "\tCP\t03H\n"
 		+ "\tJR\tZ,XBREAK\n"
 		+ "\tRET\n" );
 	} else {
 	  buf.append( "\tRET\tNC\n" );
 	}
-	buf.append( "XINKE1:\tXOR\tA\n"
+	buf.append( "X_INKEY_1:\n"
+		+ "\tXOR\tA\n"
 		+ "\tRET\n" );
       }
     }
-    if( xinch ) {
+    if( xInch ) {
       buf.append( "XINCH:\n" );
       if( this.usesX_M_INKEY ) {
 	buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n" );
       }
-      buf.append( "XINCH1:\tLD\tC,01H\n"
+      buf.append( "X_INCH_1:\n"
+		+ "\tLD\tC,01H\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINCH1\n" );
-      if( xckbrk || canBreakOnInput ) {
+		+ "\tJR\tC,X_INCH_1\n" );
+      if( xCheckBreak || canBreakOnInput ) {
 	buf.append( "\tCP\t03H\n"
 		+ "\tRET\tNZ\n"
 		+ "\tJR\tXBREAK\n" );
@@ -187,7 +197,7 @@ public class Z9001Target extends AbstractTarget
       StringBuilder tmpBuf = new StringBuilder( 8 );
       tmpBuf.append( appName );
       for( int i = len; i < 8; i++ ) {
-	tmpBuf.append( (char) '\u0020' );
+	tmpBuf.append( '\u0020' );
       }
       appName = tmpBuf.toString();
     } else if( len > 8 ) {
@@ -226,7 +236,7 @@ public class Z9001Target extends AbstractTarget
 		+ "\tCALL\tXOUTCH\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tA,L\n" );
-    if( this.xoutchAppended ) {
+    if( this.xOutchAppended ) {
       buf.append( "\tJR\tXOUTCH\n" );
     } else {
       appendXOutchTo( buf );
@@ -260,15 +270,61 @@ public class Z9001Target extends AbstractTarget
   }
 
 
+  /*
+   * Abfrage der Zeile der aktuellen Cursor-Position
+   */
   @Override
-  public void appendXCursTo( AsmCodeBuf buf )
+  public void appendXCrsLinTo( AsmCodeBuf buf )
   {
-    buf.append( "XCURS:\tLD\tC,1DH\n"		// DCU (Cursor loeschen)
+    buf.append( "XCRSLIN:\n"
+		+ "\tLD\tA,(002CH)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,X_CRSLIN_1\n"
+		+ "\tDEC\tA\n"
+		+ "\tCP\t18H\n"
+		+ "\tJR\tNC,X_CRSLIN_1\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n"
+		+ "X_CRSLIN_1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
+  }
+
+
+  /*
+   * Abfrage der Spalte der aktuellen Cursor-Position
+   */
+  @Override
+  public void appendXCrsPosTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSPOS:\n"
+		+ "\tLD\tA,(002BH)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,X_CRSPOS_1\n"
+		+ "\tDEC\tA\n"
+		+ "\tCP\t28H\n"
+		+ "\tJR\tNC,X_CRSPOS_1\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n"
+		+ "X_CRSPOS_1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
+  }
+
+
+  @Override
+  public void appendXCursorTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCURSOR:\n"
+		+ "\tLD\tC,1DH\n"		// DCU (Cursor loeschen)
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
-		+ "\tJR\tZ,XCURS1\n"
+		+ "\tJR\tZ,X_CURSOR_1\n"
 		+ "\tINC\tC\n"			// SCU (Cursor setzen)
-		+ "XCURS1:\tJP\t0005H\n" );
+		+ "X_CURSOR_1:\n"
+		+ "\tJP\t0005H\n" );
   }
 
 
@@ -298,23 +354,27 @@ public class Z9001Target extends AbstractTarget
    * Rueckgabewert:
    *   HL: Joystickstatus
    */
+  @Override
   public void appendXJoyTo( AsmCodeBuf buf )
   {
     buf.append( "XJOY:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XJOY3\n"
+		+ "\tJR\tNZ,X_JOY_3\n"
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XJOY1\n"
+		+ "\tJR\tNZ,X_JOY_1\n"
 		+ "\tLD\tA,(0013H)\n"
-		+ "\tJR\tXJOY2\n"
-		+ "XJOY1:\tCP\t01H\n"
-		+ "\tJR\tNZ,XJOY3\n"
+		+ "\tJR\tX_JOY_2\n"
+		+ "X_JOY_1:\n"
+		+ "\tCP\t01H\n"
+		+ "\tJR\tNZ,X_JOY_3\n"
 		+ "\tLD\tA,(0014H)\n"
-		+ "XJOY2:\tLD\tL,A\n"
+		+ "X_JOY_2:\n"
+		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XJOY3:\tLD\tHL,0000H\n"
+		+ "X_JOY_3:\n"
+		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
   }
 
@@ -344,11 +404,11 @@ public class Z9001Target extends AbstractTarget
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       buf.append( "XOUTCH:\tLD\tC,2\n"
 		+ "\tLD\tE,A\n"
 		+ "\tJP\t0005H\n" );
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -392,13 +452,13 @@ public class Z9001Target extends AbstractTarget
   @Override
   public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPAINT:\tCALL\tX_PST\n"
+    buf.append( "XPAINT:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tCALL\tXPSET2\n"
+		+ "\tCALL\tX_PSET_2\n"
 		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n" );
     appendXPSetTo( buf, compiler );
@@ -414,10 +474,11 @@ public class Z9001Target extends AbstractTarget
    *   HL >= 0: Farbcode des Pixels
    *   HL=-1:   Pixel exisitiert nicht
    */
+  @Override
   public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPOINT:\tCALL\tX_PST\n"
-		+ "\tJR\tC,XPOINT2\n"
+    buf.append( "XPOINT:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_POINT_2\n"
     // Farbbyte lesen
 		+ "\tRES\t2,H\n"
 		+ "\tLD\tD,(HL)\n"
@@ -426,18 +487,18 @@ public class Z9001Target extends AbstractTarget
 		+ "\tAND\tC\n"
 		+ "\tLD\tA,D\n"
 		+ "\tLD\tE,07H\n"
-		+ "\tJR\tZ,XPOINT1\n"
+		+ "\tJR\tZ,X_POINT_1\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tLD\tE,0FH\n"
-		+ "XPOINT1:\n"
+		+ "X_POINT_1:\n"
 		+ "\tAND\tE\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XPOINT2:\n"
+		+ "X_POINT_2:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
     appendPixUtilTo( buf );
@@ -453,15 +514,15 @@ public class Z9001Target extends AbstractTarget
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tJR\tXPSET1\n" );
+      buf.append( "\tJR\tX_PSET_1\n" );
     } else {
       buf.append( "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
     }
     appendXPSetTo( buf, compiler );
   }
@@ -477,30 +538,33 @@ public class Z9001Target extends AbstractTarget
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
       if( this.usesX_M_PEN ) {
         buf.append( "\tLD\tA,(X_M_PEN)\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+		+ "\tJR\tZ,X_PSET_2\n"		// Stift 1 (Normal)
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+		+ "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
 		+ "\tDEC\tA\n"
 		+ "\tRET\tNZ\n"
 		+ "\tLD\tA,B\n"			// Stift 3 (XOR-Mode)
 		+ "\tXOR\tC\n"
-		+ "\tJR\tXPSET3\n"
-		+ "XPSET1:\tLD\tA,C\n"		// Pixel loeschen
+		+ "\tJR\tX_PSET_3\n"
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
       }
-      buf.append( "XPSET2:\tLD\tA,B\n"		// Pixel setzen
+      buf.append( "X_PSET_2:\n"			// Pixel setzen
+		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
-		+ "XPSET3:\tEX\tDE,HL\n"
+		+ "X_PSET_3:\n"
+		+ "\tEX\tDE,HL\n"
 		+ "\tLD\tB,0\n"
 		+ "\tLD\tC,A\n"
-		+ "\tLD\tHL,XPSET_TAB\n"
+		+ "\tLD\tHL,X_PSET_TAB\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(DE),A\n" );
@@ -511,7 +575,7 @@ public class Z9001Target extends AbstractTarget
       }
       buf.append( "\tRET\n"
       // Umcodierungstabelle von Bitmuster zu Zeichen
-		+ "XPSET_TAB:\n"
+		+ "X_PSET_TAB:\n"
 		+ "\tDB\t20H,0B3H,0B2H,0B7H,0B0H,0B4H,0B8H,0BBH\n"
 		+ "\tDB\t0B1H,0B9H,0B5H,0BAH,0B6H,0BCH,0BDH,0FFH\n" );
       appendPixUtilTo( buf );
@@ -532,15 +596,15 @@ public class Z9001Target extends AbstractTarget
   @Override
   public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPTEST:\tCALL\tX_PST\n"
-		+ "\tJR\tC,X_PTEST1\n"
+    buf.append( "XPTEST:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "X_PTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
     appendPixUtilTo( buf );
@@ -567,7 +631,7 @@ public class Z9001Target extends AbstractTarget
     int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof Z9001 ) {
-        rv = 3;
+        rv = 2;
       }
     }
     return rv;
@@ -578,6 +642,13 @@ public class Z9001Target extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x0300;
+  }
+
+
+  @Override
+  public int getGideIOBaseAddr()
+  {
+    return 0x50;
   }
 
 
@@ -645,7 +716,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public boolean supportsXCURS()
+  public boolean supportsXCURSOR()
   {
     return true;
   }
@@ -659,7 +730,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public boolean supportsXLOCAT()
+  public boolean supportsXLOCATE()
   {
     return true;
   }
@@ -704,9 +775,10 @@ public class Z9001Target extends AbstractTarget
        *         dass das Pixel in der Speicherzelle beschreibt
        *   HL:   Speicherzelle, in der sich das Pixel befindet
        */
-      buf.append( "X_PST:\tLD\tA,D\n"
+      buf.append( "X_PINFO:\n"
+		+ "\tLD\tA,D\n"
 		+ "\tOR\tH\n"
-		+ "\tJR\tNZ,X_PST3\n"
+		+ "\tJR\tNZ,X_PINFO_3\n"
 		+ "\tLD\tA,4FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
@@ -715,13 +787,15 @@ public class Z9001Target extends AbstractTarget
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
-		+ "\tJR\tNC,X_PST1\n"
+		+ "\tJR\tNC,X_PINFO_1\n"
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST1:\tSRL\tE\n"
-		+ "\tJR\tNC,X_PST2\n"
+		+ "X_PINFO_1:\n"
+		+ "\tSRL\tE\n"
+		+ "\tJR\tNC,X_PINFO_2\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST2:\tEX\tDE,HL\n"
+		+ "X_PINFO_2:\n"
+		+ "\tEX\tDE,HL\n"
 		+ "\tLD\tBC,0EF98H\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tEX\tDE,HL\n"
@@ -752,7 +826,7 @@ public class Z9001Target extends AbstractTarget
 		+ "\tCP\t0EH\n"		// >= 0BEh: 4 nicht gesetzte Pixel
 		+ "\tRET\tNC\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tLD\tHL,X_PST_TAB\n"
+		+ "\tLD\tHL,X_PINFO_TAB\n"
 		+ "\tLD\tD,0\n"
 		+ "\tLD\tE,A\n"
 		+ "\tADD\tHL,DE\n"
@@ -761,10 +835,11 @@ public class Z9001Target extends AbstractTarget
 		+ "\tLD\tB,A\n"
 		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n"
-		+ "X_PST3:\tSCF\n"
+		+ "X_PINFO_3:\n"
+		+ "\tSCF\n"
 		+ "\tRET\n"
       // Umcodierungstabelle von (Zeichen - 0B0H) zu Bitmuster
-		+ "X_PST_TAB:\n"
+		+ "X_PINFO_TAB:\n"
 		+ "\tDB\t04H,08H,02H,01H,05H,0AH,0CH,03H\n"
 		+ "\tDB\t06H,09H,0BH,07H,0DH,0EH\n" );
       this.pixUtilAppended = true;

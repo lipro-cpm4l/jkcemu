@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,8 @@ import java.awt.Transparency;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,11 +21,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class IFFFile
@@ -35,11 +38,32 @@ public class IFFFile
 
   private BufferedImage   image;
   private IndexColorModel icm;
+  private ExifData        exifData;
 
 
   public static boolean accept( File file )
   {
-    return EmuUtil.accept( file, fileSuffixes );
+    return FileUtil.accept( file, fileSuffixes );
+  }
+
+
+  public static boolean accept( File file, byte[] fileBytes )
+  {
+    boolean rv = false;
+    if( EmuUtil.isTextAt( "FORM", fileBytes, 0 )
+	&& EmuUtil.isTextAt( "ILBM", fileBytes, 8 ) )
+    {
+      rv = true;
+    } else {
+      rv = FileUtil.accept( file, fileSuffixes );
+    }
+    return rv;
+  }
+
+
+  public ExifData getExifData()
+  {
+    return this.exifData;
   }
 
 
@@ -49,10 +73,16 @@ public class IFFFile
   }
 
 
+  public BufferedImage getImage()
+  {
+    return this.image;
+  }
+
+
   public static FileNameExtensionFilter getImageFileFilter()
   {
     if( imageFileFilter == null ) {
-      imageFileFilter = ImgUtil.createFileFilter(
+      imageFileFilter = ImageUtil.createFileFilter(
 					"IFF/ILBM-Datei",
 					fileSuffixes );
     }
@@ -63,7 +93,7 @@ public class IFFFile
   public static FileNameExtensionFilter getPaletteFileFilter()
   {
     if( paletteFileFilter == null ) {
-      paletteFileFilter = ImgUtil.createFileFilter(
+      paletteFileFilter = ImageUtil.createFileFilter(
 					"IFF/ILBM-Farbpalettendatei",
 					fileSuffixes );
     }
@@ -71,21 +101,23 @@ public class IFFFile
   }
 
 
-  public static BufferedImage readImage( File file ) throws IOException
+  public static IFFFile readImage(
+				File   file,
+				byte[] fileBytes ) throws IOException
   {
-    BufferedImage image = readFile( file, false ).image;
-    if( image == null ) {
+    IFFFile iffFile = readFile( file, fileBytes, false );
+    if( iffFile.image == null ) {
       throw new IOException( "Die Datei enth\u00E4lt keine Bilddaten." );
     }
-    return image;
+    return iffFile;
   }
 
 
   public static IndexColorModel readPalette( File file ) throws IOException
   {
-    IndexColorModel icm = readFile( file, true ).icm;
+    IndexColorModel icm = readFile( file, null, true ).icm;
     if( icm == null ) {
-      throw new IOException( "Die Datei enth\u00E4lt keine Farbpalette." );
+      ImageUtil.throwNoColorTabInFile();
     }
     return icm;
   }
@@ -106,14 +138,15 @@ public class IFFFile
    */
   public static void writeImage(
 			File          file,
-			BufferedImage image ) throws IOException
+			BufferedImage image,
+			ExifData      exifData ) throws IOException
   {
     int width  = image.getWidth();
     int height = image.getHeight();
 
     // Anzahl der Bitplanes ermitteln
     int             bitplaneCnt = 24;
-    IndexColorModel icm         = ImgUtil.getIndexColorModel( image );
+    IndexColorModel icm         = ImageUtil.getIndexColorModel( image );
     if( icm != null ) {
       int colorCnt = icm.getMapSize();
       if( colorCnt > 0 ) {
@@ -142,7 +175,8 @@ public class IFFFile
 						bitplaneCnt,
 						1,	// Kompression
 						icm,
-						transpColorOut );
+						transpColorOut,
+						exifData );
     if( transpColorOut != null ) {
       if( transpColorOut.get() < 0 ) {
 	transpColor = transpColorOut.get();
@@ -183,7 +217,7 @@ public class IFFFile
 	    if( (transpColor > 0) && ((v >> 24) & 0xFF) < 0x80 ) {
 	      v = transpColor;
 	    } else {
-	      v = ImgUtil.getNearestIndex( icm, v );
+	      v = ImageUtil.getNearestIndex( icm, v );
 	    }
 	  } else {
 	    v = (v & 0xFF000000)
@@ -203,7 +237,7 @@ public class IFFFile
 	}
       }
       for( int i = 0; i < bitplanes.length; i++ ) {
-	ImgUtil.writePackBits( bodyChunk, bitplanes[ i ] );
+	ImageUtil.writePackBits( bodyChunk, bitplanes[ i ], false );
       }
     }
 
@@ -216,7 +250,10 @@ public class IFFFile
 				File            file,
 				IndexColorModel icm ) throws IOException
   {
-    writeFile( file, createHeaderChunks( 0, 0, 0, 0, icm, null ), null );
+    writeFile(
+	file,
+	createHeaderChunks( 0, 0, 0, 0, icm, null, null ),
+	null );
   }
 
 
@@ -228,7 +265,8 @@ public class IFFFile
 			int             bitplaneCnt,
 			int             compression,
 			IndexColorModel icm,
-			AtomicInteger   transpColorOut ) throws IOException
+			AtomicInteger   transpColorOut,
+			ExifData        exifData ) throws IOException
   {
     int transpColor = 0;
     int colorCnt    = 0;
@@ -246,7 +284,7 @@ public class IFFFile
     }
 
     ByteArrayOutputStream buf = new ByteArrayOutputStream(
-						37 + (3 * colorCnt) );
+						100 + (3 * colorCnt) );
 
     // BMHD-Chunk erzeugen
     EmuUtil.writeASCII( buf, "BMHD" );
@@ -263,6 +301,18 @@ public class IFFFile
     buf.write( height > 0 ? 1 : 0 );		// Seitenverhaeltnis Y
     EmuUtil.writeInt2BE( buf, width );		// Seitenbreite
     EmuUtil.writeInt2BE( buf, height );		// Seitenhoehe
+
+    // Meta-Daten
+    if( exifData != null ) {
+      String anno = exifData.getImageDesc();
+      if( anno == null ) {
+	anno = exifData.getComment();
+      }
+      writeAsciiContentTag( buf, "AUTH", exifData.getAuthor() );
+      writeAsciiContentTag( buf, "ANNO", anno );
+      writeAsciiContentTag( buf, "NAME", exifData.getDocumentName() );
+      writeAsciiContentTag( buf, "(c) ", exifData.getCopyright() );
+    }
 
     // CMAP-Chunk
     if( icm != null ) {
@@ -292,25 +342,39 @@ public class IFFFile
 
   private static IFFFile readFile(
 				File    file,
+				byte[]  fileBytes,
 				boolean paletteOnly ) throws IOException
   {
-    BufferedImage   image = null;
-    IndexColorModel icm   = null;
-    InputStream     in    = null;
+    ExifData        exifData = null;
+    BufferedImage   image    = null;
+    IndexColorModel icm      = null;
+    InputStream     in       = null;
     try {
-      in = new BufferedInputStream( new FileInputStream( file ) );
+      if( fileBytes != null ) {
+	in = new ByteArrayInputStream( fileBytes );
+      } else if( file != null ) {
+	in = new BufferedInputStream( new FileInputStream( file ) );
+      } else {
+	ImageUtil.throwNoFileConent();
+      }
 
       // Datei lesen
-      byte[] fileHdr         = new byte[ 12 ];
-      byte[] cmap            = null;
-      byte[] body            = null;
-      int    width           = -1;
-      int    height          = -1;
-      int    bitplanes       = 0;
-      int    compression     = 0;
-      int    masking         = 0;
-      int    transpColor     = 0;
-      int    bitplaneLineLen = 0;
+      byte[]  fileHdr         = new byte[ 12 ];
+      byte[]  author          = null;
+      byte[]  imgDesc         = null;
+      byte[]  docName         = null;
+      byte[]  copyright       = null;
+      byte[]  cmap            = null;
+      byte[]  body            = null;
+      int     width           = -1;
+      int     height          = -1;
+      int     bitplanes       = 0;
+      int     compression     = 0;
+      int     masking         = 0;
+      int     transpColor     = 0;
+      int     bitplaneLineLen = 0;
+      boolean hamMode         = false;	// hold and modify mode
+      boolean ehbMode         = false;	// extra halfbright mode
       if( EmuUtil.read( in, fileHdr ) == fileHdr.length ) {
 	if( EmuUtil.isTextAt( "FORM", fileHdr, 0 )
 	    && EmuUtil.isTextAt( "ILBM", fileHdr, 8 ) )
@@ -321,7 +385,27 @@ public class IFFFile
 	    if( chunkLen < 0 ) {
 	      break;
 	    }
-	    if( EmuUtil.isTextAt( "BMHD", chunkHdr, 0 ) ) {
+	    if( EmuUtil.isTextAt( "AUTH", chunkHdr, 0 ) ) {
+	      author = new byte[ chunkLen ];
+	      if( EmuUtil.read( in, author ) != author.length ) {
+		break;
+	      }
+	    } else if( EmuUtil.isTextAt( "ANNO", chunkHdr, 0 ) ) {
+	      imgDesc = new byte[ chunkLen ];
+	      if( EmuUtil.read( in, imgDesc ) != imgDesc.length ) {
+		break;
+	      }
+	    } else if( EmuUtil.isTextAt( "NAME", chunkHdr, 0 ) ) {
+	      docName = new byte[ chunkLen ];
+	      if( EmuUtil.read( in, docName ) != docName.length ) {
+		break;
+	      }
+	    } else if( EmuUtil.isTextAt( "(c) ", chunkHdr, 0 ) ) {
+	      copyright = new byte[ chunkLen ];
+	      if( EmuUtil.read( in, copyright ) != copyright.length ) {
+		break;
+	      }
+	    } else if( EmuUtil.isTextAt( "BMHD", chunkHdr, 0 ) ) {
 	      byte[] bmhd = new byte[ chunkLen ];
 	      if( EmuUtil.read( in, bmhd ) != bmhd.length ) {
 		break;
@@ -338,6 +422,14 @@ public class IFFFile
 		  bitplaneLineLen++;		// auf 16 Bit ausrichten
 		}
 	      }
+	    } else if( EmuUtil.isTextAt( "CAMG", chunkHdr, 0 ) ) {
+	      byte[] camg = new byte[ chunkLen ];
+	      if( EmuUtil.read( in, camg ) != camg.length ) {
+		break;
+	      }
+	      long v  = EmuUtil.getInt4BE( camg, 0 );
+	      ehbMode = ((v & 0x0080) != 0);
+	      hamMode = ((v & 0x0800) != 0);
 	    } else if( EmuUtil.isTextAt( "CMAP", chunkHdr, 0 ) ) {
 	      cmap = new byte[ chunkLen ];
 	      if( EmuUtil.read( in, cmap ) != cmap.length ) {
@@ -349,7 +441,6 @@ public class IFFFile
 				chunkLen,
 				height * bitplanes * bitplaneLineLen,
 				compression );
-
 	    } else {
 	      in.skip( chunkLen );
 	    }
@@ -365,6 +456,17 @@ public class IFFFile
 	      break;
 	    }
 	  }
+	  if( (author != null)
+	      || (imgDesc != null)
+	      || (docName != null)
+	      || (copyright != null) )
+	  {
+	    exifData = new ExifData( true );
+	    exifData.setAuthor( author );
+	    exifData.setImageDesc( imgDesc );
+	    exifData.setDocumentName( docName );
+	    exifData.setCopyright( copyright );
+	  }
 	}
       }
 
@@ -377,17 +479,9 @@ public class IFFFile
       if( cmap != null ) {
 	int colorCnt = cmap.length / 3;
 	if( colorCnt > 0 ) {
-	  int bits = 8;
-	  imgType  = BufferedImage.TYPE_BYTE_INDEXED;
+	  imgType = BufferedImage.TYPE_BYTE_INDEXED;
 	  if( colorCnt <= 16 ) {
 	    imgType = BufferedImage.TYPE_BYTE_BINARY;
-	    if( colorCnt <= 2 ) {
-	      bits = 1;
-	    } else if( colorCnt <= 4 ) {
-	      bits = 2;
-	    } else {
-	      bits = 4;
-	    }
 	  }
 	  byte[] alphas = null;
 	  byte[] reds   = new byte[ colorCnt ];
@@ -409,6 +503,34 @@ public class IFFFile
 					| (b & 0x000000FF);
 	    dstIdx++;
 	  }
+	  if( ehbMode ) {
+	    /*
+	     * Wenn die Farbanzahl laut Anzahl der Bitplanes
+	     * doppelt so gross ist wie die Farbanzahl laut Farbpalette,
+	     * dann die Farbpalette verdoppeln 
+	     */
+	    int bitplaneColorCnt = (1 << bitplanes);
+	    if( bitplaneColorCnt == (colorCnt * 2) ) {
+	      byte[] oldReds   = reds;
+	      byte[] oldGreens = greens;
+	      byte[] oldBlues  = blues;
+	      reds             = new byte[ bitplaneColorCnt ];
+	      greens           = new byte[ bitplaneColorCnt ];
+	      blues            = new byte[ bitplaneColorCnt ];
+	      for( int i = 0; i < colorCnt; i++ ) {
+		byte red               = oldReds[ i ];
+		byte green             = oldBlues[ i ];
+		byte blue              = oldBlues[ i ];
+		reds[ i ]              = red;
+		greens[ i ]            = green;
+		blues[ i ]             = blue;
+		reds[ i + colorCnt ]   = (byte) ((red >> 1) & 0x7F);
+		greens[ i + colorCnt ] = (byte) ((green >> 1) & 0x7F);
+		blues[ i + colorCnt ]  = (byte) ((blue >> 1) & 0x7F);
+	      }
+	      colorCnt = bitplaneColorCnt;
+	    }
+	  }
 	  if( (masking == 2)
 	      && (transpColor > 0)
 	      && (transpColor < colorCnt) )
@@ -418,7 +540,7 @@ public class IFFFile
 	    alphas[ transpColor ] = (byte) 0;
 	    rgbs[ transpColor ] &= 0x00FFFFFF;
 	  }
-	  icm = ImgUtil.createIndexColorModel(
+	  icm = ImageUtil.createIndexColorModel(
 					colorCnt,
 					reds,
 					greens,
@@ -431,6 +553,10 @@ public class IFFFile
       if( (width > 0) && (height > 0) && (bitplanes > 0)
 	  && (bitplaneLineLen > 0) && (body != null) )
       {
+	if( hamMode && ((bitplanes == 6) || (bitplanes == 8)) ) {
+	  icm     = null;
+	  imgType = BufferedImage.TYPE_3BYTE_BGR;
+	}
 	if( icm != null ) {
 	  image = new BufferedImage( width, height, imgType, icm );
 	} else {
@@ -438,6 +564,7 @@ public class IFFFile
 	}
 	int vMask = (1 << (bitplanes - 1));
 	for( int y = 0; y < height; y++ ) {
+	  int lastRGB   = 0;
 	  int begOfLine = y * bitplanes * bitplaneLineLen;
 	  if( masking == 1 ) {
 	    // Bitplanes fuer Maskierung ueberlesen
@@ -466,10 +593,19 @@ public class IFFFile
 	      }
 	    }
 	    if( rgbs != null ) {
-	      image.setRGB(
-			x,
-			y,
-			v < rgbs.length ? rgbs[ v ] : 0x00FFFFFF );
+	      int rgb = (v < rgbs.length ? rgbs[ v ] : 0);
+	      if( hamMode ) {
+		switch( bitplanes ) {
+		  case 6:
+		    rgb = toHAM6RGB( v, rgb, lastRGB );
+		    break;
+		  case 8:
+		    rgb = toHAM8RGB( v, rgb, lastRGB );
+		    break;
+		}
+	      }
+	      image.setRGB( x, y, rgb );
+	      lastRGB = rgb;
 	    } else {
 	      if( (bitplanes == 24) || (bitplanes == 32) ) {
 		if( bitplanes == 24 ) {
@@ -511,9 +647,9 @@ public class IFFFile
       }
     }
     finally {
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( in );
     }
-    return new IFFFile( image, icm );
+    return new IFFFile( image, icm, exifData );
   }
 
 
@@ -533,29 +669,30 @@ public class IFFFile
       int idx = 0;
       while( chunkLen > 0 ) {
 	int b0 = in.read();
-	if( b0 >= 0 ) {
-	  --chunkLen;
-	  if( b0 < 128 )  {
-	    int n = b0 + 1;
-	    for( int i = 0; (i < n) && (chunkLen > 0); i++ ) {
-	      int b1 = in.read();
-	      if( b1 < 0 ) {
-		break;
-	      }
-	      --chunkLen;
-	      if( idx < data.length ) {
-		data[ idx++ ] = (byte) b1;
-	      }
+	if( b0 < 0 ) {
+	  break;
+	}
+	--chunkLen;
+	if( b0 < 128 )  {
+	  int n = b0 + 1;
+	  for( int i = 0; (i < n) && (chunkLen > 0); i++ ) {
+	    int b1 = in.read();
+	    if( b1 < 0 ) {
+	      break;
 	    }
-	  } else if( b0 > 128 ) {
-	    if( chunkLen > 0 ) {
-	      int n  = 257 - b0;
-	      int b1 = in.read();
-	      if( b1 >= 0 ) {
-		--chunkLen;
-		for( int i = 0; (i < n) && (idx < data.length); i++ ) {
-		  data[ idx++ ] = (byte) b1;
-		}
+	    --chunkLen;
+	    if( idx < data.length ) {
+	      data[ idx++ ] = (byte) b1;
+	    }
+	  }
+	} else if( b0 > 128 ) {
+	  if( chunkLen > 0 ) {
+	    int n  = 257 - b0;
+	    int b1 = in.read();
+	    if( b1 >= 0 ) {
+	      --chunkLen;
+	      for( int i = 0; (i < n) && (idx < data.length); i++ ) {
+		data[ idx++ ] = (byte) b1;
 	      }
 	    }
 	  }
@@ -568,6 +705,76 @@ public class IFFFile
 			compression ) );
     }
     return data;
+  }
+
+
+  private static int toHAM6RGB( int value, int colormapRGB, int lastRGB )
+  {
+    int rgb = 0;
+    switch( value & 0x30 ) {
+      case 0x00:
+	rgb = colormapRGB;
+	break;
+      case 0x10:
+	rgb = (lastRGB & 0xFFFFFF00) | ((value << 4) & 0x000000F0);
+	break;
+      case 0x20:
+	rgb = (lastRGB & 0xFF00FFFF) | ((value << 20) & 0x00F00000);
+	break;
+      case 0x30:
+	rgb = (lastRGB & 0xFFFF00FF) | ((value << 12) & 0x0000F000);
+	break;
+    }
+    return rgb;
+  }
+
+
+  private static int toHAM8RGB( int value, int colormapRGB, int lastRGB )
+  {
+    int rgb = 0;
+    switch( value & 0xC0 ) {
+      case 0x00:
+	rgb = colormapRGB;
+	break;
+      case 0x40:
+	rgb = (lastRGB & 0xFFFFFF00) | ((value << 2) & 0x000000FC);
+	break;
+      case 0x80:
+	rgb = (lastRGB & 0xFF00FFFF) | ((value << 18) & 0x00FC0000);
+	break;
+      case 0xC0:
+	rgb = (lastRGB & 0xFFFF00FF) | ((value << 10) & 0x0000FC00);
+	break;
+    }
+    return rgb;
+  }
+
+
+  private static void writeAsciiContentTag(
+				OutputStream out,
+				String       chunkName,
+				String       text ) throws IOException
+  {
+    if( text != null ) {
+      try {
+	byte[] buf = text.getBytes( "ISO-8859-1" );
+	if( buf != null ) {
+	  if( buf.length > 0 ) {
+	    int len = buf.length + 1;
+	    if( (len & 0x01) != 0 ) {
+	      len++;
+	    }
+	    EmuUtil.writeASCII( out, chunkName );
+	    EmuUtil.writeInt4BE( out, len );
+	    out.write( buf );
+	    for( int i = buf.length; i < len; i++ ) {
+	      out.write( 0 );
+	    }
+	  }
+	}
+      }
+      catch( UnsupportedEncodingException ex ) {}
+    }
   }
 
 
@@ -588,7 +795,7 @@ public class IFFFile
       if( (formLen % 2) != 0 ) {
 	formLen++;
       }
-      out = new FileOutputStream( file );
+      out = new BufferedOutputStream( new FileOutputStream( file ) );
       EmuUtil.writeASCII( out, "FORM" );
       EmuUtil.writeInt4BE( out, formLen );
       EmuUtil.writeASCII( out, "ILBM" );
@@ -607,16 +814,20 @@ public class IFFFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 
 
 	/* --- Konstruktor --- */
 
-  private IFFFile( BufferedImage image, IndexColorModel icm )
+  private IFFFile(
+		BufferedImage   image,
+		IndexColorModel icm,
+		ExifData        exifData )
   {
-    this.image = image;
-    this.icm   = icm;
+    this.image    = image;
+    this.icm      = icm;
+    this.exifData = exifData;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,20 +12,21 @@ import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.HueblerGraphicsMC;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
@@ -35,10 +36,10 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
   private JPanel               tabEtc;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JCheckBox            btnKCNet;
-  private JCheckBox            btnVDIP;
-  private JCheckBox            btnBasic;
-  private JCheckBox            btnCatchPrintCalls;
+  private JCheckBox            cbKCNet;
+  private JCheckBox            cbVDIP;
+  private JCheckBox            cbBasic;
+  private JCheckBox            cbCatchPrintCalls;
 
 
   public HueblerGraphicsMCSettingsFld(
@@ -49,12 +50,12 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Erweiterungen
-    this.tabExt = new JPanel( new GridBagLayout() );
+    this.tabExt = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
     GridBagConstraints gbcExt = new GridBagConstraints(
@@ -66,22 +67,20 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnKCNet = new JCheckBox(
-			"KCNet-kompatible Netzwerkkarte",
-			false );
-    this.tabExt.add( this.btnKCNet, gbcExt );
+    this.cbKCNet = GUIFactory.createCheckBox(
+			"KCNet-kompatible Netzwerkkarte" );
+    this.tabExt.add( this.cbKCNet, gbcExt );
 
-    this.btnVDIP = new JCheckBox(
-			"USB-Anschluss (Vinculum VDIP Modul)",
-			false );
+    this.cbVDIP = GUIFactory.createCheckBox(
+			"USB-Anschluss (Vinculum VDIP Modul)" );
     gbcExt.insets.top    = 0;
     gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
-    this.tabExt.add( this.btnVDIP, gbcExt );
+    this.tabExt.add( this.cbVDIP, gbcExt );
 
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -93,18 +92,18 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnBasic = new JCheckBox(
+    this.cbBasic = GUIFactory.createCheckBox(
 		"BASIC-Interpreter im ROM enthalten",
 		true );
-    this.tabEtc.add( this.btnBasic, gbcEtc );
+    this.tabEtc.add( this.cbBasic, gbcEtc );
 
-    this.btnCatchPrintCalls = new JCheckBox(
+    this.cbCatchPrintCalls = GUIFactory.createCheckBox(
 		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
 		true );
     gbcEtc.insets.top    = 0;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnCatchPrintCalls, gbcEtc );
+    this.tabEtc.add( this.cbCatchPrintCalls, gbcEtc );
 
 
     // Tab AutoLoad
@@ -120,16 +119,17 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		AutoInputCharSet.getStdCharSet(),
 		HueblerGraphicsMC.DEFAULT_SWAP_KEY_CHAR_CASE,
 		HueblerGraphicsMC.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
-    this.btnBasic.addActionListener( this );
-    this.btnCatchPrintCalls.addActionListener( this );
-    this.btnKCNet.addActionListener( this );
-    this.btnVDIP.addActionListener( this );
+    this.cbBasic.addActionListener( this );
+    this.cbCatchPrintCalls.addActionListener( this );
+    this.cbKCNet.addActionListener( this );
+    this.cbVDIP.addActionListener( this );
   }
 
 
@@ -143,22 +143,22 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_BASIC,
-		this.btnBasic.isSelected() );
+		this.cbBasic.isSelected() );
 
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_CATCH_PRINT_CALLS,
-		this.btnCatchPrintCalls.isSelected() );
+		this.cbCatchPrintCalls.isSelected() );
 
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_KCNET_ENABLED,
-		this.btnKCNet.isSelected() );
+		this.cbKCNet.isSelected() );
 
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_VDIP_ENABLED,
-		this.btnVDIP.isSelected() );
+		this.cbVDIP.isSelected() );
 
     this.tabAutoLoad.applyInput( props, selected );
     this.tabAutoInput.applyInput( props, selected );
@@ -185,35 +185,27 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
-    this.btnBasic.setSelected(
+    this.cbBasic.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_BASIC,
 		true ) );
 
-    this.btnCatchPrintCalls.setSelected(
+    this.cbCatchPrintCalls.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_CATCH_PRINT_CALLS,
 		true ) );
 
-    this.btnKCNet.setSelected(
+    this.cbKCNet.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_KCNET_ENABLED,
 		false ) );
 
-    this.btnVDIP.setSelected(
+    this.cbVDIP.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + HueblerGraphicsMC.PROP_VDIP_ENABLED,

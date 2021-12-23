@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,13 +15,13 @@ import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 import jkcemu.etc.CksCalculator;
 
 
@@ -65,6 +65,19 @@ public class ReplyCksAlgorithmDlg extends BaseDlg
 
 
   @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.comboAlgorithm.removeKeyListener( this );
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
+  @Override
   public void keyPressed( KeyEvent e )
   {
     if( e.getComponent() == this.comboAlgorithm ) {
@@ -83,7 +96,7 @@ public class ReplyCksAlgorithmDlg extends BaseDlg
   }
 
 
-	/* --- private Methoden --- */
+	/* --- Konstruktor --- */
 
   private ReplyCksAlgorithmDlg( Window owner, String preSelection )
   {
@@ -105,34 +118,31 @@ public class ReplyCksAlgorithmDlg extends BaseDlg
 
 
     // Eingabebereich
-    add( new JLabel( "Algorithmus:" ), gbc );
+    add( GUIFactory.createLabel( "Algorithmus:" ), gbc );
 
-    this.comboAlgorithm = new JComboBox<>(
+    this.comboAlgorithm = GUIFactory.createComboBox(
 		CksCalculator.getAvailableAlgorithms() );
     this.comboAlgorithm.setEditable( false );
     if( preSelection != null ) {
       this.comboAlgorithm.setSelectedItem( preSelection );
     }
-    this.comboAlgorithm.addKeyListener( this );
     gbc.anchor = GridBagConstraints.WEST;
     gbc.gridx++;
     add( this.comboAlgorithm, gbc );
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor    = GridBagConstraints.CENTER;
     gbc.gridwidth = GridBagConstraints.REMAINDER;
     gbc.gridx     = 0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -140,8 +150,16 @@ public class ReplyCksAlgorithmDlg extends BaseDlg
     pack();
     setParentCentered();
     setResizable( false );
+
+
+    // Listener
+    this.comboAlgorithm.addKeyListener( this );
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
   }
 
+
+	/* --- private Methoden --- */
 
   private void doApprove()
   {

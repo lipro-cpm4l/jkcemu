@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,14 +9,13 @@
 package jkcemu.emusys.kc85;
 
 import java.awt.Component;
-import java.lang.*;
 
 
 public class M047 extends AbstractKC85UserPROMModule
 {
-  public M047( int slot, Component owner, String fileName )
+  public M047( int slot, int typeByte, Component owner, String fileName )
   {
-    super( slot, 0x72, "M047", 16, 0x2000, owner, fileName );
+    super( slot, typeByte, "M047", 16, 0x2000, owner, fileName );
   }
 
 

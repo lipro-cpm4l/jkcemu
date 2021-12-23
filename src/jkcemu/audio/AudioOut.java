@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ package jkcemu.audio;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import javax.sound.sampled.AudioFormat;
@@ -22,8 +21,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.SourceDataLine;
-import jkcemu.base.EmuUtil;
-import jkcemu.base.MyByteArrayOutputStream;
+import jkcemu.etc.ReadableByteArrayOutputStream;
 import z80emu.Z80CPU;
 
 
@@ -32,31 +30,56 @@ public class AudioOut extends AudioIO
   public static final int MAX_LINE_PAUSE_MILLIS       = 100;
   public static final int MAX_RECORDING_PAUSE_SECONDS = 5;
   public static final int MAX_UNSIGNED_VALUE          = 255;
-  public static final int MAX_UNSIGNED_USED_VALUE     = 220;
-  public static final int UNSIGNED_VALUE_1            = 200;
+  public static final int MAX_USED_UNSIGNED_VALUE     = 200;
 
-  private static int[] frameRates = {
+  public static final int SIGNED_VALUE_1 = MAX_USED_UNSIGNED_VALUE / 2;
+  public static final int SIGNED_VALUE_0 = -SIGNED_VALUE_1;
+
+
+  private static final String ERROR_LINE_CLOSED_BECAUSE_NOT_WORKING =
+	"Der Audiokanal funktioniert nicht und wurde deshalb geschlossen.";
+
+  private static final int[] frameRates = {
 			44100, 48000, 32000, 22050, 16000, 8000 };
 
-  private int                     speedKHz;
-  private int                     maxWaveTStatesLine;
-  private int                     maxWaveTStatesRec;
-  private int                     lineChannels;
-  private int                     audioPos;
-  private byte[]                  audioBuf;
-  private volatile SourceDataLine dataLine;
-  private volatile Thread         writingThread;
-  private MyByteArrayOutputStream recBufGZip;
-  private GZIPOutputStream        recBufOut;
-  private int                     recBufFrames;
-  private int                     recPauseFrames;
-  private int                     recStatus;
-  private int                     lastRecMonoValue;
-  private int                     lastRecLeftValue;
-  private int                     lastRecRightValue;
-  private int                     maxRecBufFrames;
-  private int                     maxRecPauseFrames;
-  private boolean                 stereo;
+  private enum RecStatus {
+			DISABLED,
+			INIT,
+			IDLE,
+			RUNNING,
+			PAUSE };
+
+  private Z80CPU                        z80cpu;
+  private long                          speedHz;
+  private long                          totalFrameCnt;
+  private long                          begTStates;
+  private long                          lastTStates;
+  private long                          maxTStates;
+  private int                           maxWaveTStatesLine;
+  private int                           maxWaveTStatesRec;
+  private int                           audioPos;
+  private byte[]                        audioBuf;
+  private volatile SourceDataLine       dataLine;
+  private Mixer.Info                    mixerInfo;
+  private RecStatus                     recStatus;
+  private ReadableByteArrayOutputStream recBufGZip;
+  private GZIPOutputStream              recBufOut;
+  private int                           recBufFrames;
+  private int                           recPauseFrames;
+  private int                           lastRecPauseFrames;
+  private int                           lastRecMonoValue;
+  private int                           lastRecLeftValue;
+  private int                           lastRecRightValue;
+  private int                           maxRecBufFrames;
+  private int                           maxRecPauseFrames;
+  private int                           lineChannels;
+  private volatile boolean              lineRequested;
+  private boolean                       formatMissing;
+  private boolean                       firstCall;
+  private boolean                       lastPhase;
+  private boolean                       singleBit;
+  private boolean                       stereo;
+  private boolean                       forPrgSave;
 
 
   public AudioOut(
@@ -64,101 +87,95 @@ public class AudioOut extends AudioIO
 		Z80CPU          z80cpu,
 		int             speedKHz,
 		int             frameRate,
-		boolean         openLine,
-		Mixer           mixer,
+		boolean         lineRequested,
 		boolean         singleBit,
-		boolean         stereo ) throws IOException
+		boolean         stereo,
+		Mixer.Info      mixerInfo,
+		boolean         forPrgSave )
   {
-    super( observer, z80cpu );
-    this.speedKHz           = speedKHz;
-    this.frameRate          = 0;		// wird spaeter gesetzt
+    super( observer );
+    this.z80cpu             = z80cpu;
+    this.speedHz            = speedKHz * 1000;
+    this.frameRate          = frameRate;
+    this.lineRequested      = lineRequested;
+    this.singleBit          = singleBit;
+    this.stereo             = stereo;
+    this.mixerInfo          = mixerInfo;
+    this.forPrgSave         = forPrgSave;
     this.maxWaveTStatesLine = speedKHz * MAX_LINE_PAUSE_MILLIS;
     this.maxWaveTStatesRec  = speedKHz * MAX_RECORDING_PAUSE_SECONDS * 1000;
+    this.formatMissing      = true;
+    this.firstCall          = true;
+    this.lastPhase          = false;
     this.lineChannels       = 0;
     this.audioPos           = 0;
     this.audioBuf           = null;
     this.dataLine           = null;
-    this.writingThread      = null;
     this.recBufGZip         = null;
     this.recBufOut          = null;
     this.recBufFrames       = 0;
     this.recPauseFrames     = 0;
-    this.recStatus          = 0;
+    this.lastRecPauseFrames = 0;
+    this.recStatus          = RecStatus.DISABLED;
     this.lastRecMonoValue   = 0;
     this.lastRecLeftValue   = 0;
     this.lastRecRightValue  = 0;
+    this.lastTStates        = 0;
+    this.begTStates         = 0;
+    this.maxTStates         = 0;
     this.maxRecBufFrames    = 0;
-    this.stereo             = stereo;
-    if( openLine ) {
-      SourceDataLine line = null;
-      if( frameRate > 0 ) {
-	line = openSourceDataLine( mixer, frameRate, stereo );
-      } else {
-	for( int i = 0; i < this.frameRates.length; i++ ) {
-	  line = openSourceDataLine(
-			mixer,
-			this.frameRates[ i ],
-			stereo );
-	  if( line != null ) {
-	    break;
-	  }
-	}
-      }
-      if( line != null ) {
-	AudioFormat fmt = line.getFormat();
-	setFormat(
-		Math.round( fmt.getSampleRate() ),
-		singleBit ? 1 : 8,
-		stereo ? 2 : 1,
-		false,
-		false );
-	this.lineChannels = fmt.getChannels();
-	this.dataLine     = line;
-
-	// Audiopuffer anlegen
-	int r = this.frameRate;
-	int n = line.getBufferSize() / 32;
-	if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
-	  n = r / 2;
-	}
-	if( n < 1 ) {
-	  n = 1;
-	}
-	this.audioBuf = new byte[ n * this.channels ];
-	this.audioPos = 0;
-
-	// Fuer die Pegelanzeige gilt der Wertebereich 0...MAX_UNSIGEND_VALUE.
-        this.observer.setVolumeLimits( 0, MAX_UNSIGNED_VALUE );
-      }
-    }
-    if( this.frameRate <= 0 ) {
-      if( frameRate <= 0 ) {
-	frameRate = this.frameRates[ 0 ];
-      }
-      setFormat(
-		frameRate,
-		singleBit ? 1 : 8,
-		1,
-		false,
-		false );
-    }
-    // nach 120 Minuten Aufnahme beenden
-    this.maxRecBufFrames = this.frameRate * 60
-				* AudioUtil.RECORDING_MINUTES_MAX;
-    // nach entsprechender Pause Aufnahme stoppen
-    this.maxRecPauseFrames = this.frameRate * MAX_RECORDING_PAUSE_SECONDS;
-    this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
-						/ (float) this.frameRate );
+    this.maxRecPauseFrames  = 0;
+    this.totalFrameCnt      = 0;
   }
 
 
   public synchronized PCMDataSource createPCMDataSourceOfRecordedData()
 							throws IOException
   {
-    PCMDataSource rv = null;
+    PCMDataSource    rv     = null;
+    GZIPOutputStream recBuf = this.recBufOut;
     if( hasRecordedData() ) {
-      if( this.recBufOut != null ) {
-	this.recBufOut.finish();
+      if( (this.frameRate < 1)
+	  || (this.sampleSizeInBits < 1)
+	  || (this.channels < 1)
+	  || (this.recBufFrames < 1) )
+      {
+	recBuf.finish();
+	this.recBufOut = null;
+	throw new IOException( "Keine Aufnahme vorhanden" );
+      }
+
+      /*
+       * Die Routinen fuer das Einlesen von Kassettenaufzeichnungen
+       * bleiben haeufig haengen,
+       * da sie noch auf eine abschliessende Schwingung warten.
+       * Aus diesem Grund werden hier noch drei Halbwellen der letzten
+       * Schwingung angehaengt, aber nur, wenn es sich auch
+       * um eine Kassettenaufzeichnung handeln koennte (1 Bit Mono).
+       */
+      if( this.forPrgSave
+	  && (this.channels == 1)
+	  && (this.lastRecPauseFrames > 0)
+	  && ((this.lastRecMonoValue == 0)
+	      || (this.lastRecMonoValue == MAX_USED_UNSIGNED_VALUE)) )
+      {
+	int v = this.lastRecMonoValue;
+	for( int i = 0; i < 3; i++ ) {
+	  if( v == 0 ) {
+	    v = MAX_USED_UNSIGNED_VALUE;
+	  } else {
+	    v = 0;
+	  }
+	  for( int k = 0; k < this.lastRecPauseFrames; k++ ) {
+	    recBuf.write( v );
+	    this.recBufFrames++;
+	  }
+	}
+      }
+
+      // aufgenommene Daten schliessen und PCMDataSource erzeugen
+      if( recBuf != null ) {
+	recBuf.finish();
 	this.recBufOut = null;
       }
       rv = new PCMDataStream(
@@ -171,6 +188,12 @@ public class AudioOut extends AudioIO
 		this.recBufFrames * this.channels );
     }
     return rv;
+  }
+
+
+  public static int getDefaultFrameRate()
+  {
+    return frameRates[ 0 ];
   }
 
 
@@ -194,46 +217,54 @@ public class AudioOut extends AudioIO
 
   public boolean isRecording()
   {
-    return this.recStatus > 0;
+    return this.recStatus.equals( RecStatus.INIT )
+		|| this.recStatus.equals( RecStatus.IDLE )
+		|| this.recStatus.equals( RecStatus.RUNNING );
+  }
+
+
+  public boolean isSingleBit()
+  {
+    return this.singleBit;
   }
 
 
   public synchronized void setRecording( boolean state )
   {
     try {
-      if( state && ((this.recBufGZip == null) || (this.recBufOut == null)) ) {
-	int initialSize = this.frameRate * 60;
-	if( this.stereo ) {
-	  initialSize *= 2;
+      if( state ) {
+	if( !isRecording() ) {
+	  if( (this.recBufGZip == null) || (this.recBufOut == null) ) {
+	    int initSize = getRealFrameRate() * 60;
+	    if( this.stereo ) {
+	      initSize *= 2;
+	    }
+	    if( (this.maxRecBufFrames < 1)
+		|| (this.maxRecPauseFrames < 1) )
+	    {
+	      calcMaxRecFrames();
+	    }
+
+	    // Aufnahmepuffer mit Datenkomprimierung
+	    this.recBufGZip = new ReadableByteArrayOutputStream( initSize );
+	    this.recBufOut  = new GZIPOutputStream( this.recBufGZip );
+	  }
+	  this.recStatus = RecStatus.INIT;
+	  this.observer.fireRecordingStatusChanged( this );
 	}
-	this.recBufGZip = new MyByteArrayOutputStream( initialSize );
-	this.recBufOut  = new GZIPOutputStream( this.recBufGZip );
+      } else {
+	if( isRecording() ) {
+	  this.recStatus = RecStatus.PAUSE;
+	  this.observer.fireRecordingStatusChanged( this );
+	}
       }
-      this.recStatus = 1;
-      this.observer.fireRecordingStatusChanged( this );
     }
     catch( IOException ex ) {
       // sollte nie vorkommen
       this.recBufGZip = null;
       this.recBufOut  = null;
-      this.recStatus  = 0;
-    }
-  }
-
-
-  public void stopAudio()
-  {
-    this.recStatus = 0;
-    EmuUtil.closeSilent( this.recBufOut );
-    SourceDataLine line = this.dataLine;
-    if( line != null ) {
-      this.dataLine = null;
-
-      Thread t = this.writingThread;
-      if( (t != null) && (t != Thread.currentThread()) ) {
-	t.interrupt();
-      }
-      DataLineCloser.closeDataLine( line );
+      this.recStatus  = RecStatus.DISABLED;
+      checkFinished();
     }
   }
 
@@ -248,124 +279,151 @@ public class AudioOut extends AudioIO
 			int leftValue,
 			int rightValue )
   {
-    // Daten in Audiokanal schreiben
-    SourceDataLine line     = this.dataLine;
-    byte[]         audioBuf = this.audioBuf;
-    if( (line != null) && (audioBuf != null) && (nFrames > 0) ) {
-      for( int i = 0; i < nFrames; i++ ) {
-	if( (this.audioPos + this.channels - 1) >= audioBuf.length ) {
-	  this.writingThread = Thread.currentThread();
-	  if( !line.isActive() ) {
-	    line.start();
-	  }
-	  line.write( audioBuf, 0, audioBuf.length );
-	  this.audioPos      = 0;
-	  this.writingThread = null;
-	}
-	if( this.lineChannels == 2 ) {
-	  if( this.channels == 1 ) {
-	    leftValue  = monoValue;
-	    rightValue = monoValue;
-	  }
-	  audioBuf[ this.audioPos++ ] = (byte) leftValue;
-	  audioBuf[ this.audioPos++ ] = (byte) rightValue;
-	} else {
-	  audioBuf[ this.audioPos++ ] = (byte) monoValue;
-	}
-      }
-    }
+    try {
+      checkOpen();
 
-    /*
-     * Daten aufnehmen
-     *
-     * Die eigentliche Aufnahme erst beginnen,
-     * wenn sich die Sample-Daten erstmalig aendern
-     */
-    OutputStream out = this.recBufOut;
-    if( out != null ) {
-      if( this.recStatus == 1 ) {
-	this.lastRecMonoValue  = monoValue;
-	this.lastRecLeftValue  = leftValue;
-	this.lastRecRightValue = rightValue;
-	this.recStatus         = 2;
-      } else if( this.recStatus == 2 ) {
-	if( (!stereo && (monoValue != this.lastRecMonoValue))
-	    || (stereo && ((leftValue != this.lastRecLeftValue)
-			   || (rightValue != this.lastRecRightValue))) )
-	{
-	  this.recPauseFrames = 0;
-	  this.recStatus      = 3;
-	}
-      }
-      if( this.recStatus == 3 ) {
+      // Daten in Audiokanal schreiben
+      SourceDataLine line     = this.dataLine;
+      byte[]         audioBuf = this.audioBuf;
+      if( (line != null) && (audioBuf != null) && (nFrames > 0) ) {
 	try {
-	  if( stereo ) {
-	    if( (leftValue == this.lastRecLeftValue)
-		&& (rightValue == this.lastRecRightValue) )
-	    {
-	      this.recPauseFrames += nFrames;
-	    } else {
-	      while( this.recPauseFrames > 0 ) {
-		out.write( this.lastRecLeftValue );
-		out.write( this.lastRecRightValue );
-		this.recBufFrames++;
-		--this.recPauseFrames;
+	  for( int i = 0; i < nFrames; i++ ) {
+	    if( (this.audioPos + this.lineChannels - 1) >= audioBuf.length ) {
+	      if( line.available() < audioBuf.length ) {
+		int n = 0;
+		do {
+		  Thread.sleep( 10 );
+		  n++;
+		  if( n > 100 ) {
+		    throw new IOException(
+				ERROR_LINE_CLOSED_BECAUSE_NOT_WORKING );
+		  }
+		} while( line.available() < audioBuf.length );
 	      }
-	      this.lastRecLeftValue  = leftValue;
-	      this.lastRecRightValue = rightValue;
-	      for( int i = 0; i < nFrames; i++ ) {
-		out.write( leftValue );
-		out.write( rightValue );
+	      if( line != null ) {
+		line.write( audioBuf, 0, audioBuf.length );
 	      }
-	      this.recBufFrames += nFrames;
+	      this.audioPos = 0;
 	    }
-	  } else {
-	    if( monoValue == this.lastRecMonoValue ) {
-	      this.recPauseFrames += nFrames;
+	    if( this.lineChannels == 2 ) {
+	      if( this.channels == 1 ) {
+		leftValue  = monoValue;
+		rightValue = monoValue;
+	      }
+	      audioBuf[ this.audioPos++ ] = (byte) leftValue;
+	      audioBuf[ this.audioPos++ ] = (byte) rightValue;
 	    } else {
-	      while( this.recPauseFrames > 0 ) {
-		out.write( this.lastRecMonoValue );
-		this.recBufFrames++;
-		--this.recPauseFrames;
-	      }
-	      this.lastRecMonoValue = monoValue;
-	      for( int i = 0; i < nFrames; i++ ) {
-		out.write( monoValue );
-	      }
-	      this.recBufFrames += nFrames;
+	      audioBuf[ this.audioPos++ ] = (byte) monoValue;
 	    }
 	  }
-	  if( this.recBufFrames >= this.maxRecBufFrames ) {
-	    throw new IOException( "Audiofunktion beendet, da die maximal\n"
-			+ " zul\u00E4ssige Aufnahmedauer erreicht wurde" );
-	  }
-	  if( this.recPauseFrames > this.maxRecPauseFrames ) {
-	    this.recStatus      = 0;
-	    this.recPauseFrames = 0;
-	    this.observer.fireRecordingStatusChanged( this );
-	  }
 	}
-	catch( IOException ex ) {
-	  this.recStatus = 0;
-	  stopAudio();
-	  this.observer.fireFinished( this, ex.getMessage() );
+	catch( InterruptedException ex ) {
+	  // z.B. Programmbeendigung
+	  fireStop();
 	}
-	catch( OutOfMemoryError e ) {
-	  this.recStatus = 0;
-	  this.recBufOut = null;
-	  System.gc();
-	  stopAudio();
-	  this.observer.fireFinished(
-				this,
-				AudioUtil.ERROR_RECORDING_OUT_OF_MEMORY );
+	catch( Exception ex ) {
+	  // z.B. Abziehen eines aktiven USB-Audiogeraetes
+	  setErrorText( ERROR_LINE_CLOSED_BECAUSE_NOT_WORKING );
+	  fireStop();
 	}
       }
-    }
 
-    // Pegelanzeige aktualisieren
-    this.observer.updVolume( this.channels == 2 ?
+      /*
+       * Daten aufnehmen
+       *
+       * Die eigentliche Aufnahme erst beginnen,
+       * wenn sich die Sample-Daten erstmalig aendern
+       */
+      OutputStream out = this.recBufOut;
+      if( out != null ) {
+	switch( this.recStatus ) {
+	  case RUNNING:
+	    try {
+	      if( stereo ) {
+		if( (leftValue == this.lastRecLeftValue)
+		    && (rightValue == this.lastRecRightValue) )
+		{
+		  this.recPauseFrames += nFrames;
+		} else {
+		  this.lastRecPauseFrames = this.recPauseFrames;
+		  while( this.recPauseFrames > 0 ) {
+		    out.write( this.lastRecLeftValue );
+		    out.write( this.lastRecRightValue );
+		    this.recBufFrames++;
+		    --this.recPauseFrames;
+		  }
+		  this.lastRecLeftValue  = leftValue;
+		  this.lastRecRightValue = rightValue;
+		  this.recPauseFrames    = nFrames;
+		}
+	      } else {
+		if( monoValue == this.lastRecMonoValue ) {
+		  this.recPauseFrames += nFrames;
+		} else {
+		  this.lastRecPauseFrames = this.recPauseFrames;
+		  while( this.recPauseFrames > 0 ) {
+		    out.write( this.lastRecMonoValue );
+		    this.recBufFrames++;
+		    --this.recPauseFrames;
+		  }
+		  this.lastRecMonoValue = monoValue;
+		  this.recPauseFrames   = nFrames;
+		}
+	      }
+	      if( this.recBufFrames >= this.maxRecBufFrames ) {
+		fireStop();
+		setErrorText( "Audiofunktion beendet, da die maximal\n"
+			+ "zul\u00E4ssige Aufnahmedauer erreicht wurde" );
+	      }
+	      if( this.recPauseFrames > this.maxRecPauseFrames ) {
+		this.recStatus      = RecStatus.DISABLED;
+		this.recPauseFrames = 0;
+		this.observer.fireRecordingStatusChanged( this );
+	      }
+	    }
+	    catch( IOException ex ) {
+	      fireStop();
+	      setErrorText( ERROR_LINE_CLOSED_BECAUSE_NOT_WORKING );
+	    }
+	    catch( OutOfMemoryError e ) {
+	      this.recStatus = RecStatus.DISABLED;
+	      this.recBufOut = null;
+	      System.gc();
+	      setErrorText( ERROR_RECORDING_OUT_OF_MEMORY );
+	      fireStop();
+	    }
+	    break;
+
+	  case IDLE:
+	    if( (!stereo && (monoValue != this.lastRecMonoValue))
+		|| (stereo && ((leftValue != this.lastRecLeftValue)
+			       || (rightValue != this.lastRecRightValue))) )
+	    {
+	      this.recPauseFrames = 0;
+	      this.recStatus      = RecStatus.RUNNING;
+	    }
+	    break;
+
+	  case INIT:
+	    this.lastRecMonoValue  = monoValue;
+	    this.lastRecLeftValue  = leftValue;
+	    this.lastRecRightValue = rightValue;
+	    this.recStatus         = RecStatus.IDLE;
+	    break;
+	}
+      }
+
+      // Pegelanzeige aktualisieren
+      this.observer.updVolume( this.channels == 2 ?
 					(leftValue + rightValue) / 2
 					: monoValue );
+    }
+    catch( Exception ex ) {
+      fireStop();
+    }
+    finally {
+      checkCloseAndFinished();
+    }
   }
 
 
@@ -375,8 +433,8 @@ public class AudioOut extends AudioIO
    */
   public void writePhase( boolean phase )
   {
-    int value = (phase ? UNSIGNED_VALUE_1 : 0);
-    writeValue( value, value, value );
+    int value = (phase ? MAX_USED_UNSIGNED_VALUE : 0);
+    writeValues( value, value, value );
   }
 
 
@@ -386,35 +444,52 @@ public class AudioOut extends AudioIO
    * einen Byte-Wert in den Audiokanal.
    * Wertebereich: 0...MAX_UNSIGNED_VALUE
    */
-  public void writeValue( int monoValue, int leftValue, int rightValue )
+  public void writeValues( int monoValue, int leftValue, int rightValue )
   {
-    if( this.tStatesPerFrame > 0 ) {
+    try {
+      checkOpen();
       if( this.firstCall ) {
-	this.firstCall   = false;
-	this.lastTStates = this.z80cpu.getProcessedTStates();
+	this.firstCall = false;
+	calcMaxRecFrames();
+
+	// max. T-States, damit kein numerischer Ueberlauf auftritt
+	this.maxTStates = 0x7FFFFFFF00000000L / (this.frameRate + 1);
+
+	// Anfangswerte
+	this.begTStates  = this.z80cpu.getProcessedTStates();
+	this.lastTStates = this.begTStates;
 	this.lastPhase   = false;
 
       } else {
 
-	long tStates     = this.z80cpu.getProcessedTStates();
-	long diffTStates = this.z80cpu.calcTStatesDiff(
-					      this.lastTStates,
-					      tStates );
-	if( diffTStates > 0 ) {
-
-	  // Anzahl der zu erzeugenden Samples
-	  int nFrames = (int) (diffTStates / this.tStatesPerFrame);
-	  if( currentDiffTStates( diffTStates ) ) {
-	    writeFrames( nFrames, monoValue, leftValue, rightValue );
+	long curTStates  = this.z80cpu.getProcessedTStates();
+	long allTStates  = curTStates - this.begTStates;
+	if( (allTStates < 0) || (allTStates > this.maxTStates) ) {
+	  fireStop();
+	} else if( allTStates > 0 ) {
+	  int nFrames = (int) ((allTStates
+				* this.frameRate
+				/ this.speedHz) - this.totalFrameCnt);
+	  if( nFrames > 0 ) {
+	    long diffTStates = curTStates - this.lastTStates;
+	    if( diffTStates > 0 ) {
+	      if( currentDiffTStates( diffTStates ) ) {
+		writeFrames( nFrames, monoValue, leftValue, rightValue );
+	      }
+	      this.totalFrameCnt += nFrames;
+	      this.lastTStates = curTStates;
+	    }
 	  }
-
-	  /*
-	   * Anzahl der verstrichenen Taktzyklen auf den Wert
-	   * des letzten ausgegebenen Samples korrigieren
-	   */
-	  this.lastTStates += (nFrames * this.tStatesPerFrame);
 	}
       }
+    }
+    catch( Exception ex ) {
+      // z.B. Abziehen eines aktiven USB-Audiogeraetes
+      setErrorText( ERROR_LINE_CLOSED_BECAUSE_NOT_WORKING );
+      fireStop();
+    }
+    finally {
+      checkCloseAndFinished();
     }
   }
 
@@ -422,16 +497,33 @@ public class AudioOut extends AudioIO
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public synchronized void closeLine()
+  {
+    if( this.dataLine != null ) {
+      closeDataLine( this.dataLine );
+      this.dataLine = null;
+      checkFinished();
+    }
+  }
+
+
+  @Override
   protected boolean currentDiffTStates( long diffTStates )
   {
-    boolean rv = false;
+    boolean rv = true;
 
     // Audiokanal
     if( diffTStates > this.maxWaveTStatesLine ) {
-      this.audioPos = 0;
       DataLine line = this.dataLine;
       if( line != null ) {
+	/*
+	 * Sollte nicht vorkommen, aber falls doch,
+	 * dann Puffer leeren und fuer die verstrichene Zeit
+	 * keine Audiodaten ausgeben
+	 */
         line.flush();
+	this.audioPos = 0;
+	rv            = false;
       }
     } else {
       /*
@@ -444,84 +536,185 @@ public class AudioOut extends AudioIO
       if( this.dataLine != null ) {
 	this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
       }
-      rv = true;
     }
 
     // Recorder
-    if( (this.recStatus == 3) && (diffTStates > this.maxWaveTStatesRec) ) {
-      this.recStatus = 0;
+    if( this.recStatus.equals( RecStatus.RUNNING )
+	&& (diffTStates > this.maxWaveTStatesRec) )
+    {
+      this.recStatus = RecStatus.DISABLED;
       if( this.dataLine != null ) {
 	this.observer.fireRecordingStatusChanged( this );
       } else {
-	this.observer.fireFinished( this, null );
+	finished();
       }
-    } else {
-      rv = true;
     }
     return rv;
   }
 
 
   @Override
-  public boolean isLineOpen()
+  public void fireStop()
   {
-    return super.isLineOpen() || (this.dataLine != null);
+    this.recStatus = RecStatus.DISABLED;
+    super.fireStop();
   }
 
 
 	/* --- private Methoden --- */
 
-  private SourceDataLine openSourceDataLine(
-				Mixer   mixer,
-				int     frameRate,
-				boolean stereo ) throws IOException
+  private void calcMaxRecFrames()
   {
-    SourceDataLine line = openSourceDataLine(
-				mixer,
-				frameRate,
-				stereo,
-				false );
-    if( line == null ) {
-      line = openSourceDataLine( mixer, frameRate, stereo, true );
+    // nach entsprechender Zeit Aufnahme beenden
+    this.maxRecBufFrames = this.frameRate
+				* 60
+				* AudioUtil.RECORDING_MINUTES_MAX;
+
+    // nach entsprechender Pause Aufnahme beenden
+    this.maxRecPauseFrames = this.frameRate * MAX_RECORDING_PAUSE_SECONDS;
+  }
+
+
+  private void checkCloseAndFinished()
+  {
+    if( this.stopRequested ) {
+      this.stopRequested = false;
+      closeLine();
+    }
+    checkFinished();
+  }
+
+
+  private void checkFinished()
+  {
+    if( (this.dataLine == null)
+	&& this.recStatus.equals( RecStatus.DISABLED ) )
+    {
+      finished();
+    }
+  }
+
+
+  private synchronized void checkOpen()
+  {
+    // ggf. Line oeffnen
+    if( this.lineRequested ) {
+      this.lineRequested = false;
+      if( !this.stopRequested ) {
+	try {
+	  if( this.dataLine == null ) {
+	    this.dataLine = openSourceDataLine();
+	  }
+	}
+	catch( IOException ex ) {
+	  setErrorText( ex.getMessage() );
+	  if( this.recStatus.equals( RecStatus.DISABLED ) ) {
+	    fireStop();
+	  }
+	}
+      }
+    }
+
+    // Format
+    if( this.formatMissing ) {
+      setFormat(
+		null,
+		getRealFrameRate(),
+		singleBit ? 1 : 8,
+		stereo ? 2 : 1,
+		false,
+		false );
+      this.formatMissing = false;
+    }
+  }
+
+
+  private int getRealFrameRate()
+  {
+    return this.frameRate > 0 ? this.frameRate : getDefaultFrameRate();
+  }
+
+
+  private SourceDataLine openSourceDataLine() throws IOException
+  {
+    SourceDataLine line = null;
+    if( this.frameRate > 0 ) {
+      line = openSourceDataLine( this.frameRate );
+    } else {
+      for( int i = 0; i < frameRates.length; i++ ) {
+	line = openSourceDataLine( frameRates[ i ] );
+	if( line != null ) {
+	  break;
+	}
+      }
+    }
+    if( line != null ) {
+      AudioFormat fmt = line.getFormat();
+      setFormat(
+		null,
+		Math.round( fmt.getSampleRate() ),
+		singleBit ? 1 : 8,
+		stereo ? 2 : 1,
+		false,
+		false );
+      this.formatMissing = false;
+      this.lineChannels  = fmt.getChannels();
+      this.dataLine      = line;
+
+      /*
+       * externen Audiopuffer anlegen
+       *
+       * Damit die Implementierung des Blockens ausserhalb
+       * der SourceDataLine.write-Methode funktioniert,
+       * muss der externe Puffer kleiner als der interne sein.
+       */
+      this.audioBuf = new byte[ Math.min( line.getBufferSize() / 4, 512 ) ];
+      this.audioPos = 0;
+
+      // Fuer die Pegelanzeige gilt der Wertebereich 0...MAX_UNSIGEND_VALUE.
+      this.observer.setVolumeLimits( 0, MAX_UNSIGNED_VALUE );
+    } else {
+      setErrorText( ERROR_NO_LINE );
     }
     return line;
   }
 
 
   private SourceDataLine openSourceDataLine(
-				Mixer   mixer,
-				int     sampleRate,
-				boolean stereo,
-				boolean bigEndian ) throws IOException
+				int frameRate ) throws IOException
   {
     AudioFormat fmt = new AudioFormat(
-				(float) sampleRate,
+				(float) frameRate,
 				8,
-				stereo ? 2 : 1,
+				this.stereo ? 2 : 1,
 				false,
-				bigEndian );
+				false );
 
-    DataLine.Info  info = new DataLine.Info( SourceDataLine.class, fmt );
     SourceDataLine line = null;
     try {
-      if( mixer != null ) {
-	if( mixer.isLineSupported( info ) ) {
-	  line = (SourceDataLine) mixer.getLine( info );
-	}
+      if( this.mixerInfo != null ) {
+	line = AudioSystem.getSourceDataLine( fmt, this.mixerInfo );
       } else {
-	if( AudioSystem.isLineSupported( info ) ) {
-	  line = (SourceDataLine) AudioSystem.getLine( info );
-	}
+	line = AudioSystem.getSourceDataLine( fmt );
       }
       if( line != null ) {
-	line.open( fmt, sampleRate / 4 );
+	if( isEmuThread() ) {
+	  registerCPUSynchronLine( line );
+	}
+	// interner Puffer bei Stereo fuer 125 ms
+	int bufSize = frameRate / 8;
+	if( this.stereo ) {
+	  bufSize *= 2;
+	}
+	line.open( fmt, Math.max( bufSize, 256 ) );
+	line.start();
       }
     }
     catch( Exception ex ) {
-      DataLineCloser.closeDataLine( line );
+      closeDataLine( line );
       line = null;
       if( ex instanceof LineUnavailableException ) {
-	throw new IOException( AudioUtil.ERROR_TEXT_LINE_UNAVAILABLE );
+	throw new IOException( ERROR_LINE_UNAVAILABLE );
       }
     }
     return line;

@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.net;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import jkcemu.Main;
@@ -195,11 +194,9 @@ public class DhcpProcess
 			switch( option ) {
 			  case 23:		// default ip time-to-live
 			  case 37:		// default tcp time-to-live
-			    {
-			      buf.write( option );
-			      buf.write( 1 );
-			      buf.write( TTL_DEFAULT );
-			    }
+			    buf.write( option );
+			    buf.write( 1 );
+			    buf.write( TTL_DEFAULT );
 			    break;
 			}
 			--parmReqListLen;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,17 @@
 
 package jkcemu.base;
 
+import java.awt.Component;
 import java.awt.Event;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,214 +26,272 @@ import java.util.regex.PatternSyntaxException;
 import javax.swing.JEditorPane;
 import javax.swing.JOptionPane;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.KeyStroke;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import jkcemu.Main;
+import jkcemu.base.PopupMenuOwner;
 import jkcemu.print.PrintOptionsDlg;
 import jkcemu.print.PrintUtil;
-import jkcemu.text.TextUtil;
+import jkcemu.text.TextFinder;
 
 
 public class HTMLViewFrm extends BaseFrm implements
 						CaretListener,
+						PopupMenuOwner,
 						Printable
 {
   protected JEditorPane editorPane;
   protected JScrollPane scrollPane;
 
-  private int       findPos             = 0;
-  private Pattern   findPattern         = null;
-  private JMenuItem mnuFilePrintOptions = null;
-  private JMenuItem mnuFilePrint        = null;
-  private JMenuItem mnuFileClose        = null;
-  private JMenuItem mnuEditCopy         = null;
-  private JMenuItem mnuEditFind         = null;
-  private JMenuItem mnuEditFindNext     = null;
-  private JMenuItem mnuEditFindPrev     = null;
-  private JMenuItem mnuEditSelectAll    = null;
-  private JMenuItem mnuHelpContent      = null;
+  private int        findPos             = 0;
+  private Pattern    findPattern         = null;
+  private String     findTitle           = null;
+  private String     findTitle2          = null;
+  private JMenuItem  mnuFilePrintOptions = null;
+  private JMenuItem  mnuFilePrint        = null;
+  private JMenuItem  mnuFileClose        = null;
+  private JMenuItem  mnuEditCopy         = null;
+  private JMenuItem  mnuEditFind         = null;
+  private JMenuItem  mnuEditFindNext     = null;
+  private JMenuItem  mnuEditFindPrev     = null;
+  private JMenuItem  mnuEditFind2        = null;
+  private JMenuItem  mnuEditSelectAll    = null;
+  private JMenuItem  mnuHelpContent      = null;
+  private JMenuItem  popupCopy           = null;
+  private JMenuItem  popupFind           = null;
+  private JMenuItem  popupFindNext       = null;
+  private JMenuItem  popupFindPrev       = null;
+  private JMenuItem  popupFind2          = null;
+  private JMenuItem  popupSelectAll      = null;
+  private JPopupMenu popupMnu            = null;
 
 
   protected HTMLViewFrm()
   {
-    Main.updIcon( this );
+    // leer
   }
 
 
   protected void createMenuBar(
 			JMenu  mnuFile,
+			String findTitle,
+			String findTitle2,
 			JMenu  mnuEtc,
+			String helpMenuItem,
 			String helpResource )
   {
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
+    this.findTitle  = findTitle;
+    this.findTitle2 = findTitle2;
 
     // Menu Datei
     if( mnuFile == null ) {
-      mnuFile = new JMenu( "Datei" );
-      mnuFile.setMnemonic( KeyEvent.VK_D );
+      mnuFile = createMenuFile();
     }
-    mnuBar.add( mnuFile );
 
-    this.mnuFilePrintOptions = createJMenuItem( "Druckoptionen..." );
+    this.mnuFilePrintOptions = createMenuItemOpenPrintOptions();
     mnuFile.add( this.mnuFilePrintOptions );
 
-    this.mnuFilePrint = createJMenuItem(
-		"Drucken...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_P, Event.CTRL_MASK ) );
+    this.mnuFilePrint = createMenuItemOpenPrint( true );
     mnuFile.add( this.mnuFilePrint );
     mnuFile.addSeparator();
 
-    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuFileClose = createMenuItemClose();
     mnuFile.add( this.mnuFileClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuEditCopy = createJMenuItem(
-		"Kopieren",
-		KeyStroke.getKeyStroke( KeyEvent.VK_C, Event.CTRL_MASK ) );
+    this.mnuEditCopy = createMenuItemCopy( true );
     this.mnuEditCopy.setEnabled( false );
     mnuEdit.add( this.mnuEditCopy );
     mnuEdit.addSeparator();
 
-    this.mnuEditFind = createJMenuItem(
-		"Suchen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
-    mnuEdit.add( this.mnuEditFind );
+    if( findTitle != null ) {
+      this.mnuEditFind = createMenuItemWithStandardAccelerator(
+							findTitle,
+							KeyEvent.VK_F );
+      this.mnuEditFind.setEnabled( false );
+      mnuEdit.add( this.mnuEditFind );
 
-    this.mnuEditFindNext = createJMenuItem(
-		"Weitersuchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
-    this.mnuEditFindNext.setEnabled( false );
-    mnuEdit.add( this.mnuEditFindNext );
+      this.mnuEditFindNext = createMenuItemFindNext( true );
+      this.mnuEditFindNext.setEnabled( false );
+      mnuEdit.add( this.mnuEditFindNext );
 
-    this.mnuEditFindPrev = createJMenuItem(
-		"R\u00FCckw\u00E4rts suchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, Event.SHIFT_MASK ) );
-    this.mnuEditFindPrev.setEnabled( false );
-    mnuEdit.add( this.mnuEditFindPrev );
-    mnuEdit.addSeparator();
+      this.mnuEditFindPrev = createMenuItemFindPrev( true );
+      this.mnuEditFindPrev.setEnabled( false );
+      mnuEdit.add( this.mnuEditFindPrev );
+      mnuEdit.addSeparator();
+    }
 
-    this.mnuEditSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    if( findTitle2 != null ) {
+      this.mnuEditFind2 = createMenuItemWithStandardAccelerator(
+							findTitle2,
+							KeyEvent.VK_F,
+							true );
+      mnuEdit.add( this.mnuEditFind2 );
+      mnuEdit.addSeparator();
+    }
+
+    this.mnuEditSelectAll = createMenuItemSelectAll( true );
+    this.mnuEditSelectAll.setEnabled( false );
     mnuEdit.add( this.mnuEditSelectAll );
 
-    // weiteres Menue
-    if( mnuEtc != null ) {
-      mnuBar.add( mnuEtc );
-    }
 
     // Menu Hilfe
-    if( helpResource != null ) {
-      JMenu mnuHelp = new JMenu( "?" );
-      mnuBar.add( mnuHelp );
+    JMenu mnuHelp = null;
+    if( (helpMenuItem != null) && (helpResource != null) ) {
+      mnuHelp = createMenuHelp();
 
-      this.mnuHelpContent = createJMenuItem( "Hilfe..." );
-      this.mnuHelpContent.setActionCommand( helpResource );
+      this.mnuHelpContent = createMenuItem( helpMenuItem, helpResource );
       mnuHelp.add( this.mnuHelpContent );
     }
+
+
+    // weiteres Menue und MenuBar
+    setJMenuBar( GUIFactory.createMenuBar(
+				mnuFile, mnuEdit, mnuEtc, mnuHelp ) );
+
+
+    // Kontext-Menu
+    this.popupMnu = GUIFactory.createPopupMenu();
+
+    this.popupCopy = createMenuItem( EmuUtil.TEXT_COPY );
+    this.popupCopy.setEnabled( false );
+    this.popupMnu.add( this.popupCopy );
+    this.popupMnu.addSeparator();
+
+    if( findTitle != null ) {
+      this.popupFind = createMenuItem( findTitle );
+      this.popupFind.setEnabled( false );
+      this.popupMnu.add( this.popupFind );
+
+      this.popupFindNext = createMenuItemFindNext( false );
+      this.popupFindNext.setEnabled( false );
+      this.popupMnu.add( this.popupFindNext );
+
+      this.popupFindPrev = createMenuItemFindPrev( false );
+      this.popupFindPrev.setEnabled( false );
+      this.popupMnu.add( this.popupFindPrev );
+      this.popupMnu.addSeparator();
+    }
+    if( findTitle2 != null ) {
+      this.popupFind2 = createMenuItem( findTitle2 );
+      this.popupMnu.add( this.popupFind2 );
+      this.popupMnu.addSeparator();
+    }
+    this.popupSelectAll = createMenuItemSelectAll( true );
+    this.popupSelectAll.setEnabled( false );
+    this.popupMnu.add( this.popupSelectAll );
   }
 
 
   protected void createEditorPane( Object constraints )
   {
-    this.editorPane = new JEditorPane();
+    this.editorPane = GUIFactory.createEditorPane();
     this.editorPane.setMargin( new Insets( 5, 5, 5, 5 ) );
     this.editorPane.setEditable( false );
     this.editorPane.addCaretListener( this );
+    this.editorPane.addMouseListener( this );
 
-    this.scrollPane = new JScrollPane( this.editorPane );
-    add( this.scrollPane, constraints );
+    this.scrollPane = GUIFactory.createScrollPane( this.editorPane );
+    if( constraints != null ) {
+      add( this.scrollPane, constraints );
+    } else {
+      add( this.scrollPane );
+    }
   }
 
 
   protected void doFind()
   {
-    String text = this.editorPane.getSelectedText();
-    if( text != null ) {
-      if( text.isEmpty() ) {
-	text = null;
+    String initialText = this.editorPane.getSelectedText();
+    if( initialText != null ) {
+      if( initialText.isEmpty() ) {
+	initialText = null;
       }
     }
-    if( text == null ) {
+    if( initialText == null ) {
       if( this.findPattern != null ) {
-	text = this.findPattern.toString();
+	initialText = this.findPattern.toString();
       }
     }
-    final String[] options = { "Suchen", "Abbrechen" };
+    String title = null;
+    if( this.mnuEditFind != null ) {
+      title = this.mnuEditFind.getText();
+    }
+    if( title != null ) {
+      if( title.endsWith( "..." ) ) {
+	title = title.substring( 0, title.length() - 3 );
+      }
+    } else {
+      title = EmuUtil.TEXT_FIND;
+    }
+    doFind( showFindDlg( title, initialText ), true );
+  }
+
+
+  protected void doFind( String findText, boolean interactive )
+  {
+    if( findText != null ) {
+      try {
+	this.findPattern = Pattern.compile(
+				findText,
+				Pattern.LITERAL
+					| Pattern.CASE_INSENSITIVE
+					| Pattern.UNICODE_CASE );
+	this.findPos = 0;
+	if( this.mnuEditFind != null ) {
+	  this.mnuEditFindNext.setEnabled( true );
+	  this.mnuEditFindPrev.setEnabled( true );
+	  this.popupFindNext.setEnabled( true );
+	  this.popupFindPrev.setEnabled( true );
+	}
+	doFindNext( false, interactive );
+      }
+      catch( PatternSyntaxException ex ) {}
+    }
+  }
+
+
+  protected void doFind2()
+  {
+    // leer
+  }
+
+
+  protected String showFindDlg( String title, String initialText )
+  {
+    String reply = null;
+
+    final String[] options = { EmuUtil.TEXT_FIND, EmuUtil.TEXT_CANCEL };
     JOptionPane pane = new JOptionPane(
-				"Suche nach:",
+				EmuUtil.LABEL_SEARCH_FOR,
 				JOptionPane.PLAIN_MESSAGE );
     pane.setOptions( options );
     pane.setInitialValue( options[ 0 ] );
     pane.setWantsInput( true );
-    if( text != null ) {
-      pane.setInitialSelectionValue( text );
+    if( initialText != null ) {
+      pane.setInitialSelectionValue( initialText );
     }
-    pane.createDialog( this, "Suchen" ).setVisible( true );
+    pane.createDialog( this, title ).setVisible( true );
     if( pane.getValue() == options[ 0 ] ) {
       Object o = pane.getInputValue();
       if( o != null ) {
 	String s = o.toString();
 	if( s != null ) {
 	  if( !s.isEmpty() ) {
-	    try {
-	      this.findPattern = Pattern.compile(
-			s,
-			Pattern.LITERAL
-				| Pattern.CASE_INSENSITIVE
-				| Pattern.UNICODE_CASE );
-	      this.findPos = 0;
-	      this.mnuEditFindNext.setEnabled( true );
-	      this.mnuEditFindPrev.setEnabled( true );
-	      doFindNext( false );
-	    }
-	    catch( PatternSyntaxException ex ) {}
+	    reply = s;
 	  }
 	}
       }
     }
-  }
-
-
-  private void doFindNext( boolean backward )
-  {
-    if( this.findPattern != null ) {
-      String   text = null;
-      Document doc  = this.editorPane.getDocument();
-      if( doc != null ) {
-	try {
-	  text = doc.getText( 0, doc.getLength() );
-	}
-	catch( BadLocationException ex ) {}
-      }
-      if( text == null ) {
-	text = "";
-      }
-      if( this.findPos > text.length() ) {
-	this.findPos = 0;
-      }
-      Matcher matcher = this.findPattern.matcher( text );
-      boolean found   = findNext( matcher, backward );
-      if( !found && (this.findPos > 0) ) {
-	this.findPos = 0;
-	found = findNext( matcher, backward );
-      }
-      if( !found ) {
-	TextUtil.showTextNotFound( this );
-      }
-    } else {
-      doFind();
-    }
+    return reply;
   }
 
 
@@ -257,6 +316,23 @@ public class HTMLViewFrm extends BaseFrm implements
   }
 
 
+  protected void setContentActionFieldsEnabled( boolean state )
+  {
+    if( this.mnuEditFind != null ) {
+      this.mnuEditFind.setEnabled( state );
+      this.popupFind.setEnabled( state );
+      if( !state ) {
+	this.mnuEditFindNext.setEnabled( false );
+	this.popupFindNext.setEnabled( false );
+	this.popupFindPrev.setEnabled( false );
+	this.mnuEditFindPrev.setEnabled( false );
+      }
+    }
+    this.mnuEditSelectAll.setEnabled( state );
+    this.popupSelectAll.setEnabled( state );
+  }
+
+
   public void setHTMLText( String text )
   {
     this.editorPane.setContentType( "text/html" );
@@ -265,6 +341,12 @@ public class HTMLViewFrm extends BaseFrm implements
       this.editorPane.setCaretPosition( 0 );
     }
     catch( IllegalArgumentException ex ) {}
+
+    boolean state = false;
+    if( text != null ) {
+      state = !text.isEmpty();
+    }
+    setContentActionFieldsEnabled( state );
   }
 
 
@@ -273,9 +355,20 @@ public class HTMLViewFrm extends BaseFrm implements
   @Override
   public void caretUpdate( CaretEvent e )
   {
-    int a = this.editorPane.getSelectionStart();
-    int b = this.editorPane.getSelectionEnd();
-    this.mnuEditCopy.setEnabled( (a >= 0) && (a < b) );
+    int     a     = this.editorPane.getSelectionStart();
+    int     b     = this.editorPane.getSelectionEnd();
+    boolean state = ((a >= 0) && (a < b));
+    this.mnuEditCopy.setEnabled( state );
+    this.popupCopy.setEnabled( state );
+  }
+
+
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMnu;
   }
 
 
@@ -362,36 +455,96 @@ public class HTMLViewFrm extends BaseFrm implements
 	rv = true;
 	doClose();
       }
-      else if( src == this.mnuEditCopy ) {
+      else if( (src == this.mnuEditCopy)
+	       || (src == this.popupCopy) )
+      {
 	rv = true;
 	this.editorPane.copy();
       }
-      else if( src == this.mnuEditFind ) {
+      else if( (src == this.mnuEditFind)
+	       || (src == this.popupFind) )
+      {
 	rv = true;
 	doFind();
       }
-      else if( src == this.mnuEditFindNext ) {
+      else if( (src == this.mnuEditFindNext)
+	       || (src == this.popupFindNext) )
+      {
 	rv = true;
-	doFindNext( false );
+	doFindNext( false, true );
       }
-      else if( src == this.mnuEditFindPrev ) {
+      else if( (src == this.mnuEditFindPrev)
+	       || (src == this.popupFindPrev) )
+      {
 	rv = true;
-	doFindNext( true );
+	doFindNext( true, true );
       }
-      else if( src == this.mnuEditSelectAll ) {
+      else if( (src == this.mnuEditFind2)
+	       || (src == this.popupFind2) )
+      {
+	rv = true;
+	doFind2();
+      }
+      else if( (src == this.mnuEditSelectAll)
+	       || (src == this.popupSelectAll) )
+      {
 	rv = true;
 	doSelectAll();
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( this.mnuHelpContent.getActionCommand() );
+	HelpFrm.openPage( this.mnuHelpContent.getActionCommand() );
       }
     }
     return rv;
   }
 
 
+  @Override
+  protected boolean showPopupMenu( MouseEvent e )
+  {
+    boolean rv = false;
+    if( e.getComponent() == this.editorPane ) {
+      this.popupMnu.show( this.editorPane, e.getX(), e.getY() );
+      rv = true;
+    }
+    return rv;
+  }
+
+
 	/* --- private Methoden --- */
+
+  private void doFindNext( boolean backward, boolean interactive )
+  {
+    if( this.findPattern != null ) {
+      String   text = null;
+      Document doc  = this.editorPane.getDocument();
+      if( doc != null ) {
+	try {
+	  text = doc.getText( 0, doc.getLength() );
+	}
+	catch( BadLocationException ex ) {}
+      }
+      if( text == null ) {
+	text = "";
+      }
+      if( this.findPos > text.length() ) {
+	this.findPos = 0;
+      }
+      Matcher matcher = this.findPattern.matcher( text );
+      boolean found   = findNext( matcher, backward );
+      if( !found && (this.findPos > 0) ) {
+	this.findPos = 0;
+	found = findNext( matcher, backward );
+      }
+      if( !found && interactive ) {
+	TextFinder.showTextNotFound( this );
+      }
+    } else {
+      doFind();
+    }
+  }
+
 
   private boolean findNext( Matcher matcher, boolean backward )
   {

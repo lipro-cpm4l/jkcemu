@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.tools.debugger;
 import java.awt.Component;
 import java.awt.Image;
 import java.awt.Window;
-import java.lang.*;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -65,7 +64,7 @@ public class BreakpointCellRenderer extends DefaultListCellRenderer
 	  }
 	}
 	if( imgResource != null ) {
-	  image = Main.getImage( this.window, imgResource );
+	  image = Main.getLoadedImage( this.window, imgResource );
 	}
 	((JLabel) c).setHorizontalTextPosition( SwingConstants.TRAILING );
 	((JLabel) c).setVerticalTextPosition( SwingConstants.CENTER );

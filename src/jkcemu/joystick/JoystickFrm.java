@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,18 +17,19 @@ import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import jkcemu.Main;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
 
 
@@ -44,6 +45,7 @@ public class JoystickFrm extends BaseFrm
   private static JoystickFrm instance = null;
 
   private EmuThread         emuThread;
+  private boolean           joyActionByKey;
   private JPanel            panel0;
   private JPanel            panel1;
   private JLabel            labelStatus0;
@@ -67,6 +69,34 @@ public class JoystickFrm extends BaseFrm
     }
     instance.toFront();
     instance.setVisible( true );
+  }
+
+
+  public static int getJoystickActionByKeyCode( int keyCode )
+  {
+    int action = 0;
+    switch( keyCode ) {
+      case KeyEvent.VK_LEFT:
+	action = JoystickThread.LEFT_MASK;
+	break;
+      case KeyEvent.VK_RIGHT:
+	action = JoystickThread.RIGHT_MASK;
+	break;
+      case KeyEvent.VK_UP:
+	action = JoystickThread.UP_MASK;
+	break;
+      case KeyEvent.VK_DOWN:
+	action = JoystickThread.DOWN_MASK;
+	break;
+      case KeyEvent.VK_F1:
+      case KeyEvent.VK_ENTER:
+	action = JoystickThread.BUTTON1_MASK;
+	break;
+      case KeyEvent.VK_F2:
+	action = JoystickThread.BUTTON2_MASK;
+	break;
+    }
+    return action;
   }
 
 
@@ -115,26 +145,57 @@ public class JoystickFrm extends BaseFrm
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.btnConnect0 ) {
-	rv = true;
-	doConnect( 0 );
-      }
-      else if( src == this.btnConnect1 ) {
-	rv = true;
-	doConnect( 1 );
-      }
-      else if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	HelpFrm.open( HELP_PAGE );
-      }
+    Object src = e.getSource();
+    if( src == this.btnConnect0 ) {
+      rv = true;
+      doConnect( 0 );
+    }
+    else if( src == this.btnConnect1 ) {
+      rv = true;
+      doConnect( 1 );
+    }
+    else if( src == this.mnuClose ) {
+      rv = true;
+      doClose();
+    }
+    else if( src == this.mnuHelpContent ) {
+      rv = true;
+      HelpFrm.openPage( HELP_PAGE );
     }
     return rv;
+  }
+
+
+  @Override
+  public void keyPressed( KeyEvent e )
+  {
+    Component c = e.getComponent();
+    if( !e.isShiftDown() ) {
+      if( processJoystickAction( 0, e ) ) {
+	e.consume();
+      }
+    } else if( e.isShiftDown() ) {
+      if( processJoystickAction( 1, e ) ) {
+	e.consume();
+      }
+    }
+    if( !e.isConsumed() ) {
+      super.keyPressed( e );
+    }
+  }
+
+
+  @Override
+  public void keyReleased( KeyEvent e )
+  {
+    super.keyPressed( e );
+    if( this.joyActionByKey ) {
+      this.joyActionByKey = false;
+      if( this.emuThread != null ) {
+	this.emuThread.setJoystickAction( 0, 0 );
+	this.emuThread.setJoystickAction( 1, 0 );
+      }
+    }
   }
 
 
@@ -142,17 +203,18 @@ public class JoystickFrm extends BaseFrm
   public void mousePressed( MouseEvent e )
   {
     Component c = e.getComponent();
-    if( c == this.joyFld0 ) {
+    if( (c == this.joyFld0) && (this.emuThread != null) ) {
       this.emuThread.setJoystickAction(
 		0,
 		this.joyFld0.getJoystickAction( e.getX(), e.getY() ) );
       e.consume();
-    } else if( c == this.joyFld1 ) {
+    } else if( (c == this.joyFld1) && (this.emuThread != null) ) {
       this.emuThread.setJoystickAction(
 		1,
 		this.joyFld1.getJoystickAction( e.getX(), e.getY() ) );
       e.consume();
-    } else {
+    }
+    if( !e.isConsumed() ) {
       super.mousePressed( e );
     }
   }
@@ -162,14 +224,26 @@ public class JoystickFrm extends BaseFrm
   public void mouseReleased( MouseEvent e )
   {
     Component c = e.getComponent();
-    if( c == this.joyFld0 ) {
+    if( (c == this.joyFld0) && (this.emuThread != null) ) {
       this.emuThread.setJoystickAction( 0, 0 );
       e.consume();
-    } else if( c == this.joyFld1 ) {
+    } else if( (c == this.joyFld1) && (this.emuThread != null) ) {
       this.emuThread.setJoystickAction( 1, 0 );
       e.consume();
-    } else {
+    }
+    if( !e.isConsumed() ) {
       super.mousePressed( e );
+    }
+  }
+
+
+  @Override
+  public void resetFired( EmuSys newEmuSys, Properties props )
+  {
+    if( newEmuSys != null ) {
+      if( newEmuSys.getSupportedJoystickCount() < 1 ) {
+	doClose();
+      }
     }
   }
 
@@ -177,6 +251,7 @@ public class JoystickFrm extends BaseFrm
   @Override
   public void windowActivated( WindowEvent e )
   {
+    super.windowActivated( e );
     if( e.getWindow() == this ) {
       Main.setWindowActivated( Main.WINDOW_MASK_JOYSTICK );
     }
@@ -186,9 +261,19 @@ public class JoystickFrm extends BaseFrm
   @Override
   public void windowDeactivated( WindowEvent e )
   {
+    super.windowDeactivated( e );
     if( e.getWindow() == this ) {
       Main.setWindowDeactivated( Main.WINDOW_MASK_JOYSTICK );
     }
+  }
+
+
+  @Override
+  public void windowOpened( WindowEvent e )
+  {
+    super.windowOpened( e );
+    if( (e.getWindow() == this) && (this.joyFld0 != null) )
+      this.joyFld0.requestFocus();
   }
 
 
@@ -196,31 +281,25 @@ public class JoystickFrm extends BaseFrm
 
   private JoystickFrm( EmuThread emuThread )
   {
-    this.emuThread = emuThread;
+    this.emuThread      = emuThread;
+    this.joyActionByKey = true;
     setTitle( "JKCEMU Joysticks" );
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    JMenu mnuFile = createMenuFile();
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    JMenu mnuHelp       = createMenuHelp();
+    this.mnuHelpContent = createMenuItem( "Hilfe zu Joysticks..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuHelp ) );
 
 
     // Fensterinhalt
@@ -235,22 +314,22 @@ public class JoystickFrm extends BaseFrm
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.labelStatus0 = new JLabel( TEXT_NOT_CONNECTED );
+    this.labelStatus0 = GUIFactory.createLabel( TEXT_NOT_CONNECTED );
     this.joyFld0      = new JoystickActionFld();
-    this.btnConnect0  = new JButton( TEXT_CONNECT );
-    this.btnConnect0.addActionListener( this );
-    this.panel0 = createJoystickPanel(
+    this.joyFld0.setFocusable( true );
+    this.btnConnect0 = GUIFactory.createButton( TEXT_CONNECT );
+    this.panel0      = createJoystickPanel(
 				this.labelStatus0,
 				this.joyFld0,
 				this.btnConnect0,
 				"Joystick 1" );
     add( this.panel0, gbc );
 
-    this.labelStatus1 = new JLabel( TEXT_NOT_CONNECTED );
+    this.labelStatus1 = GUIFactory.createLabel( TEXT_NOT_CONNECTED );
     this.joyFld1      = new JoystickActionFld();
-    this.btnConnect1  = new JButton( TEXT_CONNECT );
-    this.btnConnect1.addActionListener( this );
-    this.panel1 = createJoystickPanel(
+    this.joyFld1.setFocusable( true );
+    this.btnConnect1 = GUIFactory.createButton( TEXT_CONNECT );
+    this.panel1      = createJoystickPanel(
 				this.labelStatus1,
 				this.joyFld1,
 				this.btnConnect1,
@@ -261,10 +340,10 @@ public class JoystickFrm extends BaseFrm
 
     // Fenstergroesse
     pack();
-    if( !applySettings( Main.getProperties(), false ) ) {
+    setResizable( false );
+    if( !applySettings( Main.getProperties() ) ) {
       setLocationByPlatform( true );
     }
-    setResizable( false );
 
 
     // Groessenanpassungen der beiden Panels verhindern
@@ -278,11 +357,18 @@ public class JoystickFrm extends BaseFrm
     }
 
 
+    // Listener
+    this.joyFld0.addKeyListener( this );
+    this.joyFld1.addKeyListener( this );
+    this.joyFld0.addMouseListener( this );
+    this.joyFld1.addMouseListener( this );
+    this.btnConnect0.addActionListener( this );
+    this.btnConnect1.addActionListener( this );
+
+
     // sonstiges
     if( this.emuThread != null ) {
       this.emuThread.setJoystickFrm( this );
-      this.joyFld0.addMouseListener( this );
-      this.joyFld1.addMouseListener( this );
     }
   }
 
@@ -295,8 +381,8 @@ public class JoystickFrm extends BaseFrm
 			JButton           btn,
 			String            title )
   {
-    JPanel panel = new JPanel( new GridBagLayout() );
-    panel.setBorder( BorderFactory.createTitledBorder( title ) );
+    JPanel panel = GUIFactory.createPanel( new GridBagLayout() );
+    panel.setBorder( GUIFactory.createTitledBorder( title ) );
 
     GridBagConstraints gbc = new GridBagConstraints(
 					0, 0,
@@ -320,5 +406,20 @@ public class JoystickFrm extends BaseFrm
   {
     if( this.emuThread != null )
       this.emuThread.changeJoystickConnectState( joyNum );
+  }
+
+
+  private boolean processJoystickAction( int joyNum, KeyEvent e )
+  {
+    boolean rv = false;
+    if( this.emuThread != null ) {
+      int action = getJoystickActionByKeyCode( e.getKeyCode() );
+      if( action != 0 ) {
+	this.emuThread.setJoystickAction( joyNum, action );
+	this.joyActionByKey = true;
+	rv                  = true;
+      }
+    }
+    return rv;
   }
 }

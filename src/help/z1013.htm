@@ -34,6 +34,20 @@
   Im Fr&uuml;hjahr 1990, vor der Einf&uuml;hrung der D-Mark in der DDR,
   wurde der Z1013 in Erfurt f&uuml;r nur noch 99&nbsp;Mark angeboten.
  <br/><br/>
+  Im Jahr 2016 stellten engagierte Bastler den Z1013-128
+  (gelegentlich auch Z1013.128 genannt) vor,
+  bei dem einige Unsch&ouml;nheiten im originalen Hardware-Design
+  behoben wurden.
+  Des Weiteren bietet er ein paar optionale Erweiterungen,
+  u.a. 128&nbsp;KByte RAM, woher z.B. sein Name r&uuml;hrt.
+  Die Hardware-Konfiguration ist durch eine ganze Reihe von Jumpern
+  sehr flexibel einstellbar.
+  In den Standardeinstellungen dieser Jumper entspricht der Z1013-128
+  im wesenlichen einem Z1013.64 mit einem zus&auml;tzlichen
+  schaltbaren 32K&nbsp;KByte gro&szlig;en EPROM im Adressbereich 8000h-FFFFh.
+  Dieser ROM und damit implizit auch der Z1013-128 in seinen
+  Standardeinstellungen werden optional emuliert 
+ <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
   <ul>
@@ -44,13 +58,26 @@
      <li><a href="z1013.htm#kb8x8">1.2. Alphatastatur</a></li>
      <li><a href="z1013.htm#peters">1.3. Peters-Platine</a></li>
      <li><a href="z1013.htm#mega">1.4. Mega-ROM-Modul</a></li>
-     <li><a href="z1013.htm#printer">1.5. Drucker</a></li>
-     <li><a href="z1013.htm#joystick">1.6. Joysticks</a></li>
-     <li><a href="z1013.htm#fdc">1.7. Floppy-Disk-Modul</a></li>
      <li>
-      <a href="z1013.htm#usb">1.8. USB-Anschluss (Vinculum VDIP Modul)</a>
+      <a href="z1013.htm#rom8000">1.5. 32K-ROM entsprechend Z1013-128</a>
      </li>
-     <li><a href="z1013.htm#rtc">1.9. Echtzeituhrmodul</a></li>
+     <li><a href="z1013.htm#printer">1.6. Drucker</a></li>
+     <li><a href="z1013.htm#joystick">1.7. Joysticks</a></li>
+     <li><a href="z1013.htm#fdc">1.8. Floppy-Disk-Modul</a></li>
+     <li>
+      <a href="z1013.htm#usb">1.9. USB-Anschluss (Vinculum VDIP Modul)</a>
+     </li>
+     <li><a href="z1013.htm#rtc">1.10. Echtzeituhrmodul</a></li>
+     <li>
+      <a href="z1013.htm#graphzx">1.11. Vollgrafik nach practic&nbsp;2/1988</a>
+     </li>
+     <li>
+      <a href="z1013.htm#krt">1.12. Vollgrafik nach KRT&nbsp;11 und FA&nbsp;7/1991</a>
+     </li>
+     <li><a href="z1013.htm#gccj">1.13. Grafikkarte des CC&nbsp;Jena</a></li>
+     <li>
+      <a href="z1013.htm#poppe">1.14. Farbgrafikkarte mit 32x32 und 64x32&nbsp;Zeichen</a>
+     </li>
     </ul>
    </li>
    <li><a href="z1013.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -81,57 +108,68 @@
   Emuliert werden:
   <ul>
    <li>Je nach Monitorprogramm 2 oder 4&nbsp;KByte ROM</li>
-   <li>16 oder 64&nbsp;KByte RAM</li>
+   <li>Je nach Z1013-Modell 1, 16 oder 64&nbsp;KByte RAM</li>
    <li>
     Tastaturen:
     <ul>
      <li><a href="z1013.htm#kb8x4">Folienflachtastatur</a> (8x4-Matrix)</li>
      <li><a href="z1013.htm#kb8x8">Alphatastatur</a> (8x8-Matrix)</li>
      <li>K7659 (12x8-Matrix)</li>
+     <li>K7669 (12x8-Matrix)</li>
      <li>S6009 (12x8-Matrix)</li>
     </ul>
    </li>
    <li>Kassettenrecorderanschluss</li>
    <li>
-    Erweiterungen:
+    Optionale Erweiterungen:
     <ul>
      <li>Peters-Platine</li>
+     <li>KC-BASIC-Modul</li>
+     <li><a href="z1013.htm#mega">Mega-ROM-Modul</a></li>
      <li>
-      optional:
-      <ul>
-       <li>KC-BASIC-Modul</li>
-       <li><a href="z1013.htm#mega">Mega-ROM-Modul</a></li>
-       <li><a href="z1013.htm#printer">Drucker</a></li>
-       <li><a href="z1013.htm#joystick">Joysticks</a></li>
-       <li>
-	Zwei&nbsp;<a href="ramfloppy.htm">RAM-Floppies</a>
-	nach <em>Mikroprozessortechnik</em>
-	Heft&nbsp;3/1988 an den E/A-Basis-Adressen&nbsp;98h und 58h
-       </li>
-       <li><a href="z1013.htm#fdc">Floppy-Disk-Modul</a></li>
-       <li>
-	<a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
-	an der E/A-Basisadresse&nbsp;40h und 80h
-       </li>
-       <li>
-	<a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
-	an der E/A-Basisadressen&nbsp;C0h
-       </li>
-       <li>
-	<a href="z1013.htm#usb">USB-Anschluss</a> (Vinculum VDIP Modul)
-       </li>
-       <li><a href="z1013.htm#rtc">Echtzeituhrmodul</a></li>
-       <li>Grafikkarte des CC&nbsp;Jena (80x25 Zeichen)</li>
-       <li>
-	Vollgrafikerweiterung nach <em>Kleinstrechnertips</em>
-	Heft&nbsp;11 und <em>Funkamateur</em> Heft&nbsp;7/91
-       </li>
-      </ul>
+      <a href="z1013.htm#rom8000">32K-ROM entsprechend Z1013-128</a>
+     </li>
+     <li><a href="z1013.htm#printer">Drucker</a></li>
+     <li><a href="z1013.htm#joystick">Joysticks</a></li>
+     <li>
+      Zwei&nbsp;<a href="ramfloppy.htm">RAM-Floppies</a>
+      nach <em>Mikroprozessortechnik</em>
+      Heft&nbsp;3/1988 an den E/A-Basis-Adressen&nbsp;98h und 58h
+     </li>
+     <li><a href="z1013.htm#fdc">Floppy-Disk-Modul</a></li>
+     <li>
+      <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+      an den E/A-Basisadressen&nbsp;40h und 80h
+     </li>
+     <li>
+      <a href="z1013.htm#usb">USB-Anschluss</a> (Vinculum VDIP Modul)
+     </li>
+     <li><a href="z1013.htm#rtc">Echtzeituhrmodul</a></li>
+     <li>
+      <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
+      an der E/A-Basisadressen&nbsp;C0h
+     </li>
+     <li><a href="k1520sound.htm">K1520-Sound-Karte</a></li>
+     <li>
+      <a href="z1013.htm#graphzx">Vollgrafik nach practic&nbsp;2/1988</a>
+     </li>
+     <li>
+      <a href="z1013.htm#krt">Vollgrafik nach KRT&nbsp;11 und FA&nbsp;7/1991</a>
+     </li>
+     <li><a href="z1013.htm#gccj">Grafikkarte des CC&nbsp;Jena</a></li>
+     <li>
+      <a href="z1013.htm#poppe">Farbgrafikkarte mit 32x32 und 64x32 Zeichen</a>
      </li>
     </ul>
    </li>
   </ul>
  <br/>
+  <b>Achtung!</b> Nicht alle optionalen Erweiterungen
+  sind miteinander kombinierbar.
+  Wenn Sie in den Einstellungen eine Option aktivieren,
+  die nicht mit einer anderen kombinierbar ist,
+  wird die andere Option automatisch abgew&auml;hlt.
+ <br/><br/>
 
  <h3><a name="kb8x4">1.1. Folienflachtastatur</a></h3>
   Die Ziffern auf der Folienflachtastatur sind standardm&auml;&szlig;ig
@@ -176,7 +214,7 @@
   bzw. Zeichen der Alphatastatur gew&ouml;hnlich auch auf der Tastatur
   des Emulatorrechners zu finden.
   Die Taste <em>Graph&nbsp;E/A</em> l&auml;sst sich mit der
-  Funktionstaste F1 bet&auml;tigen.
+  Funktionstaste&nbsp;F1 bet&auml;tigen.
  <br/><br/>
 
  <h3><a name="peters">1.3. Peters-Platine</a></h3>
@@ -185,7 +223,7 @@
   der Taktfrequenz und der Bildschirmorganisation.
  <br/><br/>
   Bedeutung der Bits von E/A-Port&nbsp;4:
- <br/>
+ <br/><br/>
   <table border="1">
    <tr>
     <th valign="top">Bit</th>
@@ -254,13 +292,30 @@
   Z9001, KC85/1 und KC87 ist mit der Z1013-Variante nicht m&ouml;glich.
  <br/><br/>
   Im JKCEMU ist kein Inhalt f&uuml;r das Mega-ROM-Modul enthalten.
-  Sie m&uuml;ssen deshalb in den Einstellungen eine entsprechende
-  ROM-Datei ausw&auml;hlen.
- <br/><br/>
-  Das Mega-ROM-Modul ist nicht mit dem KC-BASIC-Modul kombinierbar.
+  Sie m&uuml;ssen deshalb eine entsprechende ROM-Datei selbst bereitstellen
+  und in den Einstellungen ausw&auml;hlen.
  <br/><br/>
 
- <h3><a name="printer">1.5. Drucker</a></h3>
+ <h3><a name="rom8000">1.5. 32K-ROM entsprechend Z1013-128</a></h3>
+  Der Z1013-128 enth&auml;t einen zus&auml;tzlichen EPROM,
+  der durch Ausgabe eines gesetzten Bit&nbsp;5 auf der E/A-Adresse&nbsp;4
+  im Adressbereich 8000h-FFFFh eingeblendet werden kann.
+  Der Bereich von EC00h-FFFFh ist jedoch nur sichtbar,
+  wenn zus&auml;chlich auch Bit&nbsp;4 gesetzt und damit
+  der Bildwiederholspeicher sowie der System-ROM abgeschaltet werden.
+ <br/><br/>
+  Dieser 32K-EPROM wird entsprechend den Z1013-128-Standardeinstellungen
+  optional emuliert.
+  Im JKCEMU ist kein Inhalt f&uuml;r diesen ROM enthalten.
+  Sie m&uuml;ssen deshalb eine entsprechende ROM-Datei selbst bereitstellen
+  und in den Einstellungen ausw&auml;hlen.
+ <br/><br/>
+  <b>Achtung!</b> Mit dem schaltbaren 32K-ROM entsprechend Z1013-128
+  wird auch die Taktfrequenzumschaltung &uuml;ber E/A-Adresse&nbsp;4,
+  Bit&nbsp;6 emuliert.
+ <br/><br/>
+
+ <h3><a name="printer">1.6. Drucker</a></h3>
   Es gibt zwei M&ouml;glichkeiten, einen
   <a href="print.htm">Drucker zu emulieren</a>:
   <ol>
@@ -282,7 +337,7 @@
   an den aktuellen Druckauftrag anh&auml;ngt.
  <br/><br/>
 
- <h3><a name="joystick">1.6. Joysticks (Spielhebel)</a></h3>
+ <h3><a name="joystick">1.7. Joysticks (Spielhebel)</a></h3>
   F&uuml;r den Z1013 wurden mehrere Hardware-Varianten f&uuml;r den
   Anschluss von <a href="joystick.htm">Joysticks</a> ver&ouml;ffentlicht
   sowie eine entsprechende Software-Schnittstelle definiert.
@@ -311,9 +366,10 @@
   und der (emulierten) Hardware herstellt.
  <br/><br/>
 
- <h3><a name="fdc">1.7. Floppy-Disk-Modul</a></h3>
+ <h3><a name="fdc">1.8. Floppy-Disk-Modul</a></h3>
   Das Floppy-Disk-Modul wird an folgenden Ein-/Ausgabeadressen
   <a href="floppydisk.htm">emuliert</a>:
+ <br/><br/>
   <table border="1">
    <tr><th>E/A-Adresse</th><th>Bedeutung</th></tr>
    <tr>
@@ -335,7 +391,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="usb">1.8. USB-Anschluss (Vinculum VDIP Modul)</a></h3>
+ <h3><a name="usb">1.9. USB-Anschluss (Vinculum VDIP Modul)</a></h3>
   Das <a href="usb.htm">USB-Modul</a> wird an den E/A-Basisadressen
   DCh und FCh emuliert.
   Ist das <a href="z1013.htm#mega">Mega-ROM-Modul</a> aktiviert,
@@ -343,11 +399,233 @@
   da es sonst einen Konflikt mit der E/A-Adresse FFh geben w&uuml;rde.
  <br/><br/>
 
- <h3><a name="rtc">1.9. Echtzeituhrmodul</a></h3>
+ <h3><a name="rtc">1.10. Echtzeituhrmodul</a></h3>
   Es wird eine Echtzeituhr RTC-62421 bzw. RTC-72421 an den
   E/A-Adressen&nbsp;70h bis 7Fh emuliert.
   Die Uhr kann nur gelesen, nicht aber gestellt werden.
  <br/><br/>
+
+ <h3><a name="graphzx">1.11. Vollgrafik nach practic&nbsp;2/1988</a></h3>
+  Die in der Zeitschrift practic&nbsp;2/1988 vorgestellte
+  ZX-Spectrum-kompatible Vollgrafikerweiterung wird als
+  zweite Anzeigeeinheit emuliert
+  (Men&uuml; <em>Extra</em>&rarr; <em>Zweite Anzeigeeinheit...</em>).
+  Diese Grafikerweiterterung hat einen 6&nbsp;KByte gro&szlig;en
+  Pixelspeicher f&uuml;r die 256x192&nbsp;Pixel (Adressbereich 4000h-57FFh),
+  nicht jedoch den beim ZX&nbsp;Spectrum vorhandenen Farbattributspeicher.
+  Die Bildausgabe ist somit schwarz-/wei&szlig; mit wei&szlig;
+  als Hintergrundfarbe.
+  Ein gesetztes Bit im Pixelspicher f&uuml;hrt zu einem schwarzen Pixel.
+ <br/><br/>
+  Die Grafikerweiterung erzeugt auch den vom ZX&nbsp;Spectrum her bekannten
+  Interrupt w&auml;hrend des Bildsynchronimpulses.
+  Da die Hardware keinen Interrupt-Vektor und keine Daisy Chain
+  unterst&uuml;tzt, ist dieser Interrupt praktisch nur
+  im Interrupt-Modus&nbsp;1 nutzbar.
+  Au&szlig;erdem wird die Interrupt-Anmeldung aller anderen
+  Interrupt-Quellen gest&ouml;rt
+  (z.B. die PIO, die f&uuml;r den Schrittbetrieb des Monitorprogramms
+  (Kommando&nbsp;B) Interrupts ausl&ouml;st).
+ <br/><br/>
+  Die Grafikkarte erzeugt im Original kein MEMDI-Signal, d.h.,
+  der Speicher auf der Z1013-Grundplatine oder einer Speichererweiterung
+  wird nicht ausgeblendet.
+  Ist im Adressbereich des Pixelspeichers ein anderer Speicher vorhanden,
+  wird die Grafikerweiterung so konfiguriert,
+  dass der Pixelspeicher nur beschrieben werden kann.
+ <br/><br/>
+
+ <h3>
+  <a name="krt">1.12. Vollgrafik nach KRT&nbsp;11 und FA&nbsp;7/1991</a>
+ </h3>
+  Im Buch <em>Kleinstrechnertips&nbsp;11</em> (KRT&nbsp;11)
+  wurde eine recht einfache Schaltung vorgestellt,
+  mit der der Z1013 Vollgrafikf&auml;higkeiten erh&auml;lt.
+  Leicht modifiziert wurde diese Schaltung in der Zeitschrift
+  <em>Funkamateur 7/1991</em> (FA&nbsp;7/1991) erneut publiziert.
+  Beide Schaltungsvarianten werden optional emuliert.
+ <br/><br/>
+  Das Prinzip der Schaltung ist recht simple:
+  Anstelle des originalen Bildwiederholspeichers gibt es 8&nbsp;parallel
+  liegende RAM-B&auml;nke, wobei jede RAM-Bank f&uuml;r eine Pixelzeile
+  innerhalb einer Zeichenzeile steht.
+  Ist RAM-Bank&nbsp;0 aktiviert, hat man im Adressbereich EC00h bis EFFFh
+  Zugriff auf alle obersten Pixelzeilen innerhalb der Zeichenzeilen.
+  Bei RAM-Bank&nbsp;7 sind es alle untersten Pixelzeilen
+  innerhalb der Zeichenzeilen.
+  Die Auswahl der RAM-Bank erfolgt &uuml;ber die unteren 3&nbsp;Bit
+  der Ausgabeadresse&nbsp;8
+  (gleiche E/A-Adresse wie f&uuml;r die Tastaturspalten).
+  Die Pixeldaten sind invertiert, d.h., ein zur&uuml;ckgesetztes Bit
+  ergibt ein wei&szlig;es Pixel.
+ <br/><br/>
+  Zwischen Vollgrafik und originalem Textmodus kann softwaretechnisch
+  umgeschaltet werden.
+  Diese Umschaltung unterscheidet sich zwischen den beiden
+  Schaltungsvarianten:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Funktion</th><th>KRT&nbsp;11</th><th>FA&nbsp;7/1991</th></tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+     Vollgrafik&nbsp;ein
+    </td>
+    <td valign="top">
+     Ausgabe einer 8 auf den unteren 4&nbsp;Bit der E/A-Adresse&nbsp;8
+    </td>
+    <td valign="top">
+     Ein- oder Ausgabebefehl mit beliebigem Datenbyte
+     auf Adresse&nbsp;0Ch bis 0Fh
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+     Vollgrafik&nbsp;aus<br/>
+     (originaler Textmodus wieder ein)
+    </td>
+    <td valign="top">
+     Ausgabe einer 9 auf den unteren 4&nbsp;Bit der E/A-Adresse&nbsp;8
+    </td>
+    <td valign="top">
+     Ein- oder Ausgabebefehl mit beliebigem Datenbyte
+     auf Adresse&nbsp;10h bis 13h
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Beide Schaltungsvarianten werden parallel emuliert,
+  d.h., man kann im Emulator die Vollgrafik nach
+  <em>KRT&nbsp;11</em> ein- und nach <em>FA&nbsp;7/1991</em>
+  wieder ausschalten.
+ <br/><br/>
+
+ <h3><a name="gccj">1.13. Grafikkarte des CC&nbsp;Jena</a></h3>
+  Der Computerclub Jena hat eine Graphikkarte entwickelt,
+  die den Grafik Display Controller U82720 verwendet.
+  Obwohl ein Grafikprozessor verwendet wird,
+  kann die Karte hardwarem&auml;&szlig;ig nur Text ausgeben.
+  Die Aufl&ouml;sung betr&auml;gt &uuml;blicherweise 80x25 Zeichen.
+ <br/><br/>
+  Die Grafikkarte enth&auml;lt einen 8&nbsp;KByte gro&szlig;en
+  EPROM als Zeichengenerator.
+  Darin lassen sich mehrere Zeichens&auml;tze unterbringen,
+  von denen der gew&uuml;nschte durch entsprechende Programmierung
+  des Grafikprozessors ausgew&auml;hlt werden kann.
+  Der in JKCEMU integrierte Zeichengenerator f&uuml;r diese Grafikkarte
+  enth&auml;lt nur einen vollst&auml;ndigen Zeichensatz.
+  Man kann aber in den Einstellungen durch Einbinden einer
+  bis zu 8&nbsp;KByte gro&szlig;en ROM-Datei den Zeichengenerator
+  mit einem anderen Inhalt f&uuml;llen.
+ <br/><br/>
+  Die Grafikkarte wird als zweite Anzeigeeinheit emuliert
+  (Men&uuml;eintrag <em>Extra</em> &rarr; <em>Zweite Anzeigeeinheit...</em>).
+ <br/><br/>
+
+ <h3>
+  <a name="poppe">1.14. Farbgrafikkarte mit 32x32 und 64x32&nbsp;Zeichen</a>
+ </h3>
+  Heiko Poppe hat eine Farbgrafikkarte f&uuml;r Textausgaben entwickelt,
+  die es auch in einer speziellen Variante f&uuml;r den Z1013 gibt.
+  Diese Variante wird optional emuliert.
+ <br/><br/>
+  Die Grafikkarte bietet die beiden Ausgabeformate 32x32
+  und 64x32&nbsp;Zeichen.
+  Der Bildwiederholspeicher liegt im Adressbereich E800h-EFFFh
+  und besteht aus einem Text- und einem Farbspeicher.
+  Im Ausgabeformat 32x32&nbsp;Zeichen ist die Adresszuordnung identisch zum
+  Z1013-Standard, d.h., nur der Bereich von EC00h-EFFFh wird angezeigt.
+  In diesem Ausgabeformat wird der Z1013-Zeichensatz verwendet.
+ <br/><br/>
+  Im Ausgabeformat 64x32&nbsp;Zeichen werden zwei Zeichens&auml;tze
+  mit der Zeichengr&ouml;&szlig;e 8x6&nbsp;Pixel unterst&uuml;tzt,
+  zwischen denen umgeschaltet werden kann.
+  Im JKCEMU ist daf&uuml;r jedoch nur ein ASCII-Zeichensatz
+  enthalten, so dass die Zeichensatzumschaltung keine Wirkung zeigt.
+  M&ouml;chten Sie die Zeichensatzumschaltung nutzen,
+  m&uuml;ssen Sie in den Z1013-Einstellungen im Reiter
+  <em>Grafik-Erweiterungen</em> eine 4&nbsp;KByte gro&szlig;e
+  Zeichensatzdatei angeben.
+  Die ersten 2&nbsp;KByte davon werden als ersten und die zweiten
+  2&nbsp;KByte als zweiten Zeichensatz vewendet.
+ <br/><br/>
+  Die Farbgrafikkarte hat ein Steuerregister,
+  auf dass &uuml;ber zwei Ein-/Ausgabedresse zugegriffen werden kann.
+  Die Tabelle zeigt die Bedeutung der einzelnen Bits dieses Registers
+  und die Zugriffsm&ouml;glichkeiten:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Bit</th>
+    <th>Bedeutung bei Wert&nbsp;0<br/>(Standard)</th>
+    <th>Bedeutung bei Wert&nbsp;1</th>
+    <th>E/A-Adresse f&uuml;r Lesen</th>
+    <th>E/A-Adresse f&uuml;r Schreiben</th>
+   </tr>
+   <tr>
+    <td valign="top">0</td>
+    <td valign="top">Zugriff auf Textspeicher</td>
+    <td valign="top">Zugriff auf Farbspeicher</td>
+    <td valign="top">12h</td>
+    <td valign="top">12h</td>
+   </tr>
+   <tr>
+    <td valign="top">1</td>
+    <td valign="top">Ausgabeformat 64x32&nbsp;Zeichen</td>
+    <td valign="top">Ausgabeformat 32x32&nbsp;Zeichen</td>
+    <td valign="top">12h</td>
+    <td valign="top">11h</td>
+   </tr>
+   <tr>
+    <td valign="top">3</td>
+    <td valign="top">
+     Erster Zeichensatz im Modus 64x32&nbsp;Zeichen aktiv
+    </td>
+    <td valign="top">
+     Zweiter Zeichensatz im Modus 64x32&nbsp;Zeichen aktiv
+    </td>
+    <td valign="top">12h</td>
+    <td valign="top">11h</td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Wenn GIDE nicht aktiviert ist,
+  wird die Farbgrafikkarte auch an den E/A-Adressen&nbsp;41h
+  und 42h emuliert.
+ <br/><br/>
+  Bedeutung einer Speicherzelle im Farbspeicher:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Bit</th><th>Bedeutung</th></tr>
+   <tr><td>0</td><td>Vordergrundfarbe rot</td></tr>
+   <tr><td>1</td><td>Vordergrundfarbe gr&uuml;n</td></tr>
+   <tr><td>2</td><td>Vordergrundfarbe blau</td></tr>
+   <tr><td>3</td><td>Vordergrundfarbe intensiv</td></tr>
+   <tr><td>4</td><td>Hintergrundgrundfarbe rot</td></tr>
+   <tr><td>5</td><td>Hintergrundgrundfarbe gr&uuml;n</td></tr>
+   <tr><td>6</td><td>Hintergrundgrundfarbe blau</td></tr>
+   <tr><td>7</td><td>Hintergrundgrundfarbe intensiv</td></tr>
+  </table>
+ <br/>
+
+  <b>Achtung!</b> Da die im JKCEMU enthaltenen Z1013-Monitorprogramme
+  den Farbspeicher nicht initialisieren,
+  sieht man nach RESET ein buntes Zufallsbild,
+  in dem die Textausgaben nur schwer erkennbar sind.
+  Aus diesem Grund wird die Farbgrafikarte als zweite Anzeigeeinheit
+  emuliert.
+  Die originale Z1013-Bildschirmausgabe ist somit weiterhin sichtbar.
+  Damit dies technisch funktioniert, ist der Bildwiederholspeicher
+  der Grafikkarte nur schreibend zugreifbar.
+  Schreibzugriffe im Adressbereich E800h-EFFFh gehen somit in den
+  Z1013-RAM bzw. den originalen Bildwiederholspeicher und
+  parallel auch in den Bildwiederholspeicher der Farbgrafikkarte.
+  Gelesen wird im Adressbereich E800h-EFFh dagegen nur vom Z1013-Speicher,
+  nicht von der Grafikkarte.
+  Im Original entspricht dies der Anschlussvariante,
+  bei der die Grafikkarte kein /MEMDI-Signal erzeugt und somit
+  den Speicher auf der Z1013-Grundplatine nicht abschaltet.
+ <br/><br/>
+
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
@@ -370,7 +648,7 @@
      </li>
      <li>
       Boot-Lader&nbsp;BL4 von Rainer Brosig
-      (Boot-Diskette im ersten emulierten Diskettenlaufwerk eingelegen!)
+      (Boot-Diskette im ersten emulierten Diskettenlaufwerk einlegen!)
      </li>
     </ul>
    </li>
@@ -397,11 +675,17 @@
     Zum Booten von der Diskette m&uuml;ssen Sie folgende Konfiguration
     einstellen:
     <ul>
-     <li>Z1013.16</li>
+     <li>Z1013.64</li>
      <li>Boot Lader 4 / Tastatur K7659</li>
-     <li>RAM-Floppy an E/A-Basisadresse 98h</li>
+     <li>Peters-Platine</li>
      <li>Floppy-Disk-Modul</li>
-     <li>7-Bit-Centronics am Anwendertor</li>
+     <li>
+      RAM-Floppy nach MP&nbsp;3/1988 an E/A-Adressen&nbsp;98h-9Fh
+     </li>
+     <li>
+      Drucker an 7-Bit-Centronics-Anschluss nach practic&nbsp;2/1989
+      am Anwendertor
+     </li>
     </ul>
     <br/>
    </li>
@@ -410,13 +694,19 @@
     Zum Booten von der Diskette m&uuml;ssen Sie folgende Konfiguration
     einstellen:
     <ul>
-     <li>Z1013.16</li>
+     <li>Z1013.64</li>
      <li>Boot Lader 4 / Tastatur K7659</li>
-     <li>RAM-Floppy an E/A-Basisadresse 98h</li>
+     <li>Peters-Platine</li>
      <li>Floppy-Disk-Modul</li>
-     <li>7-Bit-Centronics am Anwendertor</li>
+     <li>Echtzeituhr (RTC)</li>
      <li>Grafikkarte des CC&nbsp;Jena (80x25 Zeichen)</li>
-     <li>Echtzeituhrmodul</li>
+     <li>
+      RAM-Floppy nach MP&nbsp;3/1988 an E/A-Adressen&nbsp;98h-9Fh
+     </li>
+     <li>
+      Drucker an 7-Bit-Centronics-Anschluss nach practic&nbsp;2/1989
+      am Anwendertor
+     </li>
     </ul>
    </li>
   </ul>
@@ -454,6 +744,13 @@
   Anleitungen dazu finden Sie als Textdateien in User-Ebene&nbsp;0.
   Diese Dateien k&ouml;nnen mit dem CP/M-Kommando <em>TYPE</em>
   gelesen werden.
+ <br/><br/>
+  <b>Achtung!</b> Auf beiden Disketten ist auch die leere Datei
+  <a href="go_com.htm">GO.COM</a> enthalten.
+  Diese dient zum Starten eines im Arbeitsspeicher befindlichen
+  CP/M-kompatiblen Programms.
+  Wird <em>GO</em> aufgerufen ohne dass ein Programm im Arbeitsspeicher
+  vorhanden ist, f&uuml;hrt das zu einem Absturz.
  <br/><br/>
 
  <h2><a name="etc">4. Sonstiges</a></h2>
@@ -519,4 +816,3 @@
   m&uuml;ssen Sie die Option ebenfalls ausschalten.
 </body>
 </html>
-

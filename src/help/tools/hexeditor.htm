@@ -4,21 +4,46 @@
   Der Hex-Editor erm&ouml;glicht Ihnen
   das Ansehen und Ver&auml;ndern von Dateien in ihrer bin&auml;ren Form.
  <br/><br/>
+  <ul>
+   <li><a href="hexeditor.htm#start">1. Hex-Editor starten</a></li>
+   <li>
+    <a href="hexeditor.htm#functions">2. Funktionen</a>
+    <ul>
+     <li>
+      <a href="hexeditor.htm#overwrite">2.1. Bytes direkt &uuml;berschreiben</a>
+     </li>
+    </ul>
+   </li>
+   <li><a href="hexeditor.htm#goto">3. Zu einer Position springen</a></li>
+   <li><a href="hexeditor.htm#mark">4. Bereich ausw&auml;hlen</a></li>
+   <li>
+    <a href="hexeditor.htm#copy">5. Ausgew&auml;hlte Bytes kopieren</a>
+   </li>
+   <li><a href="hexeditor.htm#font">6. Schrift</a></li>
+  </ul>
+ <br/>
+
+
+ <h2><a name="start">1. Hex-Editor starten</a></h2>
   Sie rufen den Hex-Editor im Emulatorfenster &uuml;ber das Men&uuml;
   <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr; <em>Hex-Editor...</em> auf.
-  Es ist aber auch m&ouml;glich, dieses Werkzeug als eigenst&auml;ndiges
-  Programm ohne Emulator zu starten.
-  Geben Sie dazu beim Aufruf von JKCEMU in der Kommandozeile die Option
-  <em>--he</em> oder <em>--hexeditor</em> an.
+  Es ist aber auch m&ouml;glich, dieses Werkzeug mit einer ausgew&auml;hlten
+  Datei aus dem <a href="filebrowser.htm">Datei-Browser</a> heraus
+  aufzurufen oder den Hex-Editor als eigenst&auml;ndiges Programm
+  ohne Emulator zu starten.
+  F&uuml;r letzteres geben Sie beim Aufruf von JKCEMU in der Kommandozeile
+  die Option <em>--he</em> oder <em>--hexeditor</em> an.
   Optional kann dahinter auch eine Datei angegeben werden,
   die dann ge&ouml;ffnet wird.
  <br/><br/>
-  Nach dem Start befinden Sie sich im Modus <em>Neue Datei</em>,
-  d.h., Sie k&ouml;nnen durch <em>Bytes am Ende anh&auml;ngen</em>
+  Wurde der Hex-Editor ohne zu &ouml;ffnende Datei gestartet,
+  befinden Sie sich im Modus <em>Neue Datei</em>.
+  In diesem Modus k&ouml;nnen Sie durch <em>Bytes am Ende anh&auml;ngen</em>
   und anschlie&szlig;endem Speichern eine neue Datei anlegen.
  <br/><br/>
 
- <h2>1. Funktionen</h2>
+
+ <h2><a name="functions">2. Funktionen</a></h2>
   Im Men&uuml; <em>Datei</em> finden Sie die Funktionen zum &Ouml;ffnen
   und Speichern der Datei.
   Das Ver&auml;ndern des Dateiinhalts erfolgt &uuml;ber die Funktionen
@@ -51,7 +76,29 @@
   die ge&ouml;ffnete Datei in mehrere zerlegen.
  <br/><br/>
 
- <h2>2. Zu einer Position springen</h2>
+ <h3><a name="overwrite">2.1. Bytes direkt &uuml;berschreiben</a></h3>
+  Wie bereits oben angedeutet,
+  &auml;ndert bzw. &uuml;berschreibt man Datenbytes,
+  indem man zuerst auf das erste zu &auml;ndernde Byte klickt,
+  um es zu markieren, und anschlie&szlig;end den Men&uuml;punkt
+  <em>Bearbeiten</em> &rarr; <em>Bytes &uuml;berschreiben...</em>
+  aufruft.
+  Zus&auml;tzlich gibt es auch die M&ouml;glichkeit,
+  die Datenbytes direkt in der Anzeige zu &auml;ndern,
+  indem man einfach zwei hexadezimale Ziffern eingibt
+  und so den neuen Wert des markierten Datenbytes festlegt.
+  Diese direkte Eingabem&ouml;glichkeit kann jedoch leicht zu einem
+  versehentlichen &Uuml;berschreiben des Dateinhalts f&uuml;hren.
+  Aus diesem Grund ist sie standardm&auml;&szlig;ig deaktiviert.
+  Sie aktivieren diese Eingabem&ouml;glichkeit
+  &uuml;ber den Men&uuml;punkt <em>Einstellungen</em> &rarr;
+  <em>Bytes durch direkte Eingabe &uuml;berschreiben</em>.
+  Beim <a href="../settings.htm#profiles">Speichern eines Profils</a>
+  wird diese Einstellung mit gespeichert.
+ <br/><br/>
+
+
+ <h2><a name="goto">3. Zu einer Position springen</a></h2>
   Mit einem Mausklick setzen Sie den Cursor auf die gew&uuml;nschte
   Position.
   Sie k&ouml;nnen aber auch in einem der beiden Felder im Bereich
@@ -59,7 +106,8 @@
   und <em>Enter</em> dr&uuml;cken.
  <br/><br/>
 
- <h2>3. Bereich ausw&auml;hlen</h2>
+
+ <h2><a name="mark">4. Bereich ausw&auml;hlen</a></h2>
   Einen Bereich w&auml;hlen Sie aus durch Ziehen der Maus
   mit gedr&uuml;ckter Maustaste
   oder durch Benutzung der Cursor-Tasten bei gedr&uuml;ckter Shift-Taste.
@@ -72,15 +120,22 @@
   Danach springen Sie zum letzten zu markierenden Byte
   und benutzen den Men&uuml;eintrag
   <em>Bis zur gemerkten Position ausw&auml;hlen</em>.
-  <br/><br/>
+ <br/><br/>
 
 
- <h2>4. Ausgew&auml;hlte Bytes kopieren</h2>
+ <h2><a name="copy">5. Ausgew&auml;hlte Bytes kopieren</a></h2>
   Mit dieser Funktion, die Sie im Men&uuml; <em>Bearbeiten</em> finden,
   k&ouml;nnen Sie die ausgew&auml;hlten Bytes als Hex-String
   in die Zwischenablage kopieren
   und von da aus dann z.B. in den Dialog zur Eingabe von Bytes
   wieder einf&uuml;gen.
+ <br/><br/>
+
+
+ <h2><a name="font">6. Schrift</a></h2>
+  Die Schrift f&uuml;r die Datenanzeige kann man im Fenster
+  <a href="../settings.htm">JKCEMU-Einstellungen</a>
+  im Reiter <em>Schriften/Symbole</em> unter
+  <em>Schrift f&uuml;r Code-Bereiche</em> &auml;ndern.
 </body>
 </html>
-

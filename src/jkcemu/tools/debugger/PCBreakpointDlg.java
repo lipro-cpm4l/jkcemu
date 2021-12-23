@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,20 +12,43 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
-import javax.swing.text.BadLocationException;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HexDocument;
+import jkcemu.base.UserInputException;
 
 
 public class PCBreakpointDlg extends AbstractBreakpointDlg
 {
+  private static class FlagItem
+  {
+    private int    mask;
+    private int    value;
+    private String text;
+
+    private FlagItem( int mask, int value, String text )
+    {
+      this.mask  = mask;
+      this.value = value;
+      this.text  = text;
+    }
+
+    @Override
+    public String toString()
+    {
+      return this.text;
+    }
+  };
+
+
   private static String[] registers = {
 				"A", "B", "C", "D", "E", "H", "L",
 				"BC", "DE", "HL",
@@ -33,24 +56,31 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 				"IY", "IYH", "IYL",
 				"SP" };
 
-  private HexDocument       docAddr;
-  private HexDocument       docMask;
-  private HexDocument       docValue;
-  private JLabel            labelReg1;
-  private JLabel            labelReg2;
-  private JLabel            labelReg3;
-  private JComboBox<String> comboReg;
-  private JComboBox<String> comboCond;
-  private JCheckBox         btnCheckReg;
-  private JTextField        fldAddr;
-  private JTextField        fldMask;
-  private JTextField        fldValue;
+  private LabelDocument       docName;
+  private HexDocument         docAddr;
+  private HexDocument         docRegMask;
+  private HexDocument         docRegValue;
+  private JLabel              labelFlag1;
+  private JLabel              labelFlag2;
+  private JLabel              labelReg1;
+  private JLabel              labelReg2;
+  private JLabel              labelReg3;
+  private JComboBox<FlagItem> comboFlag;
+  private JComboBox<String>   comboRegCond;
+  private JComboBox<String>   comboRegName;
+  private JCheckBox           cbCheckFlag;
+  private JCheckBox           cbCheckReg;
+  private JTextField          fldAddr;
+  private JTextField          fldName;
+  private JTextField          fldRegMask;
+  private JTextField          fldRegValue;
 
 
   public PCBreakpointDlg(
 		DebugFrm           debugFrm,
 		AbstractBreakpoint breakpoint,
-		int                presetAddr )
+		String             name,
+		int                addr )
   {
     super( debugFrm, "Programmadresse", breakpoint );
 
@@ -67,89 +97,121 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
 
-    add( new JLabel( "Adresse:" ), gbc );
+    add( GUIFactory.createLabel( "Adresse (hex):" ), gbc );
+    gbc.gridy++;
+    add( GUIFactory.createLabel( "Name (optional):" ), gbc );
 
     this.docAddr = new HexDocument( 4 );
-    this.fldAddr = new JTextField( this.docAddr, "", 0 );
+    this.fldAddr = GUIFactory.createTextField( this.docAddr, 0 );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
+    gbc.gridy   = 0;
     gbc.gridx++;
     add( this.fldAddr, gbc );
+
+    this.docName = new LabelDocument();
+    this.fldName = GUIFactory.createTextField( this.docName, 0 );
+    gbc.gridy++;
+    add( this.fldName, gbc );
 
     gbc.fill      = GridBagConstraints.HORIZONTAL;
     gbc.weightx   = 1.0;
     gbc.gridwidth = GridBagConstraints.REMAINDER;
     gbc.gridx     = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
-    this.btnCheckReg = new JCheckBox(
+    this.cbCheckReg = GUIFactory.createCheckBox(
 		"Zus\u00E4tzlich Registerinhalt vor Befehlsausf\u00FChrung"
-			+ " pr\u00FCfen",
-		false );
+			+ " pr\u00FCfen:" );
     gbc.insets.bottom = 0;
     gbc.fill          = GridBagConstraints.NONE;
     gbc.weightx       = 0.0;
     gbc.gridy++;
-    add( this.btnCheckReg, gbc );
+    add( this.cbCheckReg, gbc );
 
-    JPanel panelReg = new JPanel( new GridBagLayout() );
+    JPanel panelReg = GUIFactory.createPanel();
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
+    gbc.insets.top  = 0;
     gbc.gridx++;
     gbc.gridy++;
     add( panelReg, gbc );
 
-    GridBagConstraints gbcReg = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 0, 0, 0, 0 ),
-						0, 0 );
+    panelReg.setLayout( new BoxLayout( panelReg, BoxLayout.X_AXIS ) );
 
-    this.labelReg1 = new JLabel( "Nur anhalten/loggen wenn Register" );
-    panelReg.add( this.labelReg1, gbcReg );
+    this.labelReg1 = GUIFactory.createLabel(
+				"Nur anhalten/loggen, wenn Register" );
+    panelReg.add( this.labelReg1 );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.comboReg = new JComboBox<>( registers );
-    this.comboReg.setEditable( false );
-    gbcReg.insets.left = 5;
-    gbcReg.gridx++;
-    panelReg.add( this.comboReg, gbcReg );
+    this.comboRegName = GUIFactory.createComboBox( registers );
+    this.comboRegName.setEditable( false );
+    panelReg.add( this.comboRegName );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.labelReg2 = new JLabel( "UND" );
-    gbcReg.gridx++;
-    panelReg.add( this.labelReg2, gbcReg );
+    this.labelReg2 = GUIFactory.createLabel( "UND" );
+    panelReg.add( this.labelReg2 );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.docMask = new HexDocument( 4 );
-    this.fldMask = new JTextField( this.docMask, "", 4 );
-    this.fldMask.setToolTipText( "Maske" );
-    gbcReg.fill    = GridBagConstraints.HORIZONTAL;
-    gbcReg.weightx = 0.5;
-    gbcReg.gridx++;
-    panelReg.add( this.fldMask, gbcReg );
+    this.docRegMask = new HexDocument( 4 );
+    this.fldRegMask = GUIFactory.createTextField( this.docRegMask, 4 );
+    this.fldRegMask.setToolTipText( "Maske" );
+    panelReg.add( this.fldRegMask );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.comboCond = new JComboBox<>( conditions );
-    this.comboCond.setEditable( false );
-    gbcReg.fill    = GridBagConstraints.NONE;
-    gbcReg.weightx = 0.0;
-    gbcReg.gridx++;
-    panelReg.add( this.comboCond, gbcReg );
+    this.comboRegCond = GUIFactory.createComboBox( conditions );
+    this.comboRegCond.setEditable( false );
+    panelReg.add( this.comboRegCond );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.docValue = new HexDocument( 4 );
-    this.fldValue = new JTextField( this.docValue, "", 4 );
-    this.fldValue.setToolTipText( "Vergleichswert" );
-    gbcReg.fill    = GridBagConstraints.HORIZONTAL;
-    gbcReg.weightx = 0.5;
-    gbcReg.gridx++;
-    panelReg.add( this.fldValue, gbcReg );
+    this.docRegValue = new HexDocument( 4 );
+    this.fldRegValue = GUIFactory.createTextField( this.docRegValue, 4 );
+    this.fldRegValue.setToolTipText( "Vergleichswert" );
+    panelReg.add( this.fldRegValue );
+    panelReg.add( Box.createHorizontalStrut( 5 ) );
 
-    this.labelReg3 = new JLabel( "ist." );
-    gbcReg.fill    = GridBagConstraints.NONE;
-    gbcReg.weightx = 0.0;
-    gbcReg.gridx++;
-    panelReg.add( this.labelReg3, gbcReg );
+    this.labelReg3 = GUIFactory.createLabel( "ist." );
+    panelReg.add( this.labelReg3 );
+
+    this.cbCheckFlag = GUIFactory.createCheckBox(
+		"Zus\u00E4tzlich Flagbedingung vor Befehlsausf\u00FChrung"
+			+ " pr\u00FCfen:" );
+    gbc.insets.top = 10;
+    gbc.gridx = 0;
+    gbc.gridy++;
+    add( this.cbCheckFlag, gbc );
+
+    JPanel panelFlag = GUIFactory.createPanel();
+    gbc.weightx      = 0.0;
+    gbc.fill         = GridBagConstraints.NONE;
+    gbc.insets.top   = 0;
+    gbc.gridx++;
+    gbc.gridy++;
+    add( panelFlag, gbc );
+
+    panelFlag.setLayout( new BoxLayout( panelFlag, BoxLayout.X_AXIS ) );
+
+    this.labelFlag1 = GUIFactory.createLabel(
+				"Nur anhalten/loggen, wenn Flagbedingung" );
+    panelFlag.add( this.labelFlag1 );
+    panelFlag.add( Box.createHorizontalStrut( 5 ) );
+
+    this.comboFlag = GUIFactory.createComboBox();
+    this.comboFlag.setEditable( false );
+    this.comboFlag.addItem( new FlagItem( 0x80, 0x80, "M (S=1)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x80, 0,    "P (S=0)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x40, 0x40, "Z (Z=1)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x40, 0,    "NZ (Z=0)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x04, 0x04, "PE (PV=1)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x04, 0,    "PO (PV=0)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x01, 0x01, "C (C=1)" ) );
+    this.comboFlag.addItem( new FlagItem( 0x01, 0,    "NC (C=0)" ) );
+    panelFlag.add( this.comboFlag );
+    panelFlag.add( Box.createHorizontalStrut( 5 ) );
+
+    this.labelFlag2 = GUIFactory.createLabel( "erf\u00FCllt ist." );
+    panelFlag.add( this.labelFlag2 );
 
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -158,7 +220,7 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     gbc.anchor     = GridBagConstraints.CENTER;
     gbc.fill       = GridBagConstraints.NONE;
@@ -169,34 +231,58 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 
 
     // Vorbelegungen
-    boolean valueState = false;
-    String  reg        = null;
-    String  cond       = null;
-    int     mask       = 0xFFFF;
-    int     value      = 0;
+    boolean regValueState = false;
+    String  regName       = null;
+    String  regCond       = null;
+    int     regMask       = 0xFFFF;
+    int     regValue      = 0;
+    int     flagMask      = 0;
+    int     flagValue     = 0;
     if( breakpoint != null ) {
       if( breakpoint instanceof PCBreakpoint ) {
 	PCBreakpoint bp = (PCBreakpoint) breakpoint;
+	this.fldName.setText( bp.getName() );
 	this.docAddr.setValue( bp.getAddress(), 4 );
-	reg   = bp.getRegister();
-	mask  = bp.getMask();
-	cond  = bp.getCondition();
-	value = bp.getValue();
-	if( (reg != null) && (cond != null) ) {
-	  valueState = true;
+	regName   = bp.getRegName();
+	regMask   = bp.getRegMask();
+	regCond   = bp.getRegCondition();
+	regValue  = bp.getRegValue();
+	flagMask  = bp.getFlagMask();
+	flagValue = bp.getFlagValue();
+	if( (regName != null) && (regCond != null) ) {
+	  regValueState = true;
+	}
+      }
+    } else {
+      if( name != null ) {
+	this.fldName.setText( name );
+      }
+      if( addr >= 0 ) {
+	this.docAddr.setValue( addr, 4 );
+      }
+    }
+    this.comboRegName.setSelectedItem( regName != null ? regName : "A" );
+    regChanged();
+    this.docRegMask.setValue( regMask, this.docRegMask.getMaxLength() );
+    this.comboRegCond.setSelectedItem( regCond != null ? regCond : "=" );
+    this.docRegValue.setValue( regValue, this.docRegValue.getMaxLength() );
+    this.cbCheckReg.setSelected( regValueState );
+    updCheckRegFieldsEnabled();
+
+    boolean flagMatched = false;
+    int     nItems      = this.comboFlag.getItemCount();
+    for( int i = 0; i < nItems; i++ ) {
+      FlagItem item = this.comboFlag.getItemAt( i );
+      if( item != null ) {
+	if( (item.mask == flagMask) && (item.value == flagValue) ) {
+	  this.comboFlag.setSelectedItem( item );
+	  flagMatched = true;
+	  break;
 	}
       }
     }
-    if( presetAddr >= 0 ) {
-      this.docAddr.setValue( presetAddr, 4 );
-    }
-    this.comboReg.setSelectedItem( reg != null ? reg : "A" );
-    regChanged();
-    this.docMask.setValue( mask, this.docMask.getMaxLength() );
-    this.comboCond.setSelectedItem( cond != null ? cond : "=" );
-    this.docValue.setValue( value, this.docValue.getMaxLength() );
-    this.btnCheckReg.setSelected( valueState );
-    updCheckRegFieldsEnabled();
+    this.cbCheckFlag.setSelected( flagMatched );
+    updCheckFlagFieldsEnabled();
 
 
     // Fenstergroesse und -position
@@ -206,13 +292,17 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 
 
     // Sonstiges
-    this.fldMask.setColumns( 0 );
-    this.fldValue.setColumns( 0 );
+    this.docName.setReverseCase( true );
+    this.fldRegMask.setColumns( 0 );
+    this.fldRegValue.setColumns( 0 );
     this.fldAddr.addActionListener( this );
-    this.btnCheckReg.addActionListener( this );
-    this.comboReg.addActionListener( this );
-    this.fldMask.addActionListener( this );
-    this.fldValue.addActionListener( this );
+    this.fldName.addActionListener( this );
+    this.cbCheckReg.addActionListener( this );
+    this.comboRegName.addActionListener( this );
+    this.comboFlag.addActionListener( this );
+    this.fldRegMask.addActionListener( this );
+    this.fldRegValue.addActionListener( this );
+    this.cbCheckFlag.addActionListener( this );
   }
 
 
@@ -225,21 +315,29 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
     if( e != null ) {
       Object src = e.getSource();
       if( src != null ) {
-	if( src == this.btnCheckReg ) {
+	if( src == this.cbCheckReg ) {
 	  rv = true;
 	  updCheckRegFieldsEnabled();
 	}
-	else if( src == this.comboReg ) {
+	else if( src == this.comboRegName ) {
 	  rv = true;
 	  regChanged();
 	}
-	else if( (src == this.fldAddr) || (src == this.fldValue) ) {
+	else if( src == this.fldAddr ) {
+	  rv = true;
+	  this.fldName.requestFocus();
+	}
+	else if( (src == this.fldName) || (src == this.fldRegValue) ) {
 	  rv = true;
 	  doApprove();
 	}
-	else if( src == this.fldMask ) {
+	else if( src == this.fldRegMask ) {
 	  rv = true;
-	  this.comboCond.requestFocus();
+	  this.comboRegCond.requestFocus();
+	}
+	else if( src == this.cbCheckFlag ) {
+	  rv = true;
+	  updCheckFlagFieldsEnabled();
 	}
       }
     }
@@ -253,77 +351,85 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
   @Override
   protected void doApprove()
   {
-    String fldName = "Adresse";
+    String curFldName = "Adresse";
     try {
-      boolean status = true;
-      int     addr   = this.docAddr.intValue();
-      String  reg    = null;
-      String  cond   = null;
-      int     mask   = 0xFFFF;
-      int     value  = 0;
-      if( this.btnCheckReg.isSelected() ) {
-	Object o = this.comboReg.getSelectedItem();
+      boolean status    = true;
+      int     addr      = this.docAddr.intValue();
+      String  regName   = null;
+      String  regCond   = null;
+      int     regMask   = 0xFFFF;
+      int     regValue  = 0;
+      int     flagMask  = 0;
+      int     flagValue = 0;
+      if( this.cbCheckReg.isSelected() ) {
+	Object o = this.comboRegName.getSelectedItem();
 	if( o != null ) {
-	  reg = o.toString();
+	  regName = o.toString();
 	}
-	o = this.comboCond.getSelectedItem();
+	o = this.comboRegCond.getSelectedItem();
 	if( o != null ) {
-	  cond = o.toString();
+	  regCond = o.toString();
 	}
-	if( (reg != null) && (cond != null) ) {
+	if( (regName != null) && (regCond != null) ) {
 	  boolean is8Bit = true;
-	  if( reg.length() == 2 ) {
+	  if( regName.length() == 2 ) {
 	    is8Bit = false;
 	  }
-	  int m   = (is8Bit ? 0xFF : 0xFFFF);
-	  fldName = "Maske";
-	  mask    = this.docMask.intValue() & m;
-	  fldName = "Wert";
-	  value   = this.docValue.intValue() & m;
-	  status  = checkMaskValue( is8Bit, mask, value );
+	  int m      = (is8Bit ? 0xFF : 0xFFFF);
+	  curFldName = "Maske";
+	  regMask    = this.docRegMask.intValue() & m;
+	  curFldName = "Wert";
+	  regValue   = this.docRegValue.intValue() & m;
+	  status     = checkMaskValue( is8Bit, regMask, regValue );
+	}
+      }
+      if( this.cbCheckFlag.isSelected() ) {
+	Object o = this.comboFlag.getSelectedItem();
+	if( o != null ) {
+	  if( o instanceof FlagItem ) {
+	    flagMask  = ((FlagItem) o).mask;
+	    flagValue = ((FlagItem) o).value;
+	  }
 	}
       }
       if( status ) {
-	int     oldAddr     = -1;
-	boolean oldImported = false;
-	boolean done        = false;
-	if( this.breakpoint != null ) {
-	  if( this.breakpoint instanceof PCBreakpoint ) {
-	    oldAddr     = ((PCBreakpoint) this.breakpoint).getAddress();
-	    oldImported = ((PCBreakpoint) this.breakpoint).wasImported();
-	  }
-	  if( (this.breakpoint instanceof LabelBreakpoint)
-	      && (!oldImported || (oldImported && (addr == oldAddr))) )
-	  {
-	    approveBreakpoint(
-		new LabelBreakpoint(
-			this.debugFrm,
-			((LabelBreakpoint) this.breakpoint).getLabelName(),
-			addr,
-			reg,
-			mask,
-			cond,
-			value,
-			oldImported ) );
-	    done = true;
-	  }
-	}
-	if( !done ) {
-	  approveBreakpoint(
+	approveBreakpoint(
 		new PCBreakpoint(
-			this.debugFrm,
-			addr,
-			reg,
-			mask,
-			cond,
-			value,
-			oldImported && (addr == oldAddr) ) );
-	}
+				this.debugFrm,
+				this.docName.getLabel(),
+				addr,
+				regName,
+				regMask,
+				regCond,
+				regValue,
+				flagMask,
+				flagValue ) );
       }
     }
     catch( NumberFormatException ex ) {
-      showInvalidFmt( fldName );
+      showInvalidFmt( curFldName );
     }
+    catch( InvalidParamException | UserInputException ex ) {
+      showErrorDlg( this, ex );
+    }
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.fldAddr.removeActionListener( this );
+      this.fldName.removeActionListener( this );
+      this.cbCheckReg.removeActionListener( this );
+      this.comboRegName.removeActionListener( this );
+      this.comboFlag.removeActionListener( this );
+      this.fldRegMask.removeActionListener( this );
+      this.fldRegValue.removeActionListener( this );
+      this.cbCheckFlag.removeActionListener( this );
+    }
+    return rv;
   }
 
 
@@ -341,7 +447,7 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
   private void regChanged()
   {
     int    n = 2;
-    Object o = this.comboReg.getSelectedItem();
+    Object o = this.comboRegName.getSelectedItem();
     if( o != null ) {
       String s = o.toString();
       if( s != null ) {
@@ -350,20 +456,29 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 	}
       }
     }
-    this.docMask.setMaxLength( n, 'F' );
-    this.docValue.setMaxLength( n, '0' );
+    this.docRegMask.setMaxLength( n, 'F' );
+    this.docRegValue.setMaxLength( n, '0' );
+  }
+
+
+  private void updCheckFlagFieldsEnabled()
+  {
+    boolean state = this.cbCheckFlag.isSelected();
+    this.labelFlag1.setEnabled( state );
+    this.labelFlag2.setEnabled( state );
+    this.comboFlag.setEnabled( state );
   }
 
 
   private void updCheckRegFieldsEnabled()
   {
-    boolean state = this.btnCheckReg.isSelected();
+    boolean state = this.cbCheckReg.isSelected();
     this.labelReg1.setEnabled( state );
     this.labelReg2.setEnabled( state );
     this.labelReg3.setEnabled( state );
-    this.comboReg.setEnabled( state );
-    this.fldMask.setEnabled( state );
-    this.comboCond.setEnabled( state );
-    this.fldValue.setEnabled( state );
+    this.comboRegName.setEnabled( state );
+    this.fldRegMask.setEnabled( state );
+    this.comboRegCond.setEnabled( state );
+    this.fldRegValue.setEnabled( state );
   }
 }

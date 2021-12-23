@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
 import jkcemu.Main;
@@ -192,7 +191,7 @@ public class RAMFloppy
 	      load( new File( fileName ) );
 	    }
 	    catch( IOException ex ) {
-	      EmuUtil.fireShowError(
+	      EmuUtil.fireShowErrorDlg(
 			Main.getScreenFrm(),
 			infoText + " konnte nicht geladen werden.",
 			ex );
@@ -222,7 +221,7 @@ public class RAMFloppy
 	fireRAMFloppyChanged();
       }
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
   }
@@ -330,7 +329,7 @@ public class RAMFloppy
       fireRAMFloppyChanged();
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 

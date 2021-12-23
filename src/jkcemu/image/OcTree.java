@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,11 +10,11 @@
  * Der oberste Knoten steht fuer den gesamten Farbraum.
  * Jeder Kindknoten umfasst 1/8 des Farbraums des Elternknotens.
  * Bei 8 Bit Farbtiefe (8 Bit pro Dimension) erreicht der Baum
- * eine Tiefe von 9.
+ * eine Tiefe von 8 (acht Ebenen unter dem Wurzelknoten).
  *
  * Im ersten Schritt werden alle Pixel in den Baum eingetragen,
  * womit jede unterschiedliche Farbe ein Blatt ergibt.
- * Aus Grueden der Performance und des Speicherbedarfs
+ * Aus Gruenden der Performance und des Speicherbedarfs
  * wird der Baum hier allerdings nur bis zur Tiefe 6 aufgebaut,
  * d.h., jeweils 4 eng beieinander liegende Farben
  * (die unteren 2 Bit) werden schon im ersten Schritt zusammengefasst
@@ -25,7 +25,7 @@
  * In dem Fall kann sich durch den nicht voll aufgebauten Baum
  * die Anzahl der Farben nochmals reduzieren,
  * was fuer den Anwender verwirrend und nicht nachvollziehbar ist.
- * Um diesen Effekt zu verweiden, werden parallel zum Baum
+ * Um diesen Effekt zu vermeiden, werden parallel zum Baum
  * die Farben auch in einen Set eingetragen., max. jedoch 257.
  * Wenn die Set-Groesse die gewuenschte Farbanzahl nicht uebersteigt,
  * wird die Farbpalette daraus ermittelt.
@@ -46,7 +46,7 @@
  * nach und das Bild verblasst.
  * Besonders deutlich ist das bei 16 und weniger Farben zu sehen.
  * Aus diesem Grund wird das OcTree-Verfahren hier folgendermassen
- * modizifiert:
+ * modifiziert:
  * In die Farbpalette wird immer die dunkelste im Bild vorkommende
  * Farbe aufgenommen und nur die restlichen Farben mit dem Baum ermittelt.
  * Der Kontrastverlust faellt dadurch wesentlich geringer aus.
@@ -73,7 +73,6 @@ public class OcTree
 
   private class Node
   {
-    private Node   parent;
     private int    colorMask;
     private int    pixelCnt;
     private long   totalR;
@@ -81,9 +80,8 @@ public class OcTree
     private long   totalB;
     private Node[] subNodes;
 
-    private Node( Node parent, int colorMask )
+    private Node( int colorMask )
     {
-      this.parent    = parent;
       this.colorMask = colorMask;
       this.pixelCnt  = 0;
       this.totalR    = 0;
@@ -150,17 +148,17 @@ public class OcTree
       this.totalB += b;
       if( this.subNodes != null ) {
 	int idx = 0;
-	if( ((int) r & this.colorMask) != 0 ) {
+	if( (r & this.colorMask) != 0 ) {
 	  idx += 4;
 	}
-	if( ((int) g & this.colorMask) != 0 ) {
+	if( (g & this.colorMask) != 0 ) {
 	  idx += 2;
 	}
-	if( ((int) b & this.colorMask) != 0 ) {
+	if( (b & this.colorMask) != 0 ) {
 	  idx++;
 	}
 	if( this.subNodes[ idx ] == null ) {
-	  this.subNodes[ idx ] = new Node( this, this.colorMask >> 1 );
+	  this.subNodes[ idx ] = new Node( this.colorMask >> 1 );
 	}
 	this.subNodes[ idx ].putPixel( r, g, b );
       }
@@ -182,7 +180,7 @@ public class OcTree
 	    }
 	  }
 	  this.subNodes = null;
-	  addLeafCount( 1 - n );	// dieser Konten wird zum Blatt
+	  addLeafCount( 1 - n );	// dieser Knoten wird zum Blatt
 	} else {
 	  /*
 	   * Es brauchen nicht alle Subknoten zusammengefasst werden,
@@ -208,9 +206,9 @@ public class OcTree
 	      }
 	    }
 	  }
-	  // Blatt fuer die eleminierten Subkonten anlegen
+	  // Blatt fuer die eleminierten Subknoten anlegen
 	  if( pixelCnt > 0 ) {
-	    node               = new Node( this, MIN_COLOR_MASK );  // Blatt
+	    node               = new Node( MIN_COLOR_MASK );	// Blatt
 	    node.colorMask     = (this.colorMask >> 1);
 	    node.totalR        = totalR;
 	    node.totalG        = totalG;
@@ -232,7 +230,7 @@ public class OcTree
 
   public OcTree()
   {
-    this.root        = new Node( null, 0x80 );
+    this.root        = new Node( 0x80 );
     this.allRGBs     = new TreeSet<>();
     this.darkestRGB  = null;
     this.darkestGray = null;
@@ -263,7 +261,7 @@ public class OcTree
 
 
   /*
-   * Die Methode reduzierte die Farben und gibt die Farbpalette
+   * Die Methode reduziert die Farben und gibt die Farbpalette
    * in Form eines Arrays mit RGB-Werten zurueck.
    */
   public int[] reduceColors( int maxColors )
@@ -285,10 +283,7 @@ public class OcTree
     }
     if( rgbs == null ) {
 
-
-    // Blaetter des Baums ermitteln und daraus die Farbpalette erzeugen
-
-
+      // Blaetter des Baums ermitteln und daraus die Farbpalette erzeugen
       int maxTreeColors = maxColors;
       if( this.darkestRGB != null ) {
 	--maxTreeColors;
@@ -361,7 +356,7 @@ public class OcTree
     int colorMask = MIN_COLOR_MASK;
     while( (this.leafCnt > maxLeafs) && (colorMask < 0x100) ) {
       /*
-       * Konten mit der kleinsten Pixelanzahl
+       * Knoten mit der kleinsten Pixelanzahl
        * in der betreffenden Ebene zusammenfassen
        */
       while( this.leafCnt > maxLeafs ) {

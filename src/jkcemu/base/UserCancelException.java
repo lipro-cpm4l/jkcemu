@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,8 +7,6 @@
  */
 
 package jkcemu.base;
-
-import java.lang.*;
 
 
 public class UserCancelException extends Exception
@@ -18,4 +16,3 @@ public class UserCancelException extends Exception
     // leer
   }
 }
-

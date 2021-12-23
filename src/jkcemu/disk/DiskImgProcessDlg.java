@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,17 +22,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.EventObject;
 import java.util.zip.GZIPInputStream;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileFilter;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.DeviceIO;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
+import jkcemu.file.FileUtil;
 import jkcemu.text.TextUtil;
 
 
@@ -58,31 +60,64 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 
   public static void createDiskImageFromDrive( Frame owner )
   {
-    String drvFileName = DriveSelectDlg.selectDriveFileName( owner );
-    if( drvFileName != null ) {
-      File imgFile = EmuUtil.showFileSaveDlg(
+    Object drive = DriveSelectDlg.selectDrive(
+				owner,
+				DeviceIO.MediaType.ANY_DISK_READ_ONLY );
+    if( drive != null ) {
+      String  drvFileName = null;
+      Boolean cdrom       = null;
+      long    diskSize    = -1;
+      boolean specialPriv = false;
+      if( drive instanceof DeviceIO.Drive ) {
+	drvFileName = ((DeviceIO.Drive) drive).getFileName();
+	cdrom       = ((DeviceIO.Drive) drive).getCDRom();
+	diskSize    = ((DeviceIO.Drive) drive).getDiskSize();
+	specialPriv = ((DeviceIO.Drive) drive).needsSpecialPrivileges();
+      } else {
+	drvFileName = drive.toString();
+      }
+      FileFilter[] fileFilters = null;
+      if( cdrom != null ) {
+	fileFilters      = new FileFilter[ 1 ];
+	fileFilters = new FileFilter[] {
+			cdrom.booleanValue() ?
+				FileUtil.getISOFileFilter()
+				: FileUtil.getPlainDiskFileFilter() };
+      } else {
+	fileFilters = new FileFilter[] {
+				FileUtil.getPlainDiskFileFilter(),
+				FileUtil.getISOFileFilter() };
+      }
+      if( drvFileName != null ) {
+	File imgFile = FileUtil.showFileSaveDlg(
 				owner,
 				"Einfache Abbilddatei speichern",
 				Main.getLastDirFile( Main.FILE_GROUP_DISK ),
-				EmuUtil.getPlainDiskFileFilter(),
-				EmuUtil.getISOFileFilter() );
-      if( imgFile != null ) {
-	if( DiskUtil.checkFileExt(
+				fileFilters );
+	if( imgFile != null ) {
+	  if( DiskUtil.checkFileExt(
 				owner,
 				imgFile,
 				DiskUtil.plainDiskFileExt,
 				DiskUtil.gzPlainDiskFileExt,
 				DiskUtil.isoFileExt,
 				DiskUtil.gzISOFileExt ) )
-	{
-	  (new DiskImgProcessDlg(
-			owner,
-			String.format(
-				"Erzeuge Abbilddatei von %s...",
-				getDriveName( drvFileName ) ),
-			Direction.DISK_TO_FILE,
-			drvFileName,
-			imgFile )).setVisible( true );
+	  {
+	    StringBuilder buf = new StringBuilder( 256 );
+	    buf.append( "Erzeuge Abbilddatei" );
+	    String displyDriveName = getDisplayDriveName( drvFileName );
+	    if( displyDriveName != null ) {
+	      buf.append( " von " );
+	      buf.append( displyDriveName );
+	    }
+	    buf.append( "..." );
+	    (new DiskImgProcessDlg(
+				owner,
+				buf.toString(),
+				Direction.DISK_TO_FILE,
+				drvFileName,
+				imgFile )).setVisible( true );
+	  }
 	}
       }
     }
@@ -91,11 +126,12 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 
   public static void writeDiskImageToDrive( Frame owner )
   {
-    File imgFile = EmuUtil.showFileOpenDlg(
+    File imgFile = FileUtil.showFileOpenDlg(
 				owner,
 				"Einfache Abbilddatei \u00F6ffnen",
 				Main.getLastDirFile( Main.FILE_GROUP_DISK ),
-				EmuUtil.getPlainDiskFileFilter() );
+				FileUtil.getPlainDiskFileFilter(),
+				FileUtil.getISOFileFilter() );
     if( imgFile != null ) {
       if( imgFile.exists() && (imgFile.length() == 0) ) {
 	showErrorDlg( owner, "Die Datei ist leer." );
@@ -109,7 +145,13 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 				DiskUtil.plainDiskFileExt )
 			|| TextUtil.endsWith(
 				lowerFileName,
-				DiskUtil.gzPlainDiskFileExt ));
+				DiskUtil.gzPlainDiskFileExt )
+			|| TextUtil.endsWith(
+				lowerFileName,
+				DiskUtil.isoFileExt )
+			|| TextUtil.endsWith(
+				lowerFileName,
+				DiskUtil.gzISOFileExt ));
 	}
 	if( !state ) {
 	  state = showYesNoWarningDlg(
@@ -122,29 +164,55 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 			"Dateityp" );
 	}
 	if( state ) {
-	  String drvFileName = DriveSelectDlg.selectDriveFileName( owner );
-	  if( drvFileName != null ) {
-	    String drvName = getDriveName( drvFileName );
-	    if( JOptionPane.showConfirmDialog(
-		  owner,
-		  String.format(
-			"Die Abbilddatei wird nun auf den Datentr\u00E4ger"
-				+ " im Laufwerk %s geschrieben.\n"
-				+ "Dabei werden alle bisherigen Daten"
-				+ " auf dem Datentr\u00E4ger gel\u00F6scht!",
-			drvName ),
-		  "Achtung",
-		  JOptionPane.OK_CANCEL_OPTION,
-		  JOptionPane.WARNING_MESSAGE ) == JOptionPane.OK_OPTION )
-	    {
-	      (new DiskImgProcessDlg(
+	  Object drive = DriveSelectDlg.selectDrive(
+				owner,
+				DeviceIO.MediaType.ANY_DISK_READ_ONLY );
+	  if( drive != null ) {
+	    String drvFileName  = null;
+	    boolean specialPriv = false;
+	    if( drive instanceof DeviceIO.Drive ) {
+	      drvFileName = ((DeviceIO.Drive) drive).getFileName();
+	      specialPriv = ((DeviceIO.Drive) drive).needsSpecialPrivileges();
+	    } else {
+	      drvFileName = drive.toString();
+	    }
+	    if( drvFileName != null ) {
+	      StringBuilder buf = new StringBuilder( 0x100 );
+	      buf.append( "Die Abbilddatei wird nun"
+				+ " auf den Datentr\u00E4ger" );
+	      String displayDriveName = getDisplayDriveName( drvFileName );
+	      if( displayDriveName != null ) {
+		buf.append( " im Laufwerk " );
+		buf.append( displayDriveName );
+	      }
+	      buf.append( " geschrieben.\n"
+			+ "Dabei werden alle bisherigen Daten"
+			+ " auf dem Datentr\u00E4ger gel\u00F6scht!"
+			+ "\n\nIst der Datentr\u00E4ger im"
+			+ " Dateisystem eingeh\u00E4ngt,"
+			+ " wird er nun ausgeh\u00E4ngt." );
+	      if( JOptionPane.showConfirmDialog(
 			owner,
-			String.format(
-				"Schreibe Abbilddatei auf %s...",
-				drvName ),
-			Direction.FILE_TO_DISK,
-			drvFileName,
-			imgFile )).setVisible( true );
+			buf.toString(),
+			"Achtung",
+			JOptionPane.OK_CANCEL_OPTION,
+			JOptionPane.WARNING_MESSAGE )
+					== JOptionPane.OK_OPTION )
+	      {
+		buf.setLength( 0 );
+		buf.append( "Schreibe Abbilddatei" );
+		if( displayDriveName != null ) {
+		  buf.append( " auf " );
+		  buf.append( displayDriveName );
+		}
+		buf.append( "..." );
+		(new DiskImgProcessDlg(
+				owner,
+				buf.toString(),
+				Direction.FILE_TO_DISK,
+				drvFileName,
+				imgFile )).setVisible( true );
+	      }
 	    }
 	  }
 	}
@@ -166,7 +234,7 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 	  OutputStream out = null;
 	  try {
 	    in  = DeviceIO.openDeviceForSequentialRead( this.drvFileName );
-	    out = EmuUtil.createOptionalGZipOutputStream( this.imgFile );
+	    out = FileUtil.createOptionalGZipOutputStream( this.imgFile );
 	    Main.setLastDriveFileName( this.drvFileName );
 	    Main.setLastFile( this.imgFile, Main.FILE_GROUP_DISK );
 
@@ -184,8 +252,8 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 	    out = null;
 	  }
 	  finally {
-	    EmuUtil.closeSilent( out );
-	    EmuUtil.closeSilent( in );
+	    EmuUtil.closeSilently( out );
+	    EmuUtil.closeSilently( in );
 	  }
 	  if( this.thread == null ) {
 	    this.imgFile.delete();
@@ -204,7 +272,7 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 	  try {
 	    long len = this.imgFile.length();
 	    in       = new FileInputStream( this.imgFile );
-	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
+	    if( FileUtil.isGZipFile( this.imgFile ) ) {
 	      in = new GZIPInputStream( in );
 	    }
 	    if( (len > (2880 * 1024)) && ((len % 512L) >= 0x100) ) {
@@ -219,22 +287,33 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 	    Main.setLastDriveFileName( this.drvFileName );
 	    Main.setLastFile( this.imgFile, Main.FILE_GROUP_DISK );
 
-	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
-	    int    n   = in.read( buf );
+	    byte[] buf = new byte[ 0x4000 ];
+	    int    n   = EmuUtil.read( in, buf );
 	    while( n > 0 ) {
+	      if( n < buf.length ) {
+		/*
+		 * auf max. Sektorgroesse (2048 Bytes)
+		 * mit Null-Bytes auffuellen
+		 */
+		while( (n < buf.length) && ((n & 0x7FF) != 0) ) {
+		  buf[ n++ ] = (byte) 0;
+		}
+		out.write( buf, 0, n );
+		break;
+	      }
 	      out.write( buf, 0, n );
 	      this.nBytesProcessed += n;
 	      if( this.thread == null ) {
 		break;
 	      }
-	      n = in.read( buf );
+	      n = EmuUtil.read( in, buf );
 	    }
 	    out.close();
 	    out = null;
 	  }
 	  finally {
-	    EmuUtil.closeSilent( out );
-	    EmuUtil.closeSilent( in );
+	    EmuUtil.closeSilently( out );
+	    EmuUtil.closeSilently( in );
 	  }
 	}
 	catch( Exception ex ) {
@@ -251,13 +330,11 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.btnCancel ) {
-	doCancel();
-	rv = true;
-      }
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( src == this.btnCancel ) {
+      doCancel();
+      rv = true;
     }
     return rv;
   }
@@ -279,13 +356,14 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
       rv = super.doClose();
     }
     if( rv ) {
+      this.btnCancel.removeActionListener( this );
       this.timer.stop();
     }
     return rv;
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- Konstruktor --- */
 
   private DiskImgProcessDlg(
 			Window    owner,
@@ -316,26 +394,24 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.labelMsg = new JLabel( msg );
+    this.labelMsg = GUIFactory.createLabel( msg );
     add( this.labelMsg, gbc );
     gbc.insets.top    = 0;
     gbc.insets.bottom = 5;
     gbc.gridy++;
-    add( new JLabel( "Bitte warten!" ), gbc );
+    add( GUIFactory.createLabel( "Bitte warten!" ), gbc );
 
-    this.labelStatus = new JLabel();
+    this.labelStatus = GUIFactory.createLabel();
     gbc.insets.top   = 10;
     gbc.gridy++;
     add( this.labelStatus, gbc );
 
-    this.labelRunning = new JLabel();
+    this.labelRunning = GUIFactory.createLabel();
     this.labelRunning.setFont( new Font( Font.MONOSPACED, Font.BOLD, 12 ) );
     gbc.gridy++;
     add( this.labelRunning, gbc );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     gbc.gridy++;
     add( this.btnCancel, gbc );
 
@@ -361,8 +437,14 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
 				"JKCEMU disk image writer"
 				: "JKCEMU disk image reader" );
     this.thread.start();
+
+
+    // Listener
+    this.btnCancel.addActionListener( this );
   }
 
+
+	/* --- private Methoden --- */
 
   private void doCancel()
   {
@@ -372,11 +454,19 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
   }
 
 
-  private static String getDriveName( String drvFileName )
+  private static String getDisplayDriveName( String drvFileName )
   {
-    return drvFileName.startsWith( "\\\\.\\" ) && (drvFileName.length() > 4) ?
-						drvFileName.substring( 4 )
-						: drvFileName;
+    String rv = null;
+    if( drvFileName.startsWith( "\\\\.\\" ) ) {
+      if( (drvFileName.length() == 6)
+	  && drvFileName.endsWith( ":" ) )
+      {
+	rv = drvFileName.substring( 4 );
+      }
+    } else {
+      rv = drvFileName;
+    }
+   return rv;
   }
 
 
@@ -456,4 +546,3 @@ public class DiskImgProcessDlg extends BaseDlg implements Runnable
     }
   }
 }
-

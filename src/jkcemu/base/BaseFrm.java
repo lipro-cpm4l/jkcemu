@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,22 +14,24 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.lang.*;
+import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
-import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
 import jkcemu.Main;
 
@@ -46,30 +48,28 @@ public class BaseFrm extends JFrame implements
   public static final String PROP_WINDOW_HEIGHT    = "window.height";
   public static final String PROP_WINDOW_ICONIFIED = "window.iconified";
   public static final String PROP_WINDOW_MAXIMIZED = "window.maximized";
+  public static final String PROP_WINDOW_VISIBLE   = "window.visible";
+
+
+  private boolean                   notified;
+  private java.util.List<JMenuItem> menuItems;
 
 
   protected BaseFrm()
   {
+    this.notified  = false;
+    this.menuItems = new ArrayList<>();
     setDefaultCloseOperation( DO_NOTHING_ON_CLOSE );
     addWindowListener( this );
     Main.frameCreated( this );
+    Main.updIcon( this );
   }
 
 
   /*
-   * Manchmal funktioniert die pack()-Methode nicht richtig,
-   * wenn vorher setResizable(...) aufgerufen wurde.
-   * Haeufig wird die pack()-Methode aufgerufen,
-   * wenn es keine Einstellungen zu der Fenstergroesse und -position gibt.
-   * Demzufolge darf die setResizable(...)-Methode erst nach dem erstmaligen
-   * Aufruf dieser Methode erfolgen.
-   * Damit nun aber diese Methode weiss, ob das Fenster
-   * in der Groesse veraenderbar ist,
-   * muss dies explizit mit einem Paramter uebergeben werden.
-   *
    * Rueckgabewert: true, wenn Fensterposition bzw. -groesse geaendert wurde
    */
-  public boolean applySettings( Properties props, boolean resizable )
+  public boolean applySettings( Properties props )
   {
     boolean rv = false;
     if( (props != null) && !isVisible() ) {
@@ -78,26 +78,69 @@ public class BaseFrm extends JFrame implements
       int x = EmuUtil.getIntProperty(
 				props,
 				prefix + PROP_WINDOW_X,
-				-1 );
+				Integer.MIN_VALUE );
       int y = EmuUtil.getIntProperty(
 				props,
 				prefix + PROP_WINDOW_Y,
-				-1 );
-      if( (x >= 0) && (y >= 0) ) {
-	int w = EmuUtil.getIntProperty(
+				Integer.MIN_VALUE );
+      int w = EmuUtil.getIntProperty(
 				props,
 				prefix + PROP_WINDOW_WIDTH,
 				0 );
-	int h = EmuUtil.getIntProperty(
+      int h = EmuUtil.getIntProperty(
 				props,
 				prefix + PROP_WINDOW_HEIGHT,
 				0 );
-	if( resizable && (w > 0) && (h > 0) ) {
+      /*
+       * Wenn sich die Bildschirmgroesse geandert hat, wird geprueft,
+       * ob die linke obere Ecke des Fensters sichtbar sein wird.
+       * Wenn nicht, wird die gespeicherte Fensterposition ignoriert
+       */
+      if( (x > Integer.MIN_VALUE) && (y > Integer.MIN_VALUE) ) {
+	Dimension screenSize = getScreenSize();
+	if( screenSize != null ) {
+	  int wScreen = EmuUtil.getIntProperty(
+					props,
+					Main.PROP_SCREEN_WIDTH,
+					0 );
+	  int hScreen = EmuUtil.getIntProperty(
+					props,
+					Main.PROP_SCREEN_HEIGHT,
+					0 );
+	  if( (hScreen > 0) && (wScreen > 0)
+	      && ((screenSize.width != wScreen)
+			|| (screenSize.height != hScreen)) )
+	  {
+	    /*
+	     * Bildschirmgroesse unterscheidet sich von der
+	     * im Profil gespeicherten -> pruefen,
+	     * ob die obere linke Ecke des Fensters sichtbar ist
+	     * (dabei auch eine moegliche Systemleiste links oder unten
+	     * beruecksichtigen),
+	     * Wenn nicht, dann die gespeicherte Fensterposition ignorieren
+	     */
+	    if( (x < 0) || (y < 0)
+		|| (x > (screenSize.width - 100))
+		|| (y > (screenSize.height - 100)) )
+	    {
+	      x = Integer.MIN_VALUE;
+	      y = Integer.MIN_VALUE;
+	    }
+	  }
+	}
+      }
+      if( (x > Integer.MIN_VALUE) && (y > Integer.MIN_VALUE) ) {
+	if( isResizable() && (w > 0) && (h > 0) ) {
 	  setBounds( x, y, w, h );
 	} else {
 	  setLocation( x, y );
 	}
 	rv = true;
+      } else {
+	setLocationByPlatform( true );
+	if( isResizable() && (w > 0) && (h > 0) ) {
+	  setSize( w, h );
+	}
       }
       int frmState = 0;
       if( EmuUtil.getBooleanProperty(
@@ -121,81 +164,228 @@ public class BaseFrm extends JFrame implements
 
 
   /*
-   * Diese Methoden erzeugen einen Knopf mit einem Bild.
-   * Als ActionListner wird das Frame eingetragen.
+   * Diese folgenden Methoden erzeugen ein JMenu
+   * mit der entsprechenden Mnemonic-Taste.
    */
-  protected JButton createImageButton( String imgName, String text )
+  protected static JMenu createMenuEdit()
   {
-    JButton btn = EmuUtil.createImageButton( this, imgName, text );
-    btn.addActionListener( this );
-    return btn;
+    JMenu menu = GUIFactory.createMenu( "Bearbeiten" );
+    menu.setMnemonic( KeyEvent.VK_B );
+    return menu;
   }
 
 
-  /*
-   * Diese folgenden Methoden erzeugen ein JMenuItem.
-   * Als ActionListner wird das Frame eingetragen.
-   */
-  protected JMenuItem createJMenuItem( String text )
+  protected static JMenu createMenuFile()
   {
-    JMenuItem item = new JMenuItem( text );
-    item.addActionListener( this );
+    JMenu menu = GUIFactory.createMenu( "Datei" );
+    menu.setMnemonic( KeyEvent.VK_D );
+    return menu;
+  }
+
+
+  protected static JMenu createMenuHelp()
+  {
+    JMenu menu = GUIFactory.createMenu( "Hilfe" );
+    menu.setMnemonic( KeyEvent.VK_H );
+    return menu;
+  }
+
+
+  public static JMenu createMenuSettings()
+  {
+    JMenu menu = GUIFactory.createMenu( EmuUtil.TEXT_SETTINGS );
+    menu.setMnemonic( KeyEvent.VK_E );
+    return menu;
+  }
+
+
+  protected JMenuItem createMenuItem( String text )
+  {
+    JMenuItem item = GUIFactory.createMenuItem( text );
+    this.menuItems.add( item );
     return item;
   }
 
 
-  protected JMenuItem createJMenuItem( String text, String actionCmd )
+  protected JMenuItem createMenuItem( String text, String actionCmd )
   {
-    JMenuItem item = createJMenuItem( text );
+    JMenuItem item = createMenuItem( text );
     item.setActionCommand( actionCmd );
     return item;
   }
 
 
-  protected JMenuItem createJMenuItem(
-				String text,
-				int    keyCode,
-				int    modifiers )
+  protected JMenuItem createMenuItemClose()
   {
-    return createJMenuItem(
-			text,
-			KeyStroke.getKeyStroke( keyCode, modifiers ) );
+    return createMenuItem( EmuUtil.TEXT_CLOSE );
   }
 
 
-  protected JMenuItem createJMenuItem(
-				String    text,
-				KeyStroke keyStroke )
+  protected JMenuItem createMenuItemClose( String actionCmd )
   {
-    JMenuItem item = createJMenuItem( text );
-    item.setAccelerator( keyStroke );
-    return item;
-  }
-
-
-  protected JMenuItem createJMenuItem(
-				String    text,
-				String    actionCmd,
-				KeyStroke keyStroke )
-  {
-    JMenuItem item = createJMenuItem( text, actionCmd );
-    item.setAccelerator( keyStroke );
-    return item;
-  }
-
-
-  protected JRadioButtonMenuItem createJRadioButtonMenuItem(
-					ButtonGroup grp,
-					String      text,
-					String      actionCmd,
-					boolean     selected,
-					KeyStroke   keyStroke )
-  {
-    JRadioButtonMenuItem item = new JRadioButtonMenuItem( text, selected );
-    grp.add( item );
+    JMenuItem item = createMenuItemClose();
     item.setActionCommand( actionCmd );
-    item.addActionListener( this );
-    item.setAccelerator( keyStroke );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemCopy( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_COPY );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_C, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemCut( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_CUT );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_X, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemFindNext( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_FIND_NEXT );
+    if( withAccelerator ) {
+      EmuUtil.setDirectAccelerator( item, KeyEvent.VK_F3, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemFindPrev( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_FIND_PREV );
+    if( withAccelerator ) {
+      EmuUtil.setDirectAccelerator( item, KeyEvent.VK_F3, true );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemOpenFind( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_OPEN_FIND );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_F, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemOpenPrint( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_OPEN_PRINT );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_P, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemOpenPrintOptions()
+  {
+    return createMenuItem( "Druckoptionen..." );
+  }
+
+
+  protected JMenuItem createMenuItemPaste( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_PASTE );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_V, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemSaveAs( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( "Speichern unter..." );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_S, true );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemSelectAll( boolean withAccelerator )
+  {
+    JMenuItem item = createMenuItem( EmuUtil.TEXT_SELECT_ALL );
+    if( withAccelerator ) {
+      EmuUtil.setStandardAccelerator( item, KeyEvent.VK_A, false );
+    }
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithDirectAccelerator(
+						String text,
+						int    keyCode )
+  {
+    JMenuItem item = createMenuItem( text );
+    EmuUtil.setDirectAccelerator( item, keyCode, false );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithDirectAccelerator(
+						String  text,
+						int     keyCode,
+						boolean shiftDown )
+  {
+    JMenuItem item = createMenuItem( text );
+    EmuUtil.setDirectAccelerator( item, keyCode, shiftDown );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithDirectAccelerator(
+						String  text,
+						String  actionCmd,
+						int     keyCode )
+  {
+    JMenuItem item = createMenuItem( text, actionCmd );
+    EmuUtil.setDirectAccelerator( item, keyCode, false );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithDirectAccelerator(
+						String  text,
+						String  actionCmd,
+						int     keyCode,
+						boolean shiftDown )
+  {
+    JMenuItem item = createMenuItem( text, actionCmd );
+    EmuUtil.setDirectAccelerator( item, keyCode, shiftDown );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithStandardAccelerator(
+						String text,
+						int    keyCode )
+  {
+    JMenuItem item = createMenuItem( text );
+    EmuUtil.setStandardAccelerator( item, keyCode, false );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithStandardAccelerator(
+						String  text,
+						int     keyCode,
+						boolean shiftDown )
+  {
+    JMenuItem item = createMenuItem( text );
+    EmuUtil.setStandardAccelerator( item, keyCode, shiftDown );
     return item;
   }
 
@@ -207,6 +397,12 @@ public class BaseFrm extends JFrame implements
    */
   public boolean doClose()
   {
+    /*
+     * Eigenschaften des Fensters merken,
+     * damit beim erneuten Oeffnen dieses wieder
+     * auf der gleichen Position erscheint.
+     */
+    putSettingsTo( Main.getProperties() );
     setVisible( false );
     dispose();
     return true;
@@ -238,41 +434,15 @@ public class BaseFrm extends JFrame implements
   }
 
 
-  public void fireShowErrorMsg( final String msg )
+  public boolean getPackOnUIUpdate()
   {
-    final Component owner = this;
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  @Override
-		  public void run()
-		  {
-		    BaseDlg.showErrorDlg( owner, msg );
-		  }
-		} );
+    return !isResizable();
   }
 
 
   public String getSettingsPrefix()
   {
     return getClass().getName() + ".";
-  }
-
-
-  /*
-   * Die Methode wird aufgerufen,
-   * nachdem sich das Erscheinungsbild geaendert hat.
-   * Alle Komponenten, die sich in der Komponentenhierarchie
-   * des Frames befinden, werden automatisch aktualisiert.
-   *
-   * Diese Methode muss dann ueberschrieben werden,
-   * wenn Komponenten aktualisiert werden muessen,
-   * die sich gerade nicht in in der Komponentenhierarchie befinden
-   * (z.B. Popup-Menus).
-   */
-  public void lookAndFeelChanged()
-  {
-    // leer
   }
 
 
@@ -314,11 +484,15 @@ public class BaseFrm extends JFrame implements
 		props,
 		prefix + PROP_WINDOW_MAXIMIZED,
 		(frameState & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH );
+      EmuUtil.setProperty(
+		props,
+		prefix + PROP_WINDOW_VISIBLE,
+		isVisible() );
     }
   }
 
 
-  public void resetFired()
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
     // leer
   }
@@ -330,7 +504,7 @@ public class BaseFrm extends JFrame implements
    */
   public void setBoundsToDefaults()
   {
-    Dimension screenSize = getToolkit().getScreenSize();
+    Dimension screenSize = getScreenSize();
     if( screenSize != null ) {
       setBounds(
 	screenSize.width  / 4,
@@ -348,7 +522,7 @@ public class BaseFrm extends JFrame implements
    */
   public void setScreenCentered()
   {
-    Dimension screenSize = getToolkit().getScreenSize();
+    Dimension screenSize = getScreenSize();
     if( screenSize != null ) {
       Dimension mySize = getSize();
       int       x      = (screenSize.width - mySize.width) / 2;
@@ -373,9 +547,14 @@ public class BaseFrm extends JFrame implements
 
 
   /*
-   * Die Methode wird vor einem Reset aufgerufen.
+   * Diese Methode wird aufgerufen,
+   * wenn sich das Erscheinungsbild, Schriften oder Symbolgroessen aendern
    */
-  public void willReset()
+  public void updUI(
+		Properties props,
+		boolean    updLAF,
+		boolean    updFonts,
+		boolean    updIcons )
   {
     // leer
   }
@@ -395,7 +574,7 @@ public class BaseFrm extends JFrame implements
   @Override
   public void mouseClicked( MouseEvent e )
   {
-    if( showPopupInternal( e ) ) {
+    if( showPopupMenuInternal( e ) ) {
       e.consume();
     } else if( e.getClickCount() > 1 ) {
       if( doActionInternal( e ) ) {
@@ -419,14 +598,14 @@ public class BaseFrm extends JFrame implements
   @Override
   public void mousePressed( MouseEvent e )
   {
-    if( showPopupInternal( e ) )
+    if( showPopupMenuInternal( e ) )
       e.consume();
   }
 
   @Override
   public void mouseReleased( MouseEvent e )
   {
-    if( showPopupInternal( e ) )
+    if( showPopupMenuInternal( e ) )
       e.consume();
   }
 
@@ -503,6 +682,46 @@ public class BaseFrm extends JFrame implements
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      for( JMenuItem item : this.menuItems ) {
+	item.addActionListener( this );
+      }
+    }
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      for( JMenuItem item : this.menuItems ) {
+	item.removeActionListener( this );
+      }
+    }
+  }
+
+
+  @Override
+  public void toFront()
+  {
+    int m = getExtendedState();
+    if( (m & Frame.ICONIFIED) != 0 ) {
+      m &= ~Frame.ICONIFIED;
+      setExtendedState( m );
+    }
+    super.toFront();
+  }
+
+
 	/* --- zu ueberschreibende Methoden --- */
 
   protected boolean doAction( EventObject e )
@@ -511,7 +730,12 @@ public class BaseFrm extends JFrame implements
   }
 
 
-  protected boolean showPopup( MouseEvent e )
+  /*
+   * Rueckgabewert:
+   *   true:  Popup wurde angezeigt und Event soll konsumiert werden.
+   *   false: Popup nicht angezeigt, Event nicht konsumieren
+   */
+  protected boolean showPopupMenu( MouseEvent e )
   {
     return false;
   }
@@ -527,22 +751,28 @@ public class BaseFrm extends JFrame implements
       rv = doAction( e );
     }
     catch( Exception ex ) {
-      EmuUtil.exitSysError( this, null, ex );
+      EmuUtil.checkAndShowError( this, null, ex );
     }
     setWaitCursor( false );
     return rv;
   }
 
 
-  private boolean showPopupInternal( MouseEvent e )
+  private Dimension getScreenSize()
+  {
+    Toolkit tk = EmuUtil.getToolkit( this );
+    return tk != null ? tk.getScreenSize() : null;
+  }
+
+
+  private boolean showPopupMenuInternal( MouseEvent e )
   {
     boolean rv = false;
     if( e != null ) {
       if( e.isPopupTrigger() ) {
-	rv = showPopup( e );
+	rv = showPopupMenu( e );
       }
     }
     return rv;
   }
 }
-

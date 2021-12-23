@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.net;
 
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import z80emu.Z80CPU;
@@ -159,7 +158,7 @@ public class KCNet implements
 
   public int read( int port )
   {
-    int rv = -1;
+    int rv = 0xFF;
     switch( port & 0x03 ) {
       case 0x00:
 	rv = this.pio.readDataA();
@@ -171,16 +170,46 @@ public class KCNet implements
       case 0x01:
 	rv = this.pio.readDataB();
 	break;
-
-      case 0x02:
-	rv = this.pio.readControlA();
-	break;
-
-      case 0x03:
-	rv = this.pio.readControlB();
-	break;
     }
     return rv;
+  }
+
+
+  public void reset( boolean powerOn )
+  {
+    if( (this.debugMask & DEBUG_MASK_MSG) != 0 ) {
+      System.out.printf( "KCNet reset: power_on=%b\n", powerOn );
+    }
+    this.pio.reset( powerOn );
+    this.w5100.reset( powerOn );
+    setIdle();
+    if( powerOn ) {
+      this.curAddr             = 0;
+      this.errorCnt            = 0;
+      this.tStatesCounterValue = 0;
+      for( byte[] ipAddr : this.ipAddrMem ) {
+	Arrays.fill( ipAddr, (byte) 0 );
+      }
+      NetConfig netConfig = this.w5100.getNetConfig();
+      if( netConfig != null ) {
+	byte[] dnsServerIpAddr = null;
+	if( KCNet.getAutoConfig() ) {
+	  dnsServerIpAddr = netConfig.getDnsServerIpAddr();
+	} else {
+	  dnsServerIpAddr = netConfig.getManualDnsServerIpAddr();
+	}
+	if( dnsServerIpAddr != null ) {
+	  if( dnsServerIpAddr.length != 4 ) {
+	    dnsServerIpAddr = null;
+	  }
+	  if( dnsServerIpAddr != null ) {
+	    for( int i = 0; i < dnsServerIpAddr.length; i++ ) {
+	      this.ipAddrMem[ 0 ][ i ] = dnsServerIpAddr[ i ];
+	    }
+	  }
+	}
+      }
+    }
   }
 
 
@@ -226,11 +255,9 @@ public class KCNet implements
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
-    if( this.pio.isInterruptAccepted() ) {
-      this.pio.interruptFinish();
-    }
+    return this.pio.interruptFinish( addr );
   }
 
 
@@ -245,45 +272,6 @@ public class KCNet implements
   public boolean isInterruptRequested()
   {
     return this.pio.isInterruptRequested();
-  }
-
-
-  @Override
-  public void reset( boolean powerOn )
-  {
-    if( (this.debugMask & DEBUG_MASK_MSG) != 0 ) {
-      System.out.printf( "KCNet reset: power_on=%b\n", powerOn );
-    }
-    this.pio.reset( powerOn );
-    this.w5100.reset( powerOn );
-    setIdle();
-    if( powerOn ) {
-      this.curAddr             = 0;
-      this.errorCnt            = 0;
-      this.tStatesCounterValue = 0;
-      for( byte[] ipAddr : this.ipAddrMem ) {
-	Arrays.fill( ipAddr, (byte) 0 );
-      }
-      NetConfig netConfig = this.w5100.getNetConfig();
-      if( netConfig != null ) {
-	byte[] dnsServerIpAddr = null;
-	if( KCNet.getAutoConfig() ) {
-	  dnsServerIpAddr = netConfig.getDnsServerIpAddr();
-	} else {
-	  dnsServerIpAddr = netConfig.getManualDnsServerIpAddr();
-	}
-	if( dnsServerIpAddr != null ) {
-	  if( dnsServerIpAddr.length != 4 ) {
-	    dnsServerIpAddr = null;
-	  }
-	  if( dnsServerIpAddr != null ) {
-	    for( int i = 0; i < dnsServerIpAddr.length; i++ ) {
-	      this.ipAddrMem[ 0 ][ i ] = dnsServerIpAddr[ i ];
-	    }
-	  }
-	}
-      }
-    }
   }
 
 
@@ -331,29 +319,37 @@ public class KCNet implements
 				Z80PIO.Status   status )
   {
     if( (pio == this.pio) && (port == Z80PIO.PortInfo.A) ) {
-      if( status == Z80PIO.Status.OUTPUT_AVAILABLE ) {
-	stopTimeoutTimer();
-	this.pio.putInValuePortB( 0x01, 0x01 );
-	int value = this.pio.fetchOutValuePortA( true );
-	this.pio.putInValuePortB( 0x00, 0x01 );
-	writeByte( value );
-      }
-      else if( status == Z80PIO.Status.READY_FOR_INPUT ) {
-	stopTimeoutTimer();
-	this.pio.putInValuePortB( 0x00, 0x80 );
-	int value = fetchNextResultByte();
-	if( value >= 0 ) {
-	  setResultByte( value );
-	} else {
-	  if( (this.cmd == Command.READ_BYTES) && (this.byteCnt > 0) ) {
-	    value = readMemByte( this.curAddr );
-	    incCurAddr();
-	    --this.byteCnt;
-	    setResultByte( value );
-	  } else {
-	    setIdle();
+      switch( status ) {
+	case OUTPUT_AVAILABLE:
+	  {
+	    stopTimeoutTimer();
+	    this.pio.putInValuePortB( 0x01, 0x01 );
+	    int value = this.pio.fetchOutValuePortA( 0xFF, true );
+	    this.pio.putInValuePortB( 0x00, 0x01 );
+	    writeByte( value );
 	  }
-	}
+	  break;
+	case READY_FOR_INPUT:
+	  {
+	    stopTimeoutTimer();
+	    this.pio.putInValuePortB( 0x00, 0x80 );
+	    int value = fetchNextResultByte();
+	    if( value >= 0 ) {
+	      setResultByte( value );
+	    } else {
+	      if( (this.cmd == Command.READ_BYTES)
+		  && (this.byteCnt > 0) )
+	      {
+		value = readMemByte( this.curAddr );
+		incCurAddr();
+		--this.byteCnt;
+		setResultByte( value );
+	      } else {
+		setIdle();
+	      }
+	    }
+	  }
+	  break;
       }
     }
   }
@@ -363,7 +359,7 @@ public class KCNet implements
 
   public String toString()
   {
-    return this.title;
+    return this.title != null ? this.title : "KCNet";
   }
 
 
@@ -654,4 +650,3 @@ public class KCNet implements
     }
   }
 }
-

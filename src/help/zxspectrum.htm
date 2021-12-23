@@ -33,7 +33,7 @@
       <a href="zxspectrum.htm#fileformats">2.2. Unterst&uuml;tzte Dateiformate</a>
      </li>
      <li>
-      <a href="zxspectrum.htm#save_basic">2.3. BASIC-Programm in einer Sound- oder Tape-Datei speichern</a>
+      <a href="zxspectrum.htm#save_basic">2.3. BASIC-Programm in Sound- oder Tape-Datei speichern</a>
      </li>
     </ul>
    </li>
@@ -242,29 +242,13 @@
   m&uuml;ssen Sie das Fenster
   <a href="audio.htm">Audio/Kassette</a> &ouml;ffnen
   und darin eine entsprechende Funktion aktivieren.
-  Die Funktion des Reiters
-  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
-  unterscheidet sich bei den beiden emulierten Spectrum-Modellen.
-  Beim ZX&nbsp;Spectrum&nbsp;48K h&ouml;ren Sie die T&ouml;ne,
-  die &uuml;ber das Bit&nbsp;<em>EAR</em> (Bit&nbsp;4)
-  des Ausgabetors&nbsp;FEh ausgegeben werden.
-  Beim ZX&nbsp;Spectrum+&nbsp;128K h&ouml;ren Sie dagegen
-  die Ausgaben des Sound-Generators AY-3-8912.
- <br/><br/>
-  Die Funktionalit&auml;t des Reiters
-  <a href="audio.htm#tape_out">Ausgang Kassette</a>
-  ist dagegen bei beiden emulierten Spectrum-Modellen gleich.
-  Es werden sowohl die mit dem Bit&nbsp;<em>MIC</em>
-  (Bit&nbsp;3, gew&ouml;hnlich benutzt zum Speichern auf Kassette)
-  als auch die mit dem Bit&nbsp;<em>EAR</em>
-  (Bit&nbsp;4, gew&ouml;hnlich benutzt f&uuml;r Tonausgaben)
-  erzeugten Signale ausgegeben bzw. gespeichert.
-  Wenn Sie also einen ZX&nbsp;Spectrum+&nbsp;128K emulieren lassen
-  und darin Programme ausf&uuml;hren,
-  die zur Tonausgabe den Port&nbsp;FEh nutzen
-  (z.B. Programme f&uuml;r den ZX&nbsp;Spectrum&nbsp;48K),
-  m&uuml;ssen Sie zum H&ouml;ren dieser T&ouml;ne eine Funktion im Reiter
-  <a href="audio.htm#tape_out">Ausgang Kassette</a> aktivieren.
+  Im Reiter <em>Ausgang Kassette</em> k&ouml;nnen Sie die T&ouml;ne
+  h&ouml;rbar machen bzw. aufnehmen und anschlie&szlig;end
+  in eine Datei speichern,
+  die &uuml;ber den Anschluss <em>MIC</em> ausgegeben werden.
+  Der Reiter <em>EAR</em> steht f&uuml;r den EAR-Anschluss.
+  Beim ZX&nbsp;Spectrum+&nbsp;128 gibt es zus&auml;tzlich den Reiter
+  <em>Sound-Generator</em>, der den Sound-Chip AY-3-8912 repr&auml;sentiert.
  <br/><br/>
 
  <h3><a name="fileformats">2.2. Unterst&uuml;tzte Dateiformate</a></h3>
@@ -272,17 +256,15 @@
   <a href="fileformats.htm#csw">CSW</a> (*.csw),
   <a href="fileformats.htm#tzx">TZX</a> (*.tzx) und
   <a href="fileformats.htm#tap">ZX-TAP</a> (*.tap)
-  werden hier Tape-Dateien genannt
-  und k&ouml;nnen mit der Funkltion
+  werden hier Tape-Dateien genannt und k&ouml;nnen mit der Funktion
   <a href="audio.htm#file_in">Audiodaten aus Sound- oder Tape-Datei lesen</a>
-  im Fenster <em>Audio/Kassette</em> in JKCEMU geladen werden.
+  in JKCEMU geladen werden.
   Schreibunterst&uuml;tzung gibt es f&uuml;r CSW- und TZX-Dateien
-  mit der Funktion
-  <a href="audio.htm#file_out">Audiodaten aufnehmen und in Datei speichern</a>.
+  im Reiter <a href="audio.htm#tape_out">Ausgang Kassette</a>.
  <br/><br/>
 
  <h3>
-  <a name="save_basic">2.3. BASIC-Programm in einer Sound- oder Tape-Datei speichern</a>
+  <a name="save_basic">2.3. BASIC-Programm in Sound- oder Tape-Datei speichern</a>
  </h3>
   Zum Speichern eines BASIC-Programms in eine Sound- oder Tape-Datei
   wird folgende Vorgehensweise empfohlen:

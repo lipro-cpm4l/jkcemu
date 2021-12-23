@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,6 @@ import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Transparency;
 import java.awt.image.BufferedImage;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -29,6 +28,7 @@ import javax.swing.event.ChangeListener;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class ScaleDlg extends BaseDlg implements ChangeListener
@@ -43,7 +43,7 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
   private JSpinner      spinnerWidth;
   private JSpinner      spinnerHeight;
   private JSpinner      lastChangeSource;
-  private JCheckBox     btnKeepRatio;
+  private JCheckBox     cbKeepRatio;
   private JButton       btnScale;
   private JButton       btnCancel;
 
@@ -63,7 +63,7 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
   public void stateChanged( ChangeEvent e )
   {
     if( this.ratio != null ) {
-      if( this.btnKeepRatio.isSelected() ) {
+      if( this.cbKeepRatio.isSelected() ) {
 	keepRatio( e.getSource() );
       }
     }
@@ -85,9 +85,24 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
       rv = true;
       doClose();
     }
-    else if( src == this.btnKeepRatio ) {
+    else if( src == this.cbKeepRatio ) {
       rv = true;
       doKeepRatio();
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.cbKeepRatio.removeActionListener( this );
+      this.spinnerWidth.removeChangeListener( this );
+      this.spinnerHeight.removeChangeListener( this );
+      this.btnScale.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
     }
     return rv;
   }
@@ -102,7 +117,7 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
     this.ratio            = null;
     this.scaledImage      = null;
     this.lastChangeSource = null;
-    this.rotated90Degrees = imageFrm.getImgFld().isRotated90Degrees();
+    this.rotated90Degrees = imageFrm.getImageFld().isRotated90Degrees();
 
 
     // Bildgroesse
@@ -129,9 +144,9 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    add( new JLabel( "Neue Breite:" ), gbc );
+    add( GUIFactory.createLabel( "Neue Breite:" ), gbc );
 
-    this.spinnerWidth = new JSpinner(
+    this.spinnerWidth = GUIFactory.createSpinner(
 				new SpinnerNumberModel(
 					w > 0 ? w : 640,
 					1,
@@ -142,14 +157,14 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
     add( this.spinnerWidth, gbc );
 
     gbc.gridx++;
-    add( new JLabel( "Pixel" ), gbc );
+    add( GUIFactory.createLabel( "Pixel" ), gbc );
 
     gbc.insets.left = 5;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JLabel( "Neue H\u00F6he:" ), gbc );
+    add( GUIFactory.createLabel( "Neue H\u00F6he:" ), gbc );
 
-    this.spinnerHeight = new JSpinner(
+    this.spinnerHeight = GUIFactory.createSpinner(
 				new SpinnerNumberModel(
 					h > 0 ? h : 480,
 					1,
@@ -160,23 +175,24 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
     add( this.spinnerHeight, gbc );
 
     gbc.gridx++;
-    add( new JLabel( "Pixel" ), gbc );
+    add( GUIFactory.createLabel( "Pixel" ), gbc );
 
-    this.btnKeepRatio = new JCheckBox( "Seitenverh\u00E4ltnis beibehalten" );
+    this.cbKeepRatio = GUIFactory.createCheckBox(
+				"Seitenverh\u00E4ltnis beibehalten" );
     if( this.ratio != null ) {
-      this.btnKeepRatio.setSelected( lastKeepRatio );
+      this.cbKeepRatio.setSelected( lastKeepRatio );
     } else {
-      this.btnKeepRatio.setEnabled( false );
+      this.cbKeepRatio.setEnabled( false );
     }
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.insets.left = 5;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( this.btnKeepRatio, gbc );
+    add( this.cbKeepRatio, gbc );
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.insets.top  = 10;
     gbc.insets.left = 5;
@@ -185,10 +201,10 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnScale = new JButton( "Skalieren" );
+    this.btnScale = GUIFactory.createButton( "Skalieren" );
     panelBtn.add( this.btnScale );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -199,11 +215,9 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
 
 
     // Listener
-    if( this.btnKeepRatio.isEnabled() ) {
-      this.btnKeepRatio.addActionListener( this );
-      this.spinnerWidth.addChangeListener( this );
-      this.spinnerHeight.addChangeListener( this );
-    }
+    this.cbKeepRatio.addActionListener( this );
+    this.spinnerWidth.addChangeListener( this );
+    this.spinnerHeight.addChangeListener( this );
     this.btnScale.addActionListener( this );
     this.btnCancel.addActionListener( this );
   }
@@ -213,7 +227,7 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
 
   private void doKeepRatio()
   {
-    if( (this.ratio != null) && this.btnKeepRatio.isSelected() ) {
+    if( (this.ratio != null) && this.cbKeepRatio.isSelected() ) {
       keepRatio( this.lastChangeSource != null ?
 			this.lastChangeSource : this.spinnerWidth );
     }
@@ -249,8 +263,8 @@ public class ScaleDlg extends BaseDlg implements ChangeListener
 		this );
       g.dispose();
       this.scaledImage = scaledImg;
-      if( this.btnKeepRatio.isEnabled() ) {
-	lastKeepRatio = this.btnKeepRatio.isSelected();
+      if( this.cbKeepRatio.isEnabled() ) {
+	lastKeepRatio = this.cbKeepRatio.isSelected();
       }
       doClose();
     }

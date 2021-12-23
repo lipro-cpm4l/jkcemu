@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.tools.hexedit;
 
 import java.awt.Dimension;
 import java.awt.Event;
+import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -27,35 +28,41 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.EventObject;
 import javax.naming.SizeLimitExceededException;
 import javax.swing.JButton;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
-import javax.swing.KeyStroke;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
 import jkcemu.base.ReplyBytesDlg;
+import jkcemu.file.Downloader;
+import jkcemu.file.FileUtil;
 import jkcemu.print.PrintOptionsDlg;
 import jkcemu.print.PrintUtil;
+import jkcemu.text.TextFinder;
 
 
 public class HexEditFrm
 		extends AbstractHexCharFrm
-		implements DropTargetListener
+		implements
+			Downloader.Consumer,
+			DropTargetListener
 {
+  public static final String TITLE = Main.APPNAME + " Hex-Editor";
+
   private static final String HELP_PAGE  = "/help/tools/hexeditor.htm";
   private static final int    BUF_EXTEND = 0x2000;
 
   private static HexEditFrm instance = null;
 
   private File      file;
+  private String    fileName;
   private byte[]    fileBytes;
   private int       fileLen;
   private int       savedPos;
@@ -93,7 +100,7 @@ public class HexEditFrm
   private JButton   btnFind;
 
 
-  public static void open()
+  public static HexEditFrm open()
   {
     if( instance != null ) {
       if( instance.getExtendedState() == Frame.ICONIFIED ) {
@@ -104,31 +111,44 @@ public class HexEditFrm
     }
     instance.toFront();
     instance.setVisible( true );
+    return instance;
   }
 
 
-  public static void open( byte[] data )
+  public static HexEditFrm open( byte[] data )
   {
     open();
     if( (data != null) && instance.confirmDataSaved() ) {
       instance.newFileInternal( data );
     }
+    return instance;
   }
 
 
-  public static void open( File file )
+  public static HexEditFrm open( File file )
   {
     open();
     if( file != null ) {
       instance.openFile( file );
     }
+    return instance;
   }
 
 
   public void openFile( File file )
   {
     if( instance.confirmDataSaved() )
-      instance.openFileInternal( file );
+      instance.openFileInternal( file, null, null );
+  }
+
+
+	/* --- Downloader.Consumer --- */
+
+  @Override
+  public void consume( byte[] fileBytes, String fileName )
+  {
+    if( instance.confirmDataSaved() )
+      instance.openFileInternal( null, fileBytes, fileName );
   }
 
 
@@ -137,7 +157,7 @@ public class HexEditFrm
   @Override
   public void dragEnter( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
+    if( !FileUtil.isFileDrop( e ) )
       e.rejectDrag();
   }
 
@@ -159,9 +179,27 @@ public class HexEditFrm
   @Override
   public void drop( DropTargetDropEvent e )
   {
-    File file = EmuUtil.fileDrop( this, e );
+    final File file = FileUtil.fileDrop( this, e );
     if( file != null ) {
-      openFile( file );
+      if( !Downloader.checkAndStart(
+			this,
+			file,
+			Integer.MAX_VALUE,
+			true,			// GZip-Dateien entpacken
+			e,
+			this ) )
+      {
+	// nicht auf Benutzerinteraktion warten
+	EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    openFile( file );
+			  }
+			} );
+      }
     }
   }
 
@@ -263,7 +301,7 @@ public class HexEditFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
+	HelpFrm.openPage( HELP_PAGE );
       } else {
 	rv = super.doAction( e );
       }
@@ -275,12 +313,20 @@ public class HexEditFrm
   @Override
   public boolean doClose()
   {
-    boolean rv = confirmDataSaved();
-    if( rv ) {
-      rv = super.doClose();
-    }
-    if( rv ) {
-      if( !Main.checkQuit( this ) ) {
+    boolean rv = false;
+    if( confirmDataSaved() ) {
+      if( Main.isTopFrm( this ) ) {
+	rv = EmuUtil.closeOtherFrames( this );
+	if( rv ) {
+	  rv = super.doClose();
+	}
+	if( rv ) {
+	  Main.exitSuccess();
+	}
+      } else {
+	rv = super.doClose();
+      }
+      if( rv ) {
 	// damit beim erneuten Oeffnen der Editor leer ist
 	newFileInternal( null );
       }
@@ -310,6 +356,13 @@ public class HexEditFrm
 
 
   @Override
+  public boolean getDataReadOnly()
+  {
+    return false;
+  }
+
+
+  @Override
   protected void setContentActionsEnabled( boolean state )
   {
     this.mnuSaveAs.setEnabled( state );
@@ -317,6 +370,19 @@ public class HexEditFrm
     this.mnuSelectAll.setEnabled( state );
     this.mnuFind.setEnabled( state );
     this.btnFind.setEnabled( state );
+  }
+
+
+  @Override
+  public boolean setDataByte( int idx, int value )
+  {
+    boolean rv = false;
+    if( (idx >= 0) && (idx <= this.fileLen) ) {
+      this.fileBytes[ idx ] = (byte) value;
+      setDataChanged( true );
+      rv = true;
+    }
+    return rv;
   }
 
 
@@ -438,8 +504,8 @@ public class HexEditFrm
 		"M\u00F6chten Sie das ausgew\u00E4hlte Byte"
 			+ " mit dem Wert %02Xh invertieren?\n"
 			+ "invertierte Wert: %02Xh",
-		(int) this.fileBytes[ m1 ] & 0xFF,
-		(int) ~this.fileBytes[ m1 ] & 0xFF );
+		this.fileBytes[ m1 ] & 0xFF,
+		~this.fileBytes[ m1 ] & 0xFF );
       }
       if( msg != null ) {
 	if( BaseDlg.showYesNoDlg( this, msg ) ) {
@@ -612,7 +678,7 @@ public class HexEditFrm
     if( m1 >= 0 ) {
       int len = Math.min( m2, this.fileBytes.length ) - m1 + 1;
       if( len > 0 ) {
-	File file = EmuUtil.showFileSaveDlg(
+	File file = FileUtil.showFileSaveDlg(
 			this,
 			"Datei speichern",
 			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
@@ -626,7 +692,7 @@ public class HexEditFrm
 	      out = null;
 	    }
 	    finally {
-	      EmuUtil.closeSilent( out );
+	      EmuUtil.closeSilently( out );
 	    }
 	    Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
 	  }
@@ -641,7 +707,7 @@ public class HexEditFrm
 
   private void doFileAppend()
   {
-    File file = EmuUtil.showFileOpenDlg(
+    File file = FileUtil.showFileOpenDlg(
 			this,
 			"Datei anh\u00E4ngen",
 			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
@@ -654,7 +720,7 @@ public class HexEditFrm
 	{
 	  throwFileTooBig();
 	}
-	byte[] a = EmuUtil.readFile( file, false, Integer.MAX_VALUE );
+	byte[] a = FileUtil.readFile( file, false, Integer.MAX_VALUE );
 	if( a != null ) {
 	  if( a.length > 0 ) {
 	    try {
@@ -681,7 +747,7 @@ public class HexEditFrm
   {
     int caretPos = this.hexCharFld.getCaretPosition();
     if( (caretPos >= 0) && (caretPos < this.fileLen) ) {
-      File file = EmuUtil.showFileOpenDlg(
+      File file = FileUtil.showFileOpenDlg(
 			this,
 			"Datei einf\u00FCgen",
 			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
@@ -693,7 +759,7 @@ public class HexEditFrm
 	  {
 	    throwFileTooBig();
 	  }
-	  byte[] a = EmuUtil.readFile( file, false, Integer.MAX_VALUE );
+	  byte[] a = FileUtil.readFile( file, false, Integer.MAX_VALUE );
 	  if( a != null ) {
 	    if( a.length > 0 ) {
 	      try {
@@ -729,12 +795,12 @@ public class HexEditFrm
   private void doOpen()
   {
     if( confirmDataSaved() ) {
-      File file = EmuUtil.showFileOpenDlg(
+      File file = FileUtil.showFileOpenDlg(
 			this,
 			"Datei \u00F6ffnen",
 			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
       if( file != null ) {
-	openFileInternal( file );
+	openFileInternal( file, null, null );
       }
     }
   }
@@ -745,12 +811,18 @@ public class HexEditFrm
     boolean rv   = false;
     File    file = this.file;
     if( forceFileDlg || (file == null) ) {
-      file = EmuUtil.showFileSaveDlg(
-		this,
-		"Datei speichern",
-		file != null ?
-			file
-			: Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
+      File preSelection = file;
+      if( preSelection == null ) {
+	if( this.fileName != null ) {
+	  preSelection = new File( fileName );
+	} else {
+	  preSelection = Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT );
+	}
+      }
+      file = FileUtil.showFileSaveDlg(
+				this,
+				"Datei speichern",
+				preSelection );
     }
     if( file != null ) {
       try {
@@ -767,12 +839,11 @@ public class HexEditFrm
 	  out       = null;
 	  this.file = file;
 	  rv        = true;
-	  if( !setDataChanged( false ) ) {
-	    updTitle();
-	  }
+	  setDataChanged( false );
+	  updTitle();
 	}
 	finally {
-	  EmuUtil.closeSilent( out );
+	  EmuUtil.closeSilently( out );
 	}
 	Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
       }
@@ -800,6 +871,7 @@ public class HexEditFrm
   private HexEditFrm()
   {
     this.file        = null;
+    this.fileName    = null;
     this.fileBytes   = new byte[ 0x100 ];
     this.fileLen     = 0;
     this.savedPos    = -1;
@@ -807,162 +879,156 @@ public class HexEditFrm
     updTitle();
 
 
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuBar.add( mnuFile );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuNew = createJMenuItem( "Neu" );
+    this.mnuNew = createMenuItem( "Neu" );
     mnuFile.add( this.mnuNew );
 
-    this.mnuOpen = createJMenuItem( "\u00D6ffnen..." );
+    this.mnuOpen = createMenuItem( EmuUtil.TEXT_OPEN_OPEN );
     mnuFile.add( this.mnuOpen );
     mnuFile.addSeparator();
 
-    this.mnuSave = createJMenuItem(
-		"Speichern",
-		KeyStroke.getKeyStroke( KeyEvent.VK_S, Event.CTRL_MASK ) );
+    this.mnuSave = createMenuItemWithStandardAccelerator(
+						EmuUtil.TEXT_SAVE,
+						KeyEvent.VK_S );
     this.mnuSave.setEnabled( false );
     mnuFile.add( this.mnuSave );
 
-    this.mnuSaveAs = createJMenuItem( "Speichern unter..." );
+    this.mnuSaveAs = createMenuItemSaveAs( true );
     this.mnuSaveAs.setEnabled( false );
     mnuFile.add( this.mnuSaveAs );
     mnuFile.addSeparator();
 
-    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
+    this.mnuPrintOptions = createMenuItemOpenPrintOptions();
     mnuFile.add( this.mnuPrintOptions );
 
-    this.mnuPrint = createJMenuItem(
-			"Drucken...",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_P,
-				InputEvent.CTRL_MASK ) );
+    this.mnuPrint = createMenuItemOpenPrint( true );
     this.mnuPrint.setEnabled( false );
     mnuFile.add( this.mnuPrint );
     mnuFile.addSeparator();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuBytesCopyHex = createJMenuItem(
+    this.mnuBytesCopyHex = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als Hexadezimalzahlen kopieren" );
     this.mnuBytesCopyHex.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyHex );
 
-    this.mnuBytesCopyAscii = createJMenuItem(
+    this.mnuBytesCopyAscii = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als ASCII-Text kopieren" );
     this.mnuBytesCopyAscii.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyAscii );
 
-    this.mnuBytesCopyDump = createJMenuItem(
+    this.mnuBytesCopyDump = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als Hex-ASCII-Dump kopieren" );
     this.mnuBytesCopyDump.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyDump );
     mnuEdit.addSeparator();
 
-    this.mnuBytesInsert = createJMenuItem(
-		"Bytes einf\u00FCgen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_I, Event.CTRL_MASK ) );
+    this.mnuBytesInsert = createMenuItemWithStandardAccelerator(
+					"Bytes einf\u00FCgen...",
+					KeyEvent.VK_I );
     this.mnuBytesInsert.setEnabled( false );
     mnuEdit.add( this.mnuBytesInsert );
 
-    this.mnuBytesOverwrite = createJMenuItem(
-		"Bytes \u00FCberschreiben...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_O, Event.CTRL_MASK ) );
+    this.mnuBytesOverwrite = createMenuItemWithStandardAccelerator(
+					"Bytes \u00FCberschreiben...",
+					KeyEvent.VK_O );
     this.mnuBytesOverwrite.setEnabled( false );
     mnuEdit.add( this.mnuBytesOverwrite );
 
-    this.mnuBytesAppend = createJMenuItem(
-		"Bytes am Ende anh\u00E4ngen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_E, Event.CTRL_MASK ) );
+    this.mnuBytesAppend = createMenuItemWithStandardAccelerator(
+					"Bytes am Ende anh\u00E4ngen...",
+					KeyEvent.VK_E );
     mnuEdit.add( this.mnuBytesAppend );
     mnuEdit.addSeparator();
 
-    this.mnuBytesSave = createJMenuItem(
+    this.mnuBytesSave = createMenuItem(
 				"Ausgew\u00E4hlte Bytes speichern..." );
     this.mnuBytesSave.setEnabled( false );
     mnuEdit.add( this.mnuBytesSave );
 
-    this.mnuBytesInvert = createJMenuItem(
+    this.mnuBytesInvert = createMenuItem(
 				"Ausgew\u00E4hlte Bytes invertieren" );
     this.mnuBytesInvert.setEnabled( false );
     mnuEdit.add( this.mnuBytesInvert );
 
-    this.mnuBytesReverse = createJMenuItem(
+    this.mnuBytesReverse = createMenuItem(
 				"Ausgew\u00E4hlte Bytes spiegeln" );
     this.mnuBytesReverse.setEnabled( false );
     mnuEdit.add( this.mnuBytesReverse );
 
-    this.mnuBytesRemove = createJMenuItem(
-		"Ausgew\u00E4hlte Bytes entfernen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    this.mnuBytesRemove = createMenuItemWithDirectAccelerator(
+				"Ausgew\u00E4hlte Bytes entfernen",
+				KeyEvent.VK_DELETE );
     this.mnuBytesRemove.setEnabled( false );
     mnuEdit.add( this.mnuBytesRemove );
     mnuEdit.addSeparator();
 
-    this.mnuFileInsert = createJMenuItem( "Datei einf\u00FCgen..." );
+    this.mnuFileInsert = createMenuItem( "Datei einf\u00FCgen..." );
     this.mnuFileInsert.setEnabled( false );
     mnuEdit.add( this.mnuFileInsert );
 
-    this.mnuFileAppend = createJMenuItem( "Datei am Ende anh\u00E4ngen..." );
+    this.mnuFileAppend = createMenuItem( "Datei am Ende anh\u00E4ngen..." );
     mnuEdit.add( this.mnuFileAppend );
     mnuEdit.addSeparator();
 
-    this.mnuSavePos = createJMenuItem( "Position merken" );
+    this.mnuSavePos = createMenuItem( "Position merken" );
     this.mnuSavePos.setEnabled( false );
     mnuEdit.add( this.mnuSavePos );
 
-    this.mnuGotoSavedPos = createJMenuItem(
+    this.mnuGotoSavedPos = createMenuItem(
 				"Zur gemerkten Position springen" );
     this.mnuGotoSavedPos.setEnabled( false );
     mnuEdit.add( this.mnuGotoSavedPos );
 
-    this.mnuSelectToSavedPos = createJMenuItem(
+    this.mnuSelectToSavedPos = createMenuItem(
 			"Bis zur gemerkten Position ausw\u00E4hlen" );
     this.mnuSelectToSavedPos.setEnabled( false );
     mnuEdit.add( this.mnuSelectToSavedPos );
 
-    this.mnuSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuSelectAll = createMenuItemSelectAll( true );
     this.mnuSelectAll.setEnabled( false );
     mnuEdit.add( this.mnuSelectAll );
     mnuEdit.addSeparator();
 
-    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
+    this.mnuChecksum = createMenuItem( "Pr\u00FCfsumme/Hashwert..." );
     this.mnuChecksum.setEnabled( false );
     mnuEdit.add( this.mnuChecksum );
     mnuEdit.addSeparator();
 
-    this.mnuFind = createJMenuItem(
-		"Suchen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
+    this.mnuFind = createMenuItemOpenFind( true );
     this.mnuFind.setEnabled( false );
     mnuEdit.add( this.mnuFind );
 
-    this.mnuFindNext = createJMenuItem(
-		"Weitersuchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
+    this.mnuFindNext = createMenuItemFindNext( true );
     this.mnuFindNext.setEnabled( false );
     mnuEdit.add( this.mnuFindNext );
 
 
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuBar.add( mnuHelp );
+    // Einstellungen
+    JMenu mnuSettings = createMenuSettings();
+    addDirectEditMenuItemTo( mnuSettings );
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+
+    // Menu Hilfe
+    JMenu mnuHelp       = createMenuHelp();
+    this.mnuHelpContent = createMenuItem( "Hilfe zum Hex-Editor..." );
     mnuHelp.add( this.mnuHelpContent );
+
+
+    // Menu
+    setJMenuBar( GUIFactory.createMenuBar(
+					mnuFile,
+					mnuEdit,
+					mnuSettings,
+					mnuHelp ) );
 
 
     // Fensterinhalt
@@ -979,26 +1045,42 @@ public class HexEditFrm
 
 
     // Werkzeugleiste
-    JToolBar toolBar = new JToolBar();
+    JToolBar toolBar = GUIFactory.createToolBar();
     toolBar.setFloatable( false );
     toolBar.setBorderPainted( false );
     toolBar.setOrientation( JToolBar.HORIZONTAL );
     toolBar.setRollover( true );
     add( toolBar, gbc );
 
-    this.btnNew = createImageButton( "/images/file/new.png", "Neu" );
+    this.btnNew = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/new.png",
+					this.mnuNew.getText() );
+    this.btnNew.addActionListener( this );
     toolBar.add( this.btnNew );
 
-    this.btnOpen = createImageButton( "/images/file/open.png", "\u00D6ffnen" );
+    this.btnOpen = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_OPEN );
+    this.btnOpen.addActionListener( this );
     toolBar.add( this.btnOpen );
 
-    this.btnSave = createImageButton( "/images/file/save.png", "Speichern" );
+    this.btnSave = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/save.png",
+					EmuUtil.TEXT_SAVE );
     this.btnSave.setEnabled( false );
+    this.btnSave.addActionListener( this );
     toolBar.add( this.btnSave );
     toolBar.addSeparator();
 
-    this.btnFind = createImageButton( "/images/edit/find.png", "Suchen" );
+    this.btnFind = GUIFactory.createRelImageResourceButton(
+					this,
+					"edit/find.png",
+					EmuUtil.TEXT_FIND );
     this.btnFind.setEnabled( false );
+    this.btnFind.addActionListener( this );
     toolBar.add( this.btnFind );
 
 
@@ -1027,11 +1109,11 @@ public class HexEditFrm
 
 
     // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
     this.hexCharFld.setPreferredSize( null );
   }
 
@@ -1044,8 +1126,11 @@ public class HexEditFrm
     if( this.dataChanged ) {
       setState( Frame.NORMAL );
       toFront();
-      String[] options = { "Speichern", "Verwerfen", "Abbrechen" };
-      int      selOpt  = JOptionPane.showOptionDialog(
+      String[] options = {
+			EmuUtil.TEXT_SAVE,
+			"Verwerfen",
+			EmuUtil.TEXT_CANCEL };
+      int selOpt = JOptionPane.showOptionDialog(
 				this,
 				"Die Datei wurde ge\u00E4ndert und nicht"
 					+" gespeichert.\n"
@@ -1055,7 +1140,7 @@ public class HexEditFrm
 				JOptionPane.WARNING_MESSAGE,
 				null,
 				options,
-				"Speichern" );
+				EmuUtil.TEXT_SAVE );
       if( selOpt == 0 ) {
 	rv = doSave( false );
       }
@@ -1118,7 +1203,8 @@ public class HexEditFrm
       this.fileBytes = new byte[ 0x100 ];
       this.fileLen   = 0;
     }
-    this.file = null;
+    this.file     = null;
+    this.fileName = null;
     setDataChanged( false );
     updTitle();
     updView();
@@ -1126,67 +1212,84 @@ public class HexEditFrm
   }
 
 
-  private void openFileInternal( File file )
+  private void openFileInternal(
+			File   file,
+			byte[] fileBytes,
+			String fileName )
   {
     try {
       InputStream in = null;
       try {
-	long len = file.length();
-	if( len > Integer.MAX_VALUE ) {
-	  throwFileTooBig();
-	}
-	if( len > 0 ) {
-	  len = len * 10L / 9L;
-	}
-	if( len < BUF_EXTEND ) {
-	  len = BUF_EXTEND;
-	} else if( len > Integer.MAX_VALUE ) {
-	  len = Integer.MAX_VALUE;
-	}
-	byte[] fileBytes = new byte[ (int) len ];
-	int    fileLen   = 0;
-
-	in = new FileInputStream( file );
-	while( fileLen < fileBytes.length ) {
-	  int n = in.read( fileBytes, fileLen, fileBytes.length - fileLen );
-	  if( n <= 0 ) {
-	    break;
-	  }
-	  fileLen += n;
-	}
-	if( fileLen >= fileBytes.length ) {
-	  int b = in.read();
-	  while( b != -1 ) {
-	    if( fileLen >= fileBytes.length ) {
-	      int n = Math.min( fileLen + BUF_EXTEND, Integer.MAX_VALUE );
-	      if( fileLen >= n ) {
-		throwFileTooBig();
-	      }
-	      byte[] a = new byte[ n ];
-	      System.arraycopy( fileBytes, 0, a, 0, fileLen );
-	      fileBytes = a;
+	int fileLen = 0;
+	if( fileBytes != null ) {
+	  fileLen = fileBytes.length;
+	} else {
+	  if( file != null ) {
+	    long len = file.length();
+	    if( len > Integer.MAX_VALUE ) {
+	      throwFileTooBig();
 	    }
-	    fileBytes[ fileLen++ ] = (byte) b;
-	    b = in.read();
+	    if( len > 0 ) {
+	      len = len * 10L / 9L;
+	    }
+	    if( len < BUF_EXTEND ) {
+	      len = BUF_EXTEND;
+	    } else if( len > Integer.MAX_VALUE ) {
+	      len = Integer.MAX_VALUE;
+	    }
+	    fileBytes = new byte[ (int) len ];
+
+	    in = new FileInputStream( file );
+	    while( fileLen < fileBytes.length ) {
+	      int n = in.read(
+			fileBytes,
+			fileLen,
+			fileBytes.length - fileLen );
+	      if( n <= 0 ) {
+		break;
+	      }
+	      fileLen += n;
+	    }
+	    if( fileLen >= fileBytes.length ) {
+	      int b = in.read();
+	      while( b != -1 ) {
+		if( fileLen >= fileBytes.length ) {
+		  int n = Math.min(
+				fileLen + BUF_EXTEND,
+				Integer.MAX_VALUE );
+		  if( fileLen >= n ) {
+		    throwFileTooBig();
+		  }
+		  byte[] a = new byte[ n ];
+		  System.arraycopy( fileBytes, 0, a, 0, fileLen );
+		  fileBytes = a;
+		}
+		fileBytes[ fileLen++ ] = (byte) b;
+		b = in.read();
+	      }
+	    }
+	    in.close();
 	  }
 	}
-	in.close();
-
+	if( fileBytes == null ) {
+	  fileBytes = new byte[ 0x100 ];
+	}
 	this.file      = file;
+	this.fileName  = fileName;
 	this.fileBytes = fileBytes;
 	this.fileLen   = fileLen;
 	this.savedPos  = -1;
 	this.mnuGotoSavedPos.setEnabled( false );
 	this.mnuSelectToSavedPos.setEnabled( false );
-	if( !setDataChanged( false ) ) {
-	  updTitle();
-	}
+	updTitle();
 	updView();
 	setCaretPosition( -1, false );
-	Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
+	if( file != null ) {
+	  Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
+	}
       }
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
     catch( IOException ex ) {
@@ -1195,17 +1298,12 @@ public class HexEditFrm
   }
 
 
-  private boolean setDataChanged( boolean state )
+  private void setDataChanged( boolean state )
   {
-    boolean rv = false;
-    if( state != this.dataChanged ) {
-      this.dataChanged = state;
-      updTitle();
-      this.mnuSave.setEnabled( this.dataChanged );
-      this.btnSave.setEnabled( this.dataChanged );
-      rv = true;
-    }
-    return rv;
+    this.dataChanged = state;
+    updTitle();
+    this.mnuSave.setEnabled( this.dataChanged );
+    this.btnSave.setEnabled( this.dataChanged );
   }
 
 
@@ -1231,9 +1329,12 @@ public class HexEditFrm
   private void updTitle()
   {
     StringBuilder buf = new StringBuilder( 128 );
-    buf.append( "JKCEMU Hex-Editor: " );
+    buf.append( TITLE );
+    buf.append( ": " );
     if( this.file != null ) {
-      buf.append( file.getPath() );
+      buf.append( this.file.getPath() );
+    } else if( this.fileName != null ) {
+      buf.append( this.fileName );
     } else {
       buf.append( "Neue Datei" );
     }

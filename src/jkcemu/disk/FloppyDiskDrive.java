@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.disk;
 
-import java.lang.*;
 import java.util.Properties;
 
 
@@ -189,7 +188,7 @@ public class FloppyDiskDrive
   {
     AbstractFloppyDisk disk = this.disk;
     if( disk != null ) {
-      disk.closeSilent();
+      disk.closeSilently();
       this.disk = null;
     }
   }

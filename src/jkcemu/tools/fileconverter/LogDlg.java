@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,34 +8,62 @@
 
 package jkcemu.tools.fileconverter;
 
+import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
-import java.lang.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.io.FileWriter;
+import java.io.Writer;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
+import jkcemu.base.PopupMenuOwner;
+import jkcemu.file.FileUtil;
+import jkcemu.text.LogTextActionMngr;
+import jkcemu.text.TextFinder;
+import jkcemu.text.TextUtil;
 
 
-public class LogDlg extends BaseDlg
+public class LogDlg extends BaseDlg implements PopupMenuOwner
 {
-  private JTextArea textArea;
-  private JButton   btnCopy;
-  private JButton   btnClose;
+  private File              preSelection;
+  private LogTextActionMngr actionMngr;
+  private TextFinder        textFinder;
+  private JTextArea         textArea;
+  private JButton           btnSave;
+  private JButton           btnMenu;
+  private JButton           btnClose;
 
 
   public static void showDlg(
 			Window owner,
 			String logText,
-			String title )
+			String title,
+			File   preSelection )
   {
-    (new LogDlg( owner, logText, title )).setVisible( true );
+    (new LogDlg( owner, logText, title, preSelection )).setVisible( true );
+  }
+
+
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.actionMngr.getPopupMenu();
   }
 
 
@@ -44,29 +72,67 @@ public class LogDlg extends BaseDlg
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-	if( src == this.btnCopy ) {
-	  rv = true;
-	  doCopy();
-	}
-	else if( src == this.btnClose ) {
-	  rv = true;
-	  doClose();
-	}
-      }
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( src == this.btnSave ) {
+      rv = true;
+      this.actionMngr.doSaveAs();
+    }
+    else if( src == this.btnMenu ) {
+      rv = true;
+      this.actionMngr.showPopupMenu(
+				this.btnMenu,
+				0,
+				this.btnMenu.getHeight() );
+    }
+    else if( src == this.btnClose ) {
+      rv = true;
+      doClose();
     }
     return rv;
   }
 
 
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.btnSave.removeActionListener( this );
+      this.btnMenu.removeActionListener( this );
+      this.btnClose.removeActionListener( this );
+      this.textArea.removeMouseListener( this );
+    }
+    return rv;
+  }
+
+
+  @Override
+  protected boolean showPopupMenu( MouseEvent e )
+  {
+    return this.actionMngr.showPopupMenu( e );
+  }
+
+
+  @Override
+  public void windowOpened( WindowEvent e )
+  {
+    if( e.getComponent() == this )
+      this.btnClose.requestFocus();
+  }
+
+
 	/* --- Konstruktor --- */
 
-  private LogDlg( Window owner, String logText, String title )
+  private LogDlg(
+		Window owner,
+		String logText,
+		String title,
+		File   preSelection )
   {
     super( owner, title );
+    this.preSelection = preSelection;
+    this.textFinder   = null;
 
     // Fensterinhalt
     setLayout( new GridBagLayout() );
@@ -81,28 +147,34 @@ public class LogDlg extends BaseDlg
 					0, 0 );
 
     // Textbereich
-    this.textArea = new JTextArea( 16, 40 );
+    this.textArea = GUIFactory.createTextArea( 16, 40 );
     this.textArea.setEditable( false );
     if( logText != null ) {
       this.textArea.setText( logText );
     }
-    add( new JScrollPane( this.textArea ), gbc );
+    add( GUIFactory.createScrollPane( this.textArea ), gbc );
 
     // Schaltflaechen
-    JPanel panelBtns = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtns = GUIFactory.createPanel(
+					new GridLayout( 1, 2, 5, 5 ) );
     gbc.weightx = 0.0;
     gbc.weighty = 0.0;
     gbc.fill    = GridBagConstraints.NONE;
     gbc.gridy++;
     add( panelBtns, gbc );
 
-    this.btnCopy = new JButton( "Kopieren" );
-    this.btnCopy.addActionListener( this );
-    panelBtns.add( this.btnCopy );
+    this.btnSave = GUIFactory.createButton( EmuUtil.TEXT_OPEN_SAVE );
+    panelBtns.add( this.btnSave );
 
-    this.btnClose = new JButton( "Schlie\u00DFen" );
-    this.btnClose.addActionListener( this );
+    this.btnMenu = GUIFactory.createButton( "Men\u00FC" );
+    panelBtns.add( this.btnMenu );
+
+    this.btnClose = GUIFactory.createButtonClose();
     panelBtns.add( this.btnClose );
+
+    // Popup-Menu
+    this.actionMngr = new LogTextActionMngr( this.textArea, true );
+
 
     // Fenstergroesse und -position
     pack();
@@ -110,26 +182,12 @@ public class LogDlg extends BaseDlg
     setResizable( true );
     this.textArea.setColumns( 0 );
     this.textArea.setRows( 0 );
-  }
 
 
-	/* --- Aktionen --- */
-
-  private void doCopy()
-  {
-    String text = this.textArea.getSelectedText();
-    if( text != null ) {
-      if( text.isEmpty() ) {
-	text = null;
-      }
-    }
-    if( text == null ) {
-      text = this.textArea.getText();
-    }
-    if( text != null ) {
-      if( !text.isEmpty() ) {
-	EmuUtil.copyToClipboard( this, text );
-      }
-    }
+    // Listener
+    this.btnSave.addActionListener( this );
+    this.btnMenu.addActionListener( this );
+    this.btnClose.addActionListener( this );
+    this.textArea.addMouseListener( this );
   }
 }

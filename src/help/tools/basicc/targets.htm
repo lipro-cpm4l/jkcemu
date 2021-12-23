@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Zielsysteme</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -31,11 +32,22 @@
     <a href="targets.htm#z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a>
    </li>
    <li><a href="targets.htm#kc85">KC85/2..5, HC900</a></li>
-   <li><a href="targets.htm#kc85_4">KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</a></li>
+   <li>
+    <a href="targets.htm#kc85_4">KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</a>
+   </li>
+   <li>
+    <a href="targets.htm#kc85_caos48">KC85/5 mit CAOS&nbsp;&gt;=&nbsp;4.8</a>
+   </li>
    <li><a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></li>
    <li><a href="targets.htm#z1013">Z1013</a></li>
    <li>
     <a href="targets.htm#z1013_64x16">Z1013 mit Unterst&uuml;tzung des 64x16-Bildschirmformats</a>
+   </li>
+   <li>
+    <a href="targets.htm#z1013krt">Z1013 mit KRT-Grafik</a>
+   </li>
+   <li>
+    <a href="targets.htm#z1013zx">Z1013 mit ZX-Grafik</a>
    </li>
   </ul>
  <br/>
@@ -44,7 +56,8 @@
   der Zielsysteme.
  <br/><br/>
   Nicht alle BASIC-Funktionalit&auml;ten lassen sich auf allen Zielsystemen
-  umsetzen. Insbesondere bei den Grafik- und Cursor-Funktionalit&auml;ten
+  umsetzen. Insbesondere bei den Grafik- und
+  <a href="instructions.htm#cursor">CURSOR</a>-Funktionalit&auml;ten
   gibt es Einschr&auml;nkungen.
   Aus diesem Grund finden Sie hier Hinweise zu den konkreten Umsetzungen
   und damit verbunden auch zu den gegebenen Einschr&auml;nkungen.
@@ -105,7 +118,8 @@
   und f&uuml;r Textausgaben wird die Systemfunktion des Monitorprogramms
   benutzt.
  <br/><br/>
-  Im <tt>SCREEN&nbsp;0</tt> wird eine Vollgrafik mit 128x64 Pixel simuliert,
+  Im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+  wird eine Vollgrafik mit 128x64 Pixel simuliert,
   die mit den Grafikfunktionen angesprochen werden kann.
   Voraussetzung daf&uuml;r ist, dass im Zeichengenerator
   im Bereich 00h bis 0Fh die entsprechenden Grafikzeichen vorhanden sind.
@@ -122,8 +136,8 @@
   Der erzeugte Programmcode ist auch auf einem AC1
   mit Monitorprogramm&nbsp;3.1 lauff&auml;hig,
   wenn ein 2&nbsp;KByte gro&szlig;en Bildwiederholspeicher vorhanden ist
-  (64x32&nbsp;Zeichen) und auf Druckerausgaben sowie die JOYST-Funktion
-  verzichtet wird.
+  (64x32&nbsp;Zeichen) und auf Druckerausgaben sowie die
+  <a href="functions.htm#joyst">JOYST</a>-Funktion verzichtet wird.
  <br/><br/>
   Eigenschaften des Zielsystems im Detail:
  <br/>
@@ -136,17 +150,26 @@
     aufgerufen werden.
    </li>
    <li>
-    Es wird im <tt>SCREEN&nbsp;0</tt> eine Vollgrafik
-    mit 128x64&nbsp;Pixel simuliert,
+    Es wird im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    eine Vollgrafik mit 128x64&nbsp;Pixel simuliert,
     die mit den Grafikbefehlen angesprochen werden kann.
    </li>
-   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>
-    Die PAUSE-Anweisung ist auf die Standard-Taktfrequenz des AC1
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
+   </li>
+   <li>
+    Die <a href="instructions.htm#pause">PAUSE</a>-Anweisung
+    ist auf die Standard-Taktfrequenz des AC1
     (2&nbsp;MHz) abgestimmt.
    </li>
    <li>
-    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    ben&ouml;tigt ein an der E/A-Basisadresse&nbsp;80h angeschlossenes GIDE.
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
    <li>
@@ -173,8 +196,27 @@
  <h3><a name="cpm">CP/M-kompatibel</a></h3>
   <ul>
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
-   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
-   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    wird nicht unterst&uuml;tzt, d.h.,
+    sie liefert immer eine leere Zeichenkette zur&uuml;ck;
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    liefert immer&nbsp;0.
+   </li>
+   <li>
+    Das Auslesen der Cursor-Position ist nicht m&ouml;glich,
+    d.h., die Funktion <a href="functions.htm#pos">POS</a>
+    liefert immer&nbsp;-1 und die Systemvariablen
+    <a href="functions.htm#crslin">CRSLIN</a> und
+    <a href="functions.htm#crspos">CRSPOS</a>
+    enthalten immer den Wert&nbsp;-1.
+   </li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
@@ -191,7 +233,29 @@
     Die Grafikanweisungen greifen direkt auf den Bildwiederholspeicher zu.
     Dieser muss dazu auf die Standardadresse C000h eingestellt sein.
    </li>
-   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>
+    <a href="instructions.htm#cursor">CURSOR</a>-Anweisung:
+    Das Einschalten des Cursors f&uuml;hrt erst
+    mit der n&auml;chsten Ausgabe eines Zeichens zur Anzeige des Cursors.
+    Das Ausschalten des Cursors wirkt dagegen sofort.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    wird nicht unterst&uuml;tzt, d.h.,
+    sie liefert immer eine leere Zeichenkette zur&uuml;ck;
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    liefert immer&nbsp;0.
+   </li>
+   <li>
+    Das Auslesen der Cursor-Position ist nicht m&ouml;glich,
+    d.h., die Funktion <a href="functions.htm#pos">POS</a>
+    liefert immer&nbsp;-1 und die Systemvariablen
+    <a href="functions.htm#crslin">CRSLIN</a> und
+    <a href="functions.htm#crspos">CRSPOS</a>
+    enthalten immer den Wert&nbsp;-1.
+   </li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
@@ -203,21 +267,33 @@
  <br/>
   <b>Achtung!</b> F&uuml;r den H&uuml;bler-Grafik-MC compilierte Programme
   sind auch auf dem H&uuml;bler/Evert-MC lauff&auml;hig,
-  wenn auf die Grafikfunktionalit&auml;ten und
-  auf die <em>INKEY</em>-Funktion verzichtet sowie das Programm
-  nicht mit der Option <em>CTRL-C bricht Programm immer ab</em>
-  compiliert wird.
+  wenn auf die Grafikfunktionalit&auml;ten und auf die
+  <a href="functions.htm#inkey$">INKEY$</a>-Funktion
+  verzichtet sowie das Programm nicht mit der Option
+  <em>CTRL-C bricht Programm immer ab</em> compiliert wird.
  <br/><br/>
 
 
  <h3><a name="kramer">Kramer-MC</a></h3>
   <ul>
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
-   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
-   <li>Die LOCATE-Anweisung steht nicht zur Verf&uuml;gung.</li>
    <li>
-    Das im JKCEMU integrierte Monitorprogramm des Kramer-MC erkennt
-    bei der INKEY-Funktion nur die Tastenkombination <em>CTRL-C</em>.
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
+   </li>
+   <li>
+    Die <a href="instructions.htm#locate">LOCATE</a>-Anweisung
+    steht nicht zur Verf&uuml;gung.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    wird nicht unterst&uuml;tzt, d.h.,
+    sie liefert immer eine leere Zeichenkette zur&uuml;ck;
+   </li>
+   <li>
+    Das im JKCEMU integrierte Monitorprogramm des Kramer-MC
+    erkennt bei der <a href="functions.htm#inkey$">INKEY$</a>-Funktion
+    nur die Tastenkombination <em>CTRL-C</em>.
    </li>
    <li>
     Druckerausgaben werden &uuml;ber den LIST-Kanal
@@ -227,7 +303,10 @@
     dass der LIST-Kanal und damit die Druckerausgaben
     auf dem Bildschirm erscheinen.
    </li>
-   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    liefert immer&nbsp;0.
+   </li>
    <li>Es wird kein VDIP-Modul unterst&uuml;tzt.</li>
    <li>
     Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
@@ -254,24 +333,34 @@
     aufgerufen werden.
    </li>
    <li>
-    <tt>SCREEN&nbsp;0</tt> ist ein reiner Textbildschirm,
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    ist ein reiner Textbildschirm,
     in dem die Grafikbefehle nicht verwendet werden k&ouml;nnen.
    </li>
    <li>
     Die HIRES-Vollgrafikerweiterung mit 512x256&nbsp;Pixel steht im
-    <tt>SCREEN&nbsp;1</tt> zur Verf&uuml;gung,
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 zur Verf&uuml;gung,
     d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
     Textausgaben, die mit anderen als der
     <a href="instructions.htm#label">LABEL</a>-Anweisung get&auml;tigt werden,
-    gehen in <tt>SCREEN&nbsp;0</tt>,
+    gehen in <a href="instructions.htm#screen">SCREEN</a>&nbsp;0,
     der allerdings in dem Augenblick nicht sichtbar ist.
-    Im <tt>SCREEN&nbsp;1</tt> liegt der Bildwiederholspeicher
+    Im <a href="instructions.htm#screen">SCREEN</a>&nbsp;1
+    liegt der Bildwiederholspeicher
     auf Adresse&nbsp;8000h und belegt damit einen anderen Bereich
-    als der im <tt>SCREEN&nbsp;0</tt>.
+    als der im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0.
    </li>
-   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>
-    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    ben&ouml;tigt ein an der E/A-Basisadresse&nbsp;80h angeschlossenes GIDE.
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
    <li>
@@ -298,17 +387,26 @@
  <h3><a name="z9001">KC85/1, KC87, Z9001</a></h3>
   <ul>
    <li>
-    Im <tt>SCREEN&nbsp;0</tt> wird mit Hilfe der Blockgrafik
-    eine Vollgrafik mit 80x48&nbsp;Pixel simuliert,
+    Im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    wird mit Hilfe der Blockgrafik eine Vollgrafik
+    mit 80x48&nbsp;Pixel simuliert,
     die mit den Grafikbefehlen angesprochen werden kann.
    </li>
    <li>
-    Werden im BASIC-Programm die Anweisungen BORDER, COLOR, INK oder PAPER
-    verwendet, wird Programmcode mit Farbunterst&uuml;tzung erzeugt,
+    Werden im BASIC-Programm die Anweisungen
+    <a href="instructions.htm#border">BORDER</a>,
+    <a href="instructions.htm#color">COLOR</a>,
+    <a href="instructions.htm#ink">INK</a> oder
+    <a href="instructions.htm#paper">PAPER</a> verwendet,
+    wird Programmcode mit Farbunterst&uuml;tzung erzeugt,
     d.h., in dem Fall wird bei jeder Pixel setzenden Grafikanweisung
     zus&auml;tzlich auch der Farbspeicher beschrieben.
     Kommen dagegen keine Anweisungen zum Setzen der Farbe vor,
     wird Programmcode erzeugt, der nicht auf den Farbspeicher zugreift.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    ben&ouml;tigt ein an der E/A-Basisadresse&nbsp;50h angeschlossenes GIDE.
    </li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh unterst&uuml;tzt.
@@ -323,19 +421,34 @@
  <h3><a name="z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a></h3>
   <ul>
    <li>
-    <tt>SCREEN&nbsp;0</tt> ist ein reiner Textbildschirm.
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    ist ein reiner Textbildschirm.
     Eine Vollgrafik wird nicht simuliert, d.h.,
     die Grafikbefehle k&ouml;nnen hier nicht verwendet werden.
    </li>
    <li>
     Die KRT-Vollgrafik mit 320x192&nbsp;Pixel steht im
-    <tt>SCREEN&nbsp;1</tt> zur Verf&uuml;gung,
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 zur Verf&uuml;gung,
     d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
     Textausgaben sind allerdings nicht m&ouml;glich (au&szlig;er
     mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
    </li>
    <li>
-    Bez&uuml;glich Farbunterst&uuml;tzung und VDIP gilt das gleiche
+    Bez&uuml;glich Farbunterst&uuml;tzung gilt mit einer Ausnahme
+    das gleiche wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>:<br/>
+    <a href="instructions.htm#cls">CLS</a> im
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 (Grafikmodus)
+    l&ouml;scht immer den Farbspeicher,
+    auch wenn keine Anweisungen zum Setzen der Farbe im BASIC-Programm
+    enthalten sind.
+   </li>
+   <li>
+    Bez&uuml;glich der Funktionen
+    <a href="functions.htm#datetime$">DATETIME$</a>
+    gilt das gleiche wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
+   </li>
+   <li>
+    Bez&uuml;glich VDIP gilt das gleiche
     wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
    </li>
    <li>
@@ -362,7 +475,8 @@
     Tastaturein- und Bildschirmausgaben erfolgen &uuml;ber den
     jeweiligen Standardkanal,
     d.h., die Ein- und Ausgabe kann im CAOS umgeleitet werden.
-    Das gilt jedoch nicht f&uuml;r die INKEY$-Funktion.
+    Das gilt jedoch nicht f&uuml;r die
+    <a href="functions.htm#inkey$">INKEY$</a>-Funktion.
     Diese greift auch dann auf die Tastatur zu,
     wenn die Tastatureingabe umgeleitet wurde.
    </li>
@@ -370,37 +484,115 @@
     Ausgaben auf dem Drucker werden auf dem User-Kanal&nbsp;2 get&auml;tigt.
    </li>
    <li>
-    Die LOCATE-Anweisung bezieht sich auf das im CAOS eingestellte Fenster.
+    Die <a href="instructions.htm#locate">LOCATE</a>-Anweisung
+    bezieht sich auf das im CAOS eingestellte Fenster.
    </li>
    <li>
     Beim HC900 und beim KC85/2 ist standardm&auml;&szlig;ig
     das aktuelle Fenster kleiner eingestellt als maximal m&ouml;glich.
-    Die CLS-Anweisung l&ouml;scht in dem Fall nicht den ganzen Bildschirm.
+    Die <a href="instructions.htm#cls">CLS</a>-Anweisung
+    l&ouml;scht in dem Fall nicht den ganzen Bildschirm.
     Da das unsch&ouml;n aussieht, pr&uuml;ft der Compiler,
-    ob im Programm CLS-Anweisungen vorkommen.
+    ob im Programm <a href="instructions.htm#cls">CLS</a>-Anweisungen
+    vorkommen.
     Wenn ja, wird bei Programmstart die Gr&ouml;&szlig;e
     des aktuell im CAOS eingestellten Fensters gepr&uuml;ft
     und dieses gegebenfalls maximiert.
    </li>
    <li>
-    Die CURSOR-Anweisung hat keine Wirkung.
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
     CAOS schaltet den Cursor automatisch ein und aus,
     je nachdem, ob gerade auf eine Eingabe gewartet wird oder nicht.
    </li>
    <li>
-    Die JOYST-Funktion fragt direkt das Joystick-Modul (M008 bzw. M021) ab,
+    Beim erstmaligen Lesen der Systemzeit nach dem Programmstart
+    (z.B. durch die Funktion <a href="functions.htm#datetime$">DATETIME$</a>)
+    wird eine Quelle f&uuml;r die Systemzeit gesucht und das Ergebnis gemerkt.
+    Bei nachfolgenden Lesen der Systemzeit wird dann immer diese Quelle
+    verwendet, auch dann, wenn die Quelle keine g&uuml;ltigen Werte
+    mehr liefern sollte.
+    Das Gleiche gilt auch umgekehrt:
+    Wurde am Anfang keine Quelle f&uuml;r eine Systemzeit gefunden,
+    werden auch alle nachfolgenden Abfragen keine Systemzeit liefern.
+    <br/>
+    Die Suche nach einer Quelle f&uuml;r die Systemzeit l&auml;uft
+    folgenderma&szlig;en ab:
+    <br>
+    <ol>
+     <li>
+      Es wird gepr&uuml;ft, ob eine Diskettenerweiterung D004 oder D008
+      angeschlossen ist.
+     </li>
+     <li>
+      Ist das der Fall, wird gepr&uuml;ft,
+      ob darauf ein Diskettenerweiterungsprogramm (DEP)
+      in der Version&nbsp;3.0 oder h&ouml;her l&auml;uft.
+      Wenn ja, dann schreibt dieses die Systemzeit zyklisch
+      in den Koppel-RAM und die zugeh&ouml;rigen E/A-Adressen
+      auf Seite des Grundger&auml;tes
+      werden als Quelle f&uuml;r die Systemzeit verwendet.
+     </li>
+     <li>
+      Wurde kein D004/DEP- bzw. D008/DEP-Gespann gefunden,
+      pr&uuml;ft das compilierte BASIC-Programm die Speicherzellen
+      auf den Adressen 000Ch bis 000Fh auf g&uuml;ltige Werte
+      entsprechend eines DOS-Zeitstempels.
+     </li>
+     <li>
+      Wurde ein g&uuml;ltiger DOS-Zeitstempel gefunden,
+      bedeutet das noch nicht, dass eine Systemuhr existiert und l&auml;uft,
+      die diesen Zeitstempel aktualisiert.
+      Deshalb wird zus&auml;tzlich gepr&uuml;ft,
+      ob die Uhrzeit (Speicherzellen 000Eh/000Fh) den Wert Null haben.
+      Das ist n&auml;mlich dann der Fall,
+      wenn die M052-Software ihr Release-Datum dort hineinschreibt.
+      Ist die Uhrzeit jedoch ungleich Null, wird davon ausgegangen,
+      dass eine Systemuhr diese Speicherzellen aktualisert.
+      In dem Fall werden die vier Speicherzellen 000Ch bis 000Fh
+      als Quelle f&uuml;r die Systemzeit verwendet.
+      In allen anderen F&auml;llen gibt es f&uuml;r
+      das compilierte BASIC-Programm keine Systemzeit.
+      <br/>
+      <b>Achtung!</b> Von den Speicherzellen 000Ch bis 000Fh
+      wird immer eine gerade Anzahl an Sekunden gelesen,
+      da das Format des DOS-Zeitstempels keine ungeraden
+      Sekunden zul&auml;sst.
+     </li>
+    </ol>
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    fragt direkt das Joystick-Modul (M008 bzw. M021) ab,
     d.h., es muss kein spezieller Joystick-Treiber geladen werden.
     Das compilierte Programm initialisiert dazu beim Start
     die entsprechende PIO im Joystick-Modul, allerdings nur,
-    wenn im BASIC-Programm auch ein JOYST-Aufruf vorkommt.
+    wenn im BASIC-Programm auch ein
+    <a href="functions.htm#joyst">JOYST</a>-Aufruf vorkommt.
     Die Joystick-PIO wird dabei auf die gleiche Betriebsart programmiert,
     wie es auch der Joystick-Treiber im CAOS&nbsp;4.5 tut.
     Dieser wird dadurch nicht beeintr&auml;chtigt.
    </li>
    <li>
     VDIP wird &uuml;ber das Modul&nbsp;M052 unterst&uuml;tzt.
-    Das compilierte Programm aktiviert dazu das Modul selbstst&auml;ndig,
-    d.h., es kann, muss aber nicht vor dem Programmstart schon aktiv sein.
+    Bei der <a href="instructions.htm#open">OPEN</a>-Anweisung
+    pr&uuml;ft das compilierte Programm zuerst die CAOS-Version.
+    Ist diese kleiner als&nbsp;4.8, wird nach einem M052-Modul gesucht,
+    dieses aktiviert, initialisiert und verwendet.
+    Eine eventuell an dem Modul angeschlosse USB-Tastatur
+    funktioniert dadurch nicht mehr.
+    Ist die CAOS-Version gleich oder gr&ouml;&szlig;er als&nbsp;4.8,
+    pr&uuml;ft das Programm,
+    ob der im CAOS aktive Treiber ein USB-Treiber ist.
+    Wenn ja, wird dieser verwendet.
+    Wenn nein, sucht das Programm in der CAOS-Treibertabelle
+    nach einem USB-Treiber und aktiviert den ersten gefundenen.
+    Nun wird der Treiber in den USER-Mode geschaltet, damit das
+    compilierte Programm direkt auf das M052-Modul zugreifen kann.
+    Bei der <a href="instructions.htm#close">CLOSE</a>-Anweisung
+    erfolgt dann die R&uuml;ckschaltung in den CAOS-Mode.
+    Eine eventuell angeschlosse USB-Tastatur sollte damit
+    weiter funktionieren.
    </li>
    <li>
     Konstante f&uuml;r das Zielsystem ist:
@@ -422,25 +614,31 @@
   <a href="instructions.htm#screen">SCREEN</a>s&nbsp;0 und 1 bereit,
   die die beiden Bildspeicher (IRM-B&auml;nke)&nbsp;0 und 1
   repr&auml;sentieren.
-  F&uuml;r jeden Bildspeicher, d.h. f&uuml;r jeden SCREEN,
+  F&uuml;r jeden Bildspeicher, d.h. f&uuml;r jeden
+  <a href="instructions.htm#screen">SCREEN</a>,
   wird der Cursor separat verwaltet.
-  Man kann deshalb durch Umschalten des SCREENs auf beiden Bildspeichern
+  Man kann deshalb durch Umschalten des
+  <a href="instructions.htm#screen">SCREEN</a>s auf beiden Bildspeichern
   Text ausgeben, ohne das das eine Auswirkung auf den jeweils anderen
   Bildspeicher hat.
  <br/><br/>
   Eigenschaften des Zielsystems im Detail:
   <ul>
    <li>
-    <tt>SCREEN&nbsp;0</tt> erm&ouml;glicht die Ausgabe von Text und Grafik
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    erm&ouml;glicht die Ausgabe von Text und Grafik
     unter Nutzung der IRM-Bank&nbsp;0.
    </li>
    <li>
-    <tt>SCREEN&nbsp;1</tt> erm&ouml;glicht die Ausgabe von Text und Grafik
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1
+    erm&ouml;glicht die Ausgabe von Text und Grafik
     unter Nutzung der IRM-Bank&nbsp;1.
    </li>
    <li>
-    F&uuml;r jeden SCREEN wird ein eigenes CAOS-Fenster verwendet,
-    so dass jeder SCREEN auch eine eigene Cursor-Verwaltung hat.
+    F&uuml;r jeden <a href="instructions.htm#screen">SCREEN</a>
+    wird ein eigenes CAOS-Fenster verwendet,
+    so dass jeder <a href="instructions.htm#screen">SCREEN</a>
+    auch eine eigene Cursor-Verwaltung hat.
    </li>
    <li>
     alles weitere wie beim Zielsystem
@@ -454,17 +652,142 @@
     Das Zielsystem ist vom Zielsystem
     <a href="targets.htm#kc85">KC85/2..5, HC900</a> abgeleitet, d.h.,
     die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
-    liefert auch bei <a href="constants.htm#target">TARGET_KC84</a> TRUE.
+    liefert auch bei <a href="constants.htm#target">TARGET_KC85</a> TRUE.
    </li>
   </ul>
  <br/>
+
+ <h3>
+  <a name="kc85_caos48">KC85/5 mit CAOS&nbsp;&gt;=&nbsp;4.8</a>
+ </h3>
+  Mit der Betriebssystemversion CAOS&nbsp;4.8 wurden Systemfunktionen
+  eingef&uuml;hrt, mit denen Anwendungsprogramme auf einen USB-Speicher
+  zugreifen und dabei auch die Vorteile dieses Speichermediums
+  wie z.B. Unterverzeichnisse und Byte-genaue Dateigr&ouml;&szlig;en
+  nutzen k&ouml;nnen.
+  Des Weiteren wurde die mit CAOS&nbsp;4.6 eingef&uuml;hrte
+  DEVICE-Schnittstelle weiterentwickelt,
+  so dass nun auch Anwendungsprogramme besser davon profitieren k&ouml;nnen.
+  Zur Unterst&uuml;tzung dieser neuen M&ouml;glichkeiten gibt es
+  das Zielsystem <em>KC85/5 mit CAOS&nbsp;&gt;=&nbsp;4.8</em>.
+  Es ist abgeleitet vom Zielsystem
+  <em>KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</em>
+  und hat somit die gleichen Eigenschaften wie dieses,
+  au&szlig;er folgende zwei Punkte:
+ <br/><br/>
+  <ul>
+   <li>
+    <u>VDIP-Treiber (Zugiff auf USB-Speicher)</u>
+    <br/><br/>
+    Der erzeugte Programmcode enth&auml;lt keinen eigenen
+    VDIP-Treiber mehr, sondern es werden stattdessen
+    die neuen treiberspezifischen Funktionen des CAOS-USB-Treibers
+    aufgerufen.
+    F&uuml;r den BASIC-Programmierer verhalten diese sich genauso,
+    wie der sonst verwendete eigene VDIP-Treiber.
+    Allerdings ist das compilierte Programm kleiner und
+    das M052-Modul bleibt vollst&auml;ndig in der Verwaltung
+    des Betriebssystems.
+    Am M052 angeschlossene andere USB-Ger&auml;te wie z.B. eine Tastatur
+    werden dadurch nicht beeintr&auml;chtigt.
+    <br/><br/>
+   </li>
+   <li>
+    <u>DISK-Treiber (Zugiff auf Laufwerke in D004/D008)</u>
+    <br/><br/>
+    Hat man die Diskettenerweiterung D004 oder D008 angeschlossen
+    und dort l&auml;uft das Diskettenerweiterungsprogramm&nbsp;DEP,
+    kann man vom CAOS aus auf die Disketten- bzw.
+    Festplattenlaufwerke zugreifen.
+    CAOS&nbsp;4.8 richtet in dem Fall automatisch einen DISK-Treiber ein,
+    der den Zugriff f&uuml;r Anwendungsprogramme erm&ouml;glicht.
+    Davon macht das Zielsystem Gebrauch.
+    &Ouml;ffnet man im BASIC-Programm eine Datei auf den Ger&auml;ten
+    <tt>A:</tt> bis <tt>P:</tt>, l&auml;uft das
+    &uuml;ber den CAOS-DISK-Treiber.
+    Dabei gibt es einige Dinge zu beachten:
+    <br/>
+    <ul>
+     <li>
+      Die Disketten bzw. Festplatten verwenden ein CP/M-kompatibles
+      Dateisystem.
+      Die Dateien haben dadurch immer eine Byte-L&auml;nge,
+      die ein Vielfaches von 128 (Blockgr&ouml;&szlig;e) entspricht.
+      Im Textmodus wird das Byte&nbsp;1Ah als Dateiendezeichen verwendet,
+      d.h. beim Schlie&szlig;en einer zum Schreiben ge&ouml;ffneten
+      Datei wird automatisch das Byte&nbsp;1Ah angeh&auml;ngt
+      und beim Lesen dieses Bytes das Ende der Datei erkannt.
+      Im Bin&auml;rmodus wird dagegen bis zum letzten physisch
+      vorhandenen Byte gelesen.
+     </li>
+     <li>
+      Es k&ouml;nnen gleichzeitig keine zwei Dateien &uuml;ber
+      den DISK-Treiber ge&ouml;ffnet werden.
+     </li>
+     <li>
+      Der CAOS-DISK-Treiber unterst&uuml;tzt kein Anh&auml;ngen
+      an eine vorhandene Datei, d.h. bei der BASIC-Anweisung
+      <a href="instructions.htm#open">OPEN</a> ist die Betriebsart
+      <tt>APPEND</tt> nicht m&ouml;glich.
+     </li>
+     <li>
+      Es kann keine leere Datei ge&ouml;ffnet werden,
+      sondern nur eine, die mindestens einen Block (128&nbsp;Byte)
+      gro&szlig; ist.
+     </li>
+     <li>
+      Beim Schreiben einer Datei werden mindestens zwei Bl&ouml;cke
+      (einmal beim &Ouml;ffnen und einmal beim Schlie&szlig;en der Datei)
+      erzeugt, d.h. die Datei ist immer mindestens 256&nbsp;Byte gro&szlig;.
+     </li>
+     <li>
+      Beim Schreiben wird die Datei erst dann physisch ge&ouml;ffnet,
+      wenn der erste Block geschrieben wird.
+      Dadurch treten eventuelle Fehler, die &uuml;blicherweise
+      bei der <a href="instructions.htm#open">OPEN</a>-Anweisung kommen,
+      erst bei Anweisungen f&uuml;r die Ausgabe oder sogar erst bei
+      <a href="instructions.htm#close">CLOSE</a> auf.
+     </li>
+     <li>
+      Die CAOS-Systemfunktionen geben im Fehlerfall selbst
+      eine Fehlermeldung auf dem Bildschirm aus.
+      Dem aufrufenden Programm wird nur allgemein mitgeteilt,
+      dass ein Fehler aufgetreten ist.
+      Aus diesem Grund enthalten die BASIC-Fehlervariablen meistens
+      auch nur einen allgemeinen Fehler.
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
+  Hat man bei dem Zielsystem in den Compiler-Optionen sowohl den DISK-
+  als auch den VDIP-Treiber aktiviert und &ouml;ffnet eine Datei
+  ohne Angabe eines Laufwerkbuchstabens
+  (im BASIC-Jargon <em>Ger&auml;tename</em>),
+  wird der DISK-Treiber verwendet, d.h. die Datei auf dem aktuell
+  eingestellten Disketten- bzw. Festplattenlaufwerk ge&ouml;ffnet.
+ <br/><br/>
+  Ein f&uuml;r dieses Zielsystem compiliertes Programm ist auch
+  auf einem KC85/4 oder KC85/5 mit einer CAOS-Version
+  kleiner als&nbsp;4.8 lauff&auml;hig.
+  Allerdings f&uuml;hrt der Versuch, eine Datei zu &ouml;ffnen,
+  zu der Fehlermeldung <em>Ger&auml;t nicht gefunden</em>.
+ <br/><br/>
+  Die Konstante f&uuml;r das Zielsystem ist:
+  <a href="constants.htm#target">TARGET_KC85_CAOS48</a>.
+  Die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+  liefert auch bei <a href="constants.htm#target">TARGET_KC85</a>
+  und <a href="constants.htm#target">TARGET_KC85_4</a> TRUE,
+  da das Zielsystem davon abgeleitet ist.
+ <br/><br/>
 
  <h3><a name="scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></h3>
   Ist dieses Zielsystem ausgew&auml;hlt, wird Programmcode f&uuml;r
   einen AC1 bzw. LLC2 mit einem SCCH-Monitorprogramm erzeugt.
   Der Programmcode ist auch auf einem AC1 mit dem Monitorprogramm&nbsp;3.1
-  lauff&auml;hig, wenn auf Druckerausgaben, die LOCATE-Anweisung und
-  die JOYST-Funktion verzichtet wird.
+  lauff&auml;hig, wenn auf Druckerausgaben,
+  die <a href="instructions.htm#locate">LOCATE</a>-Anweisung und
+  die <a href="functions.htm#joyst">JOYST</a>-Funktion verzichtet wird.
  <br/>
   <ul>
    <li>
@@ -475,15 +798,23 @@
     aufgerufen werden.
    </li>
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
-   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>
-    Die PAUSE-Anweisung ist auf die Standard-Taktfrequenz des AC1
-    (2&nbsp;MHz) abgestimmt.
+    Die <a href="instructions.htm#cursor">CURSOR</a>-Anweisung
+    hat keine Wirkung.
+   </li>
+   <li>
+    Die <a href="instructions.htm#pause">PAUSE</a>-Anweisung
+    ist auf die Standard-Taktfrequenz des AC1 (2&nbsp;MHz) abgestimmt.
     Auf einem LLC2 ist aufgrund der h&ouml;heren Taktfrequenz
     die Wartezeit entsprechend k&uuml;rzer.
    </li>
    <li>
-    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    ben&ouml;tigt ein an der E/A-Basisadresse&nbsp;80h angeschlossenes GIDE.
+   </li>
+   <li>
+    Die <a href="functions.htm#joyst">JOYST</a>-Funktion
+    unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
    <li>
@@ -502,11 +833,19 @@
  <h3><a name="z1013">Z1013</a></h3>
   <ul>
    <li>
-    Es wird im <tt>SCREEN&nbsp;0</tt> eine Vollgrafik mit 64x64&nbsp;Pixel
-    simuliert, die mit den Grafikbefehlen angesprochen werden kann.
+    Es wird im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    eine Vollgrafik mit 64x64&nbsp;Pixel simuliert,
+    die mit den Grafikbefehlen angesprochen werden kann.
    </li>
    <li>
-    Die Funktion <em>JOYST</em> ruft den Sprungverteiler auf, aber nur,
+    Die Funktion <a href="functions.htm#datetime$">DATETIME$</a>
+    ben&ouml;tigt entweder ein Echtzeituhrmodul an der
+    E/A-Basisadresse&nbsp;70H
+    oder ein GIDE an der E/A-Basisadresse&nbsp;80h.
+   </li>
+   <li>
+    Die Funktion <a href="functions.htm#joyst">JOYST</a>
+    ruft den Sprungverteiler auf, aber nur,
     wenn auf der Adresse&nbsp;FFBBh (Einsprung zur Joystick-Abfrage)
     ein Sprungbefehl (Byte&nbsp;C3h) steht.
     Dies ist ein Schutz, damit das compilierte Programm nicht abst&uuml;rzt,
@@ -540,14 +879,15 @@
  <h3>
   <a name="z1013_64x16">Z1013 mit Unterst&uuml;tzung des 64x16-Bildschirmformats</a>
  </h3>
-  Dieses Zielsystem ist eine Erweiterung vom Zielsystem <em>Z1013</em>.
-  Der einzige Unterschied besteht darin,
-  dass es zus&auml;tzlich den <tt>SCREEN&nbsp;1</tt> gibt,
-  im dem der 64x16-Zeichen-Modus der Peters-Platine zur Verf&uuml;gung steht.
+  Dieses Zielsystem ist eine Erweiterung des Zielsystems <em>Z1013</em>.
+  Der einzige Unterschied besteht darin, dass es zus&auml;tzlich den
+  <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 gibt,
+  in dem der 64x16-Zeichen-Modus der Peters-Platine zur Verf&uuml;gung steht.
   Da die Z1013-Monitorprogramme dieses Bildschirmformat
   nicht unterst&uuml;tzen,
-  erfolgt im <tt>SCREEN&nbsp;1</tt> die Bildschirmausgabe &uuml;ber
-  eine eigene, im compilierten Programm enthaltene Bildschirmansteuerung.
+  erfolgt im <a href="instructions.htm#screen">SCREEN</a>&nbsp;1
+  die Bildschirmausgabe &uuml;ber eine eigene,
+  im compilierten Programm enthaltene Bildschirmansteuerung.
   Diese unterst&uuml;tzt die gleichen Steuercodes und verwendet auch
   die gleichen Systemzellen wie die originale Routine im Monitorprogramm.
  <br/><br/>
@@ -555,12 +895,94 @@
  <br/>
   <ul>
    <li>
-    <tt>SCREEN&nbsp;1</tt> ist ein reiner Textbildschirm mit 64x16 Zeichen.
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1
+    ist ein reiner Textbildschirm mit 64x16 Zeichen.
    </li>
    <li>Alles andere gilt entsprechend dem Zielsystem <em>Z1013</em>.</li>
    <li>
     Konstante f&uuml;r das Zielsystem ist:
     <a href="constants.htm#target">TARGET_Z1013_64X16</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#z1013">Z1013</a> abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_Z1013</a> TRUE.
+   </li>
+  </ul>
+ <br/>
+
+ <h3><a name="z1013krt">Z1013 mit KRT-Grafik</a></h3>
+  Dieses Zielsystem ist ebenfalls eine Erweiterung des Zielsystems
+  <em>Z1013</em>, bei dem es zus&auml;tzlich den
+  <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 gibt,
+  der die Vollgrafikerweiterung nach <em>Kleinstrechnertips&nbsp;11</em>
+  und <em>Funkamateur&nbsp;7/1991</em> unterst&uuml;tzt.
+  Daf&uuml;r steht im
+  <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+  die simulierte Vollgrafik mit 64x64 Pixel nicht zur Verf&uuml;gung.
+  <ul>
+   <li>
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    ist ein reiner Textbildschirm.
+    Eine Vollgrafik wird nicht simuliert, d.h.,
+    die Grafikbefehle k&ouml;nnen hier nicht verwendet werden.
+   </li>
+   <li>
+    Die Vollgrafik mit 256x256&nbsp;Pixel steht im
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 zur Verf&uuml;gung,
+    d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
+    Textausgaben sind allerdings nicht m&ouml;glich (au&szlig;er
+    mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
+   </li>
+   <li>Alles andere gilt entsprechend dem Zielsystem <em>Z1013</em>.</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z1013_KRT</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#z1013">Z1013</a> abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_Z1013</a> TRUE.
+   </li>
+  </ul>
+ <br/>
+
+ <h3><a name="z1013zx">Z1013 mit ZX-Grafik</a></h3>
+  Auch dieses Zielsystem ist eine Erweiterung des Zielsystems
+  <em>Z1013</em>, bei dem es zus&auml;tzlich den
+  <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 gibt,
+  der die ZX-Spectrum-kompatible S/W-Vollgrafik nach
+  <em>practic 2/1988</em> unterst&uuml;tzt.
+  Daf&uuml;r steht im <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+  die simulierte Vollgrafik mit 64x64 Pixel nicht zur Verf&uuml;gung.
+  <ul>
+   <li>
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;0
+    ist ein reiner Textbildschirm.
+    Eine Vollgrafik wird nicht simuliert, d.h.,
+    die Grafikbefehle k&ouml;nnen hier nicht verwendet werden.
+   </li>
+   <li>
+    Die ZX-Vollgrafik mit 256x192&nbsp;Pixel steht im
+    <a href="instructions.htm#screen">SCREEN</a>&nbsp;1 zur Verf&uuml;gung,
+    d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
+    Textausgaben sind allerdings nicht m&ouml;glich (au&szlig;er
+    mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
+   </li>
+   <li>
+    Da die Grafikerweiterung mit wei&szlig; als Hintergrundfarbe arbeitet,
+    ist ein gesetztes Pixel schwarz.
+    Demzufolge liefert auch die Funktion
+    <a href="functions.htm#point">POINT</a> bei einem gesetzten Pixel
+    den numerischen Wert f&uuml;r die Konstante
+    <a href="constants.htm#color">BLACK</a> zur&uuml;ck.
+   </li>
+   <li>Alles andere gilt entsprechend dem Zielsystem <em>Z1013</em>.</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z1013_ZX</a>
    </li>
    <li>
     Das Zielsystem ist vom Zielsystem
@@ -650,6 +1072,21 @@
     <td valign="top">ja</td>
    </tr>
    <tr>
+    <td valign="top">
+     <a href="targets.htm#kc85_caos48">TARGET_KC85_CAOS48</a>
+    </td>
+    <td valign="top">KC85/5 mit CAOS&nbsp;&gt;=&nbsp;4.8</td>
+    <td valign="top" nowrap="nowrap">
+     SCREEN&nbsp;0: 40x32 Zeichen<br/>
+     SCREEN&nbsp;1: 40x32 Zeichen
+    </td>
+    <td valign="top" nowrap="nowrap">
+     SCREEN&nbsp;0: 320x256 Pixel<br/>
+     SCREEN&nbsp;1: 320x256 Pixel
+    </td>
+    <td valign="top">ja</td>
+   </tr>
+   <tr>
     <td valign="top"><a href="targets.htm#scch">TARGET_SCCH</a></td>
     <td valign="top">
      AC1-2010, AC1-SCCH, LLC2<br/>
@@ -676,6 +1113,20 @@
      SCREEN&nbsp;1: 64x16 Zeichen
     </td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x64 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z1013krt">TARGET_Z1013_KRT</a></td>
+    <td valign="top">Z1013 mit KRT-Grafik</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 32x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 256x256 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z1013zx">TARGET_Z1013_ZX</a></td>
+    <td valign="top">Z1013 mit ZX-Grafik</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 32x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 256x192 Pixel</td>
     <td valign="top">nein</td>
    </tr>
    <tr>

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2017 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,10 +22,9 @@
 package jkcemu.emusys.kc85;
 
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.base.ByteIterator;
-import jkcemu.base.FileInfo;
+import jkcemu.file.FileInfo;
 
 
 public class KCAudioCreator extends BitSampleBuffer
@@ -59,11 +58,13 @@ public class KCAudioCreator extends BitSampleBuffer
 	 * Wenn ja, dann Header uerberspringen und langer Vorton
 	 */
 	if( skipString( iter, FileInfo.KCTAP_MAGIC ) ) {
-	  nHalf = 16000;
+	  nHalf = 8000;
 	}
       }
       if( firstBlk ) {
-	nHalf = 16000;		// beim 1. Block immer langer Vortan
+	nHalf = 8000;		// beim 1. Block immer langer Vorton
+      } else {
+	addSamples( 240, this.phase );		// kurze Pause
       }
       for( int i = 0; i < nHalf; i++ ) {
 	addPhaseChangeSamples( 4 );
@@ -78,7 +79,7 @@ public class KCAudioCreator extends BitSampleBuffer
       if( tapFmt ) {
 	b = iter.readByte();
       } else {
-	b = (iter.available() > 128 ? blkNum++ : 0xFF);
+	b = ((firstBlk || (iter.available() > 128)) ? blkNum++ : 0xFF);
       }
       addByteSamples( b );
 

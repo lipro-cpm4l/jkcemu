@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,21 +11,20 @@ package jkcemu.programming;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.*;
 
 
 public class CmdLineArgIterator implements Closeable
 {
   private Reader   reader;
-  private String[] ary;
+  private String[] array;
   private int      idx;
 
 
   public static CmdLineArgIterator createFromStringArray(
-						String[] ary,
+						String[] array,
 						int      idx )
   {
-    return new CmdLineArgIterator( null, ary, idx );
+    return new CmdLineArgIterator( null, array, idx );
   }
 
 
@@ -38,9 +37,9 @@ public class CmdLineArgIterator implements Closeable
   public synchronized String next() throws IOException
   {
     String rv = null;
-    if( this.ary != null ) {
-      if( this.idx < this.ary.length ) {
-	rv = this.ary[ this.idx++ ];	
+    if( this.array != null ) {
+      if( this.idx < this.array.length ) {
+	rv = this.array[ this.idx++ ];	
 	if( rv == null ) {
 	  rv = "";
 	}
@@ -90,7 +89,7 @@ public class CmdLineArgIterator implements Closeable
     }
     finally {
       this.reader = null;
-      this.ary    = null;
+      this.array  = null;
     }
   }
 
@@ -103,10 +102,10 @@ public class CmdLineArgIterator implements Closeable
   }
 
 
-  private CmdLineArgIterator( Reader reader, String[] ary, int idx )
+  private CmdLineArgIterator( Reader reader, String[] array, int idx )
   {
     this.reader = reader;
-    this.ary    = ary;
+    this.array  = array;
     this.idx    = idx;
   }
 }

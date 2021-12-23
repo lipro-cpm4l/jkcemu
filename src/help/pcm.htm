@@ -2,10 +2,12 @@
 <body>
  <h1>PC/M</h1>
   Der PC/M, auch Mugler/Mathes-PC oder nur Mugler-PC genannt,
-  ist ein Selbstbaucomputer mit CP/M-Kompatibilit&auml;t.
+  ist ein Selbstbaucomputer mit CP/M-Kompatibilit&auml;t,
+  der 1988 als Bauanleitung in einer Beitragsserie in der Zeitschrift
+  <em>Funkamateur</em> ver&ouml;ffentlicht wurde.
   Das urspr&uuml;ngliche Konzept sieht als Laufwerke RAM-Floppies vor,
   deren Inhalte auf Kassette gespeichert werden.
-  Die Anbindung von Disktettenlaufwerken kam erst sp&auml;ter dazu.
+  Die Anbindung von Disktettenlaufwerken kam sp&auml;ter dazu.
  <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
@@ -17,6 +19,7 @@
      <li><a href="pcm.htm#ram">1.2. RAM-B&auml;nke</a></li>
      <li><a href="pcm.htm#fdc">1.3. Floppy-Disk-Modul</a></li>
      <li><a href="pcm.htm#nmi">1.4. NMI-Generator</a></li>
+     <li><a href="pcm.htm#ext">1.5. Erweiterungen</a></li>
     </ul>
    </li>
    <li>
@@ -118,6 +121,17 @@
   Daraufhin wird dann nach dem dritten Befehl hinter dem Ein-/Ausgabebefehl
   ein nicht maskierter Interrupt ausl&ouml;st.
  <br/><br/>
+
+ <h3><a name="ext">1.5 Erweiterungen</a></h3>
+  Optional werden folgende Erweiterungen emuliert:
+   <ul>
+   <li><a href="k1520sound.htm">K1520-Sound-Karte</a></li>
+   <li>
+    <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
+    an den E/A-Basisadressen&nbsp;DCh und FCh
+   </li>
+  </ul>
+ <br/>
 
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
@@ -389,6 +403,13 @@
    <tr><td>C:</td><td>zweites Diskettenlaufwerk, 624-KByte-Format</td></tr>
    <tr><td>D:</td><td>drittes Diskettenlaufwerk, 624-KByte-Format</td></tr>
   </table>
+ <br/><br/>
+  <b>Achtung!</b> Auf beiden Disketten ist auch die leere Datei
+  <a href="go_com.htm">GO.COM</a> enthalten.
+  Diese dient zum Starten eines im Arbeitsspeicher befindlichen
+  CP/M-kompatiblen Programms.
+  Wird <em>GO</em> aufgerufen ohne dass ein Programm im Arbeitsspeicher
+  vorhanden ist, f&uuml;hrt das zu einem Absturz.
  <br/><br/>
 
 

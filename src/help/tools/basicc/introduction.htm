@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Allgemeines</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -10,7 +11,8 @@
  <br/><br/>
   Der BASIC-Compiler zeichnet sich durch folgende F&auml;higkeiten aus:
   <ul>
-   <li>16-Bit-Ganzzahlarithmetik</li>
+   <li>16- und 32-Bit Ganzzahlarithmetik</li>
+   <li>Flie&szlig;kommaarithmetik mit bis zu 7&nbsp;Nachkommastellen</li>
    <li>
     <a href="strings.htm">Zeichenkettenverarbeitung</a>
    </li>
@@ -40,5 +42,12 @@
    </li>
   </ul>
  <br/>
+  &Uuml;blicherweise erzeugt der Compiler eigenst&auml;ndige Programme,
+  die mit einem entsprechenden Kommando im Betriebssystem aufgerufen werden.
+  Es ist aber auch m&ouml;glich, das BASIC-Programm in ein
+  Maschinencodeunterprogramm zu &uuml;bersetzen
+  (siehe <a href="options.htm">Compiler-Optionen</a>).
+  Damit kann das &uuml;bersetzte Programm in anderen Programmen
+  mit einem <tt>CALL</tt>-Befehl aufgerufen werden.
 </body>
 </html>

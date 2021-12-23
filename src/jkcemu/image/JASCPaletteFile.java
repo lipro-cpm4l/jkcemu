@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,9 +15,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class JASCPaletteFile
@@ -30,14 +30,14 @@ public class JASCPaletteFile
 
   public static boolean accept( File file )
   {
-    return EmuUtil.accept( file, fileSuffixes );
+    return FileUtil.accept( file, fileSuffixes );
   }
 
 
   public static FileNameExtensionFilter getFileFilter()
   {
     if( fileFilter == null ) {
-      fileFilter = ImgUtil.createFileFilter(
+      fileFilter = ImageUtil.createFileFilter(
 				"Paintshop Pro Farbpalettendatei",
 				fileSuffixes );
     }
@@ -59,20 +59,20 @@ public class JASCPaletteFile
       in = new BufferedReader( new FileReader( file ) );
       String line = in.readLine();
       if( line == null ) {
-	EmuUtil.throwUnsupportedFileFormat();
+	FileUtil.throwUnsupportedFileFormat();
       }
       if( !line.equals( MAGIC ) ) {
-	EmuUtil.throwUnsupportedFileFormat();
+	FileUtil.throwUnsupportedFileFormat();
       }
       in.readLine();		// Zeile mit 0100 ueberlesen
       line = in.readLine();
       if( line == null ) {
-	EmuUtil.throwUnsupportedFileFormat();
+	FileUtil.throwUnsupportedFileFormat();
       }
       try {
 	int colorCnt= Integer.parseInt( line.trim() );
 	if( colorCnt < 1 ) {
-	  EmuUtil.throwUnsupportedFileFormat();
+	  FileUtil.throwUnsupportedFileFormat();
 	}
 	byte[] reds   = new byte[ colorCnt ];
 	byte[] greens = new byte[ colorCnt ];
@@ -80,35 +80,35 @@ public class JASCPaletteFile
 	for( int i = 0; i < colorCnt; i++ ) {
 	  line = in.readLine();
 	  if( line == null ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 	  String[] elems = line.split( "\\s" );
 	  if( elems == null ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 	  if( elems.length != 3 ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 
 	  int r = Integer.parseInt( elems[ 0 ].trim() );
 	  if( (r < 0) || (r > 0xFF) ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 	  reds[ i ] = (byte) r;
 
 	  int g = Integer.parseInt( elems[ 1 ].trim() );
 	  if( (g < 0) || (g > 0xFF) ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 	  greens[ i ] = (byte) g;
 
 	  int b = Integer.parseInt( elems[ 2 ].trim() );
 	  if( (b < 0) || (b > 0xFF) ) {
-	    EmuUtil.throwUnsupportedFileFormat();
+	    FileUtil.throwUnsupportedFileFormat();
 	  }
 	  blues[ i ] = (byte) b;
 	}
-	icm = ImgUtil.createIndexColorModel(
+	icm = ImageUtil.createIndexColorModel(
 					colorCnt,
 					reds,
 					greens,
@@ -116,14 +116,14 @@ public class JASCPaletteFile
 					null );
       }
       catch( NumberFormatException ex ) {
-	EmuUtil.throwUnsupportedFileFormat();
+	FileUtil.throwUnsupportedFileFormat();
       }
     }
     finally {
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( in );
     }
     if( icm == null ) {
-      ImgUtil.throwNoColorTab();
+      ImageUtil.throwNoColorTabInFile();
     }
     return icm;
   }
@@ -157,7 +157,7 @@ public class JASCPaletteFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2017 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.TimerTask;
 import javax.swing.JComponent;
@@ -250,7 +249,7 @@ public abstract class AbstractKeyboardFld<T extends EmuSys>
   }
 
 
-  protected synchronized void fireWarmResetAfterDelay()
+  protected synchronized void fireResetAfterDelay()
   {
     if( this.resetTimer == null ) {
       this.resetTimer = new java.util.Timer();
@@ -262,7 +261,7 @@ public abstract class AbstractKeyboardFld<T extends EmuSys>
 		{
 		  public void run()
 		  {
-		    screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
+		    screenFrm.fireReset( false );
 		  }
 		},
 		200L );
@@ -284,7 +283,7 @@ public abstract class AbstractKeyboardFld<T extends EmuSys>
 
   protected Image getImage( String resource )
   {
-    return Main.getImage( Main.getScreenFrm(), resource );
+    return Main.getLoadedImage( Main.getScreenFrm(), resource );
   }
 
 

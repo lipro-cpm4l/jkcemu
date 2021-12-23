@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.HueblerGraphicsMC;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
@@ -33,6 +32,9 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
   public void appendBssTo( AsmCodeBuf buf )
   {
     super.appendBssTo( buf );
@@ -44,9 +46,13 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
 
   @Override
-  public void appendExitTo( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf, boolean isAppTypeSub )
   {
-    buf.append( "\tJP\t0F01EH\n" );
+    if( isAppTypeSub ) {
+      buf.append( "\tRET\n" );
+    } else {
+      buf.append( "\tJP\t0F01EH\n" );
+    }
   }
 
 
@@ -64,6 +70,7 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   }
 
 
+  @Override
   public void appendInitTo( AsmCodeBuf buf )
   {
     super.appendInitTo( buf );
@@ -77,30 +84,32 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   @Override
   public void appendInputTo(
 			AsmCodeBuf buf,
-			boolean    xckbrk,
-			boolean    xinkey,
-			boolean    xinch,
+			boolean    xCheckBreak,
+			boolean    xInkey,
+			boolean    xInch,
 			boolean    canBreakOnInput )
   {
-    if( xckbrk ) {
-      buf.append( "XCKBRK:\tCALL\t0F012H\n"
+    if( xCheckBreak ) {
+      buf.append( "XCHECK_BREAK:\n"
+		+ "\tCALL\t0F012H\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tCALL\t0F003H\n"
 		+ "\tCP\t03H\n" );
-      if( xinkey ) {
+      if( xInkey ) {
 	buf.append( "\tJR\tZ,XBREAK\n"
 		+ "\tLD\t(X_M_INKEY),A\n"
 		+ "\tRET\n"
 		+ "XINKEY:\tLD\tA,(X_M_INKEY)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE1\n"
+		+ "\tJR\tZ,X_INKEY_1\n"
 		+ "\tPUSH\tAF\n"
 		+ "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n"
 		+ "\tPOP\tAF\n"
 		+ "\tRET\n"
-		+ "XINKE1:\tCALL\t0F012H\n"
+		+ "X_INKEY_1:\n"
+		+ "\tCALL\t0F012H\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n" );
 	this.usesX_M_INKEY = true;
@@ -108,34 +117,37 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 	buf.append( "\tRET\tNZ\n"
 		+ "\tJR\tXBREAK\n" );
       }
-      if( xinch ) {
+      if( xInch ) {
 	buf.append( "XINCH:\n" );
 	if( this.usesX_M_INKEY ) {
 	  buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n" );
 	}
-	buf.append( "XINCH1:\tCALL\t0F003H\n"
+	buf.append( "X_INCH_1:\n"
+		+ "\tCALL\t0F003H\n"
 		+ "\tCP\t03H\n"
 		+ "\tJR\tZ,XBREAK\n"
 		+ "\tRET\tNZ\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINCH1\n"
+		+ "\tJR\tZ,X_INCH_1\n"
 		+ "\tRET\n" );
       }
     } else {
-      if( xinkey ) {
+      if( xInkey ) {
 	buf.append( "XINKEY:\tCALL\t0F012H\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n" );
       }
-      if( xinkey || xinch ) {
+      if( xInkey || xInch ) {
 	if( canBreakOnInput ) {
-	  buf.append( "XINCH:\tCALL\t0F003H\n"
+	  buf.append( "XINCH:\n"
+		+ "\tCALL\t0F003H\n"
 		+ "\tCP\t03H\n"
 		+ "\tRET\tNZ\n"
 		+ "\tJR\tXBREAK\n" );
 	} else {
-	  buf.append( "XINCH:\tJP\t0F003H\n" );
+	  buf.append( "XINCH:\n"
+		+ "\tJP\t0F003H\n" );
 	}
       }
     }
@@ -189,18 +201,20 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
    *       <>0: Cursor einschalten
    */
   @Override
-  public void appendXCursTo( AsmCodeBuf buf )
+  public void appendXCursorTo( AsmCodeBuf buf )
   {
-    buf.append( "XCURS:\tPUSH\tHL\n"
+    buf.append( "XCURSOR:\n"
+		+ "\tPUSH\tHL\n"
 		+ "\tLD\tC,1BH\n"
 		+ "\tCALL\t0F009H\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
 		+ "\tLD\tC,0BH\n"
-		+ "\tJR\tZ,XCURS1\n"
+		+ "\tJR\tZ,X_CURSOR_1\n"
 		+ "\tINC\tC\n"
-		+ "XCURS1:\tJP\t0F009H\n" );
+		+ "X_CURSOR_1:\n"
+		+ "\tJP\t0F009H\n" );
   }
 
 
@@ -211,23 +225,24 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
    *   DE: linke X-Koordinate, nicht kleiner 0
    *   HL: Y-Koordinate
    */
+  @Override
   public void appendXHLineTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XHLINE:\tBIT\t7,B\n"
 		+ "\tRET\tNZ\n"
 		+ "\tPUSH\tBC\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tBC\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE1:\n"
+		+ "X_HLINE_1:\n"
 		+ "\tOR\tD\n"
 		+ "\tLD\tD,A\n"
 		+ "\tSLA\tA\n"
-		+ "\tJR\tNC,XHLINE2\n"
+		+ "\tJR\tNC,X_HLINE_2\n"
 		+ "\tLD\tA,D\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tCALL\tXPSET_A\n" );
+      buf.append( "\tCALL\tX_PSET_A\n" );
     } else {
       buf.append( "\tOR\t(HL)\n"
 		+ "\tLD\t(HL),A\n" );
@@ -238,13 +253,13 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 		+ "\tRET\tZ\n"
 		+ "\tLD\tA,01H\n"
 		+ "\tLD\tD,00H\n"
-		+ "XHLINE2:\n"
+		+ "X_HLINE_2:\n"
 		+ "\tDEC\tBC\n"
 		+ "\tBIT\t7,B\n"
-		+ "\tJR\tZ,XHLINE1\n"
+		+ "\tJR\tZ,X_HLINE_1\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XPSET_A\n"
+		+ "\tJR\tNZ,X_PSET_A\n"
 		+ "\tRET\n" );
     appendXPSetTo( buf, compiler );
   }
@@ -277,10 +292,10 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       buf.append( "XOUTCH:\tLD\tC,A\n"
 		+ "\tJP\t0F009H\n" );
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -323,46 +338,46 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tE\n"
-		+ "\tJR\tZ,XPAINT_LEFT5\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_5\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tDEC\tDE\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tDE\n"
-		+ "\tJR\tC,XPAINT_LEFT4\n"
+		+ "\tJR\tC,X_PAINT_LEFT_4\n"
 		+ "\tLD\tC,A\n"
 		+ "\tLD\tB,(HL)\n"
-		+ "XPAINT_LEFT1:\n"
+		+ "X_PAINT_LEFT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_LEFT2:\n"
+		+ "X_PAINT_LEFT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_LEFT3\n"
+		+ "\tJR\tNZ,X_PAINT_LEFT_3\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tDEC\tDE\n"
 		+ "\tSRL\tC\n"
-		+ "\tJR\tNC,XPAINT_LEFT2\n"
+		+ "\tJR\tNC,X_PAINT_LEFT_2\n"
 		+ "\tLD\t(HL),B\n"
 		+ "\tDEC\tHL\n"
 		+ "\tLD\tA,E\n"
 		+ "\tINC\tA\n"
-		+ "\tJR\tZ,XPAINT_LEFT4\n"
+		+ "\tJR\tZ,X_PAINT_LEFT_4\n"
 		+ "\tLD\tB,(HL)\n"
 		+ "\tLD\tC,80H\n"
-		+ "\tJR\tXPAINT_LEFT1\n"
-		+ "XPAINT_LEFT3:\n"
+		+ "\tJR\tX_PAINT_LEFT_1\n"
+		+ "X_PAINT_LEFT_3:\n"
 		+ "\tLD\t(HL),B\n"
-		+ "XPAINT_LEFT4:\n"
+		+ "X_PAINT_LEFT_4:\n"
 		+ "\tINC\tDE\n"
-		+ "XPAINT_LEFT5:\n"
+		+ "X_PAINT_LEFT_5:\n"
 		+ "\tLD\t(PAINT_M_X1),DE\n"
 		+ "\tRET\n"
 		+ "XPAINT_RIGHT:\n"
 		+ "\tLD\tDE,(PAINT_M_X)\n"
 		+ "\tLD\tHL,(PAINT_M_Y)\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tX_PST\n"
+		+ "\tCALL\tX_PINFO\n"
 		+ "\tPOP\tDE\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tC,A\n"
@@ -370,30 +385,30 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 		+ "\tAND\tB\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tJR\tXPAINT_RIGHT3\n"
-		+ "XPAINT_RIGHT1:\n"
+		+ "\tJR\tX_PAINT_RIGHT_3\n"
+		+ "X_PAINT_RIGHT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "XPAINT_RIGHT2:\n"
+		+ "X_PAINT_RIGHT_2:\n"
 		+ "\tAND\tC\n"
-		+ "\tJR\tNZ,XPAINT_RIGHT4\n"
-		+ "XPAINT_RIGHT3:\n"
+		+ "\tJR\tNZ,X_PAINT_RIGHT_4\n"
+		+ "X_PAINT_RIGHT_3:\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tLD\tB,A\n"
 		+ "\tINC\tDE\n"
 		+ "\tSLA\tC\n"
-		+ "\tJR\tNC,XPAINT_RIGHT2\n"
+		+ "\tJR\tNC,X_PAINT_RIGHT_2\n"
 		+ "\tLD\t(HL),B\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tA,E\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XPAINT_RIGHT5\n"
+		+ "\tJR\tZ,X_PAINT_RIGHT_5\n"
 		+ "\tLD\tB,(HL)\n"
 		+ "\tLD\tC,01H\n"
-		+ "\tJR\tXPAINT_RIGHT1\n"
-		+ "XPAINT_RIGHT4:\n"
+		+ "\tJR\tX_PAINT_RIGHT_1\n"
+		+ "X_PAINT_RIGHT_4:\n"
 		+ "\tLD\t(HL),B\n"
-		+ "XPAINT_RIGHT5:\n"
+		+ "X_PAINT_RIGHT_5:\n"
 		+ "\tDEC\tDE\n"
 		+ "\tLD\t(PAINT_M_X2),DE\n"
 		+ "\tOR\tA\n"			// CY=0
@@ -429,7 +444,7 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
 		+ "\tCPL\n"
 		+ "\tAND\t(HL)\n"
@@ -449,28 +464,30 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
-		+ "XPSET_A:\n" );
+		+ "X_PSET_A:\n" );
       if( this.usesX_M_PEN ) {
 	buf.append( "\tLD\tE,A\n"
 		+ "\tLD\tA,(X_M_PEN)\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+		+ "\tJR\tZ,X_PSET_2\n"		// Stift 1 (Normal)
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+		+ "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
 		+ "\tDEC\tA\n"
 		+ "\tRET\tNZ\n"
 		+ "\tLD\tA,(HL)\n"		// Stift 3 (XOR-Mode)
 		+ "\tXOR\tE\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n"
-		+ "XPSET1:\tLD\tA,E\n"		// Pixel loeschen
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tLD\tA,E\n"
 		+ "\tCPL\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n"
-		+ "XPSET2:\tLD\tA,E\n" );	// Pixel setzen
+		+ "X_PSET_2:\n"			// Pixel setzen
+		+ "\tLD\tA,E\n" );
       }
       buf.append( "\tOR\t(HL)\n"
 		+ "\tLD\t(HL),A\n"
@@ -496,14 +513,14 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   {
     if( !this.xptestAppended ) {
       buf.append( "XPOINT:\n"
-		+ "XPTEST:\tCALL\tX_PST\n"
-		+ "\tJR\tC,X_PTEST1\n"
+		+ "XPTEST:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "X_PTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
       appendPixUtilTo( buf );
@@ -594,7 +611,7 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
 
   @Override
-  public boolean supportsXCURS()
+  public boolean supportsXCURSOR()
   {
     return true;
   }
@@ -608,7 +625,7 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
 
   @Override
-  public boolean supportsXLOCAT()
+  public boolean supportsXLOCATE()
   {
     return true;
   }
@@ -640,20 +657,22 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   private void appendPixUtilTo( AsmCodeBuf buf )
   {
     if( !this.pixUtilAppended ) {
-      buf.append(
-	    /*
-	     * Pruefen der Parameter und
-	     * ermitteln von Informationen zu einem Pixel
-	     * Parameter:
-	     *   DE: X-Koordinate (0...255)
-	     *   HL: Y-Koordinate (0...255)
-	     * Rueckgabe:
-	     *   CY=1: Fehler
-	     *   A:    Bitmuster mit einem gesetzten Bit,
-             *         dass das Pixel in der Speicherzelle beschreibt
-	     *   HL:   Speicherzelle, in der sich das Pixel befindet
-	     */
-		"X_PST:\tLD\tA,D\n"
+      /*
+       * Pruefen der Parameter und
+       * ermitteln von Informationen zu einem Pixel
+       *
+       * Parameter:
+       *   DE: X-Koordinate (0...255)
+       *   HL: Y-Koordinate (0...255)
+       *
+       * Rueckgabe:
+       *   CY=1: Fehler
+       *   A:    Bitmuster mit einem gesetzten Bit,
+       *         dass das Pixel in der Speicherzelle beschreibt
+       *   HL:   Speicherzelle, in der sich das Pixel befindet
+       */
+      buf.append( "X_PINFO:\n"
+		+ "\tLD\tA,D\n"
 		+ "\tOR\tH\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
@@ -661,10 +680,12 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 		+ "\tAND\t07H\n"
 		+ "\tLD\tB,A\n"
 		+ "\tLD\tA,01H\n"
-		+ "\tJR\tZ,X_PST2\n"
-		+ "X_PST1:\tSLA\tA\n"
-		+ "\tDJNZ\tX_PST1\n"
-		+ "X_PST2:\tSRL\tE\n"
+		+ "\tJR\tZ,X_PINFO_2\n"
+		+ "X_PINFO_1:\n"
+		+ "\tSLA\tA\n"
+		+ "\tDJNZ\tX_PINFO_1\n"
+		+ "X_PINFO_2:\n"
+		+ "\tSRL\tE\n"
 		+ "\tSRL\tE\n"
 		+ "\tSRL\tE\n"
 		+ "\tLD\tC,E\n"

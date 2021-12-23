@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,25 +14,23 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.KC85;
 
 
 public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 {
-  private static final int FS_KEY     = 14;
-  private static final int FS_NOSHIFT = 12;
-  private static final int FS_SHIFT   = 10;
-  private static final int MARGIN_X   = 15;
-  private static final int MARGIN_Y   = 20;
-  private static final int KEY_COL_W  = 50;
-  private static final int KEY_ROW_H  = 50;
-  private static final int KEY_PAD_X  = MARGIN_X + 1;
-  private static final int KEY_PAD_Y  = MARGIN_Y + 1;
-  private static final int KEY_PAD_W  = 620;
-  private static final int KEY_PAD_H  = 272;
-  private static final int X_CRS_MID  = 695;
+  private static final int FS_MAIN   = 12;
+  private static final int FS_SHIFT  = 12;
+  private static final int MARGIN_X  = 15;
+  private static final int MARGIN_Y  = 20;
+  private static final int KEY_COL_W = 50;
+  private static final int KEY_ROW_H = 50;
+  private static final int KEY_PAD_X = MARGIN_X + 1;
+  private static final int KEY_PAD_Y = MARGIN_Y + 1;
+  private static final int KEY_PAD_W = 620;
+  private static final int KEY_PAD_H = 272;
+  private static final int X_CRS_MID = 695;
 
   private Image   imgBG;
   private Image   imgKeySmall;
@@ -47,8 +45,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
   private Image   imgShift;
   private Image   imgShLock;
   private Color   colorBG;
-  private Font    fontKey;
-  private Font    fontNoShift;
+  private Font    fontMain;
   private Font    fontShift;
   private KeyData shiftKey;
   private KeyData spaceKey;
@@ -79,10 +76,9 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
       this.wKey = this.imgKeySmall.getWidth( this );
       this.hKey = this.imgKeySmall.getHeight( this );
     }
-    this.fontKey     = new Font( "SansSerif", Font.BOLD, FS_KEY );
-    this.fontNoShift = new Font( "SansSerif", Font.BOLD, FS_NOSHIFT );
-    this.fontShift   = new Font( "SansSerif", Font.BOLD, FS_SHIFT );
-    this.curIdx      = 0;
+    this.fontMain  = new Font( Font.SANS_SERIF, Font.BOLD, FS_MAIN );
+    this.fontShift = new Font( Font.SANS_SERIF, Font.PLAIN, FS_SHIFT );
+    this.curIdx    = 0;
 
     int dist  = (KEY_PAD_W - ((KEY_COL_W * 11) + this.wKey)) / 3;
     int xKey0 = KEY_PAD_X + (2 * dist);
@@ -296,7 +292,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     if( shift && (keyNum >= 0) ) {
       keyNum++;
     }
-    ((KC85) this.emuSys ).setKeyNumPressed( keyNum );
+    this.emuSys.setKeyNumPressed( keyNum );
   }
 
 
@@ -482,17 +478,19 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 	  g.drawImage( this.imgKeySmall, key.x, key.y, this );
 	}
       }
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       if( key.image != null ) {
 	drawCenter( g, key.x, key.y, key.w, key.h, key.image );
       } else if( key.text1 != null ) {
 	if( key.text2 != null ) {
+	  g.setFont( this.fontMain );
 	  drawCenter(
 		g,
 		key.x + 6,
 		key.y + key.h - 6,
 		(key.w / 2) - 4,
 		key.text1 );
+	  g.setFont( this.fontShift );
 	  drawCenter(
 		g,
 		key.x + (key.w / 2) + 1,
@@ -500,10 +498,11 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 		(key.w / 2) - 4,
 		key.text2 );
 	} else {
+	  g.setFont( this.fontMain );
 	  drawCenter(
 		g,
 		key.x,
-		key.y + ((key.h - FS_KEY) / 2) + FS_KEY - 2,
+		key.y + ((key.h - FS_MAIN) / 2) + FS_MAIN - 2,
 		key.w,
 		key.text1 );
 	}
@@ -525,7 +524,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 
   private void prepareLayout()
   {
-    if( ((KC85) this.emuSys ).getKCTypeNum() >= 4 ) {
+    if( this.emuSys.getKCTypeNum() >= 4 ) {
       this.imgBG       = getImage( "bg_gray.png" );
       this.imgKeySpace = getImage( "key_space_gray.png" );
       this.colorBG     = new Color( 230, 230, 220 );

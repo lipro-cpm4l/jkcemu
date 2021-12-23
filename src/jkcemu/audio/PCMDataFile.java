@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ package jkcemu.audio;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.*;
 
 
 public class PCMDataFile extends AbstractPCMDataReader
@@ -72,6 +71,14 @@ public class PCMDataFile extends AbstractPCMDataReader
 
 
   @Override
+  public synchronized long getFramePos()
+  {
+    return (this.bufOffs - this.pcmDataOffs + this.bufPos)
+					/ this.bytesPerFrame;
+  }
+
+
+  @Override
   public synchronized int read(
 			byte[] buf,
 			int    offs,
@@ -109,6 +116,7 @@ public class PCMDataFile extends AbstractPCMDataReader
       // neue Position liegt innerhalb der gelesenen Bytes
       this.bufPos = (int) (filePos - this.bufOffs);
     } else {
+      this.raf.seek( filePos );
       this.bufOffs = filePos;
       this.bufLen  = 0;
       this.bufPos  = 0;

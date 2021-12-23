@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,10 @@
 package jkcemu.base;
 
 import java.awt.Component;
-import java.lang.*;
+import jkcemu.Main;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
+import jkcemu.file.SaveDlg;
 
 
 public class SourceUtil
@@ -32,11 +35,11 @@ public class SourceUtil
 	    break;
 	  }
 	  if( b == 0 ) {
-	    buf.append( (char) '\n' );
+	    buf.append( '\n' );
 	    addr += 2;
 	  } else if( b < 0x20 ) {
 	    for( int i = 0; i < b; i++ ) {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	    }
 	  } else {
 	    buf.append( (char) b );
@@ -106,7 +109,7 @@ public class SourceUtil
 	} else {
 	  if( (ch != 0) && (n > 0) ) {
 	    for( int i = 0; i <= n; i++ ) {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	    }
 	    sep = false;
 	  }
@@ -122,7 +125,7 @@ public class SourceUtil
 	}
 	if( b == '\"' ) {
 	  if( sep ) {
-	    buf.append( (char) '\u0020' );
+	    buf.append( '\u0020' );
 	  }
 	  buf.append( (char) b );
 	  while( addr < nextLineAddr ) {
@@ -151,7 +154,7 @@ public class SourceUtil
 		  if( isIdentifierChar( buf.charAt( buf.length() - 1 ) )
 		      && isIdentifierChar( s.charAt( 0 ) ) )
 		  {
-		    buf.append( (char) '\u0020' );
+		    buf.append( '\u0020' );
 		  }
 		  buf.append( s );
 		  if( isIdentifierChar( s.charAt( len - 1 ) ) ) {
@@ -170,14 +173,14 @@ public class SourceUtil
 	    if( sep
 		&& (isIdentifierChar( b ) || (b == '\'') || (b == '\"')) )
 	    {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	    }
 	    buf.append( (char) b );
 	    sep = false;
 	  }
 	}
       }
-      buf.append( (char) '\n' );
+      buf.append( '\n' );
 
       // naechste Zeile
       addr         = nextLineAddr;
@@ -213,7 +216,7 @@ public class SourceUtil
 	  } else {
 	    if( ch != '\r' ) {
 	      for( int i = 0; i <= n; i++ )
-		buf.append( (char) '\u0020' );
+		buf.append( '\u0020' );
 	    }
 	    break;
 	  }
@@ -229,7 +232,7 @@ public class SourceUtil
 	    buf.append( (char) ch );
 	  }
 	}
-	buf.append( (char) '\n' );
+	buf.append( '\n' );
       }
       if( buf.length() > 0 ) {
 	rv = buf.toString();
@@ -296,7 +299,7 @@ public class SourceUtil
 		endAddr,
 		"KC-BASIC-Programm speichern",
 		SaveDlg.BasicType.KCBASIC,
-		EmuUtil.getKCBasicFileFilter() )).setVisible( true );
+		FileUtil.getKCBasicFileFilter() )).setVisible( true );
       } else {
 	BaseDlg.showErrorDlg(
 		screenFrm,
@@ -322,6 +325,7 @@ public class SourceUtil
     if( fileFmt != null ) {
       int basicBegAddr = -1;
       if( ((fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+			    || fileFmt.equals( FileFormat.KCB )
 			    || fileFmt.equals( FileFormat.KCBASIC_PRG )
 			    || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
 			    || fileFmt.equals( FileFormat.BASIC_PRG ))
@@ -348,12 +352,10 @@ public class SourceUtil
 	basicBegAddr = 0x2C01;
       }
       if( basicBegAddr >= 0 ) {
-	int topAddr = getBasicEndAddr( emuThread, basicBegAddr ) + 1;
-	if( topAddr > basicBegAddr ) {
-	  emuThread.setBasicMemWord( begAddr - 42, topAddr );
-	  emuThread.setBasicMemWord( begAddr - 40, topAddr );
-	  emuThread.setBasicMemWord( begAddr - 38, topAddr );
-	}
+	int topAddr = begAddr + len;
+	emuThread.setBasicMemWord( begAddr - 42, topAddr );
+	emuThread.setBasicMemWord( begAddr - 40, topAddr );
+	emuThread.setBasicMemWord( begAddr - 38, topAddr );
       }
     }
   }
@@ -377,4 +379,3 @@ public class SourceUtil
 		+ "Adressbereich des Arbeitsspeichers vorhanden." );
   }
 }
-

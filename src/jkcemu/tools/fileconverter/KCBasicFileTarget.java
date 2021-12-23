@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,8 +12,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class KCBasicFileTarget extends AbstractConvertTarget
@@ -41,14 +41,14 @@ public class KCBasicFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getKCBasicFileFilter();
+    return FileUtil.getKCBasicFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".sss" );
+    return FileUtil.replaceExtension( srcFile, ".sss" );
   }
 
 
@@ -75,7 +75,7 @@ public class KCBasicFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return null;
   }

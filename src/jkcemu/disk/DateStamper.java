@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,11 +9,9 @@
 package jkcemu.disk;
 
 import java.io.File;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Calendar;
-import jkcemu.base.FileTimesView;
-import jkcemu.base.FileTimesViewFactory;
+import jkcemu.file.FileTimesData;
 
 
 public class DateStamper
@@ -23,18 +21,13 @@ public class DateStamper
 
   private static Calendar calendar = Calendar.getInstance();
 
-  private FileTimesViewFactory ftvFactory;
-  private byte[]               dateTimeBytes;
-  private int                  dateTimeLen;
-  private int                  pos;
+  private byte[] dateTimeBytes;
+  private int    dateTimeLen;
+  private int    pos;
 
 
-  public DateStamper(
-		FileTimesViewFactory ftvFactory,
-		int                  dirEntries,
-		byte[]               dateTimeBytes )
+  public DateStamper( int dirEntries, byte[] dateTimeBytes )
   {
-    this.ftvFactory  = ftvFactory;
     this.dateTimeLen = dirEntries * 16;
     if( dateTimeBytes != null ) {
       this.dateTimeBytes = dateTimeBytes;
@@ -58,26 +51,16 @@ public class DateStamper
       this.dateTimeBytes[ dstPos ] = (byte) text.charAt( srcPos++ );
       dstPos += 0x10;
     }
+    this.pos = 0;
   }
 
 
   public void addFileTimes( File file )
   {
-    FileTimesView ftv = null;
-    if( file != null ) {
-      ftv = this.ftvFactory.getFileTimesView( file );
-    }
-    if( ftv != null ) {
-      writeDateTimeEntry( ftv.getCreationMillis() );
-      writeDateTimeEntry( ftv.getLastAccessMillis() );
-      writeDateTimeEntry( ftv.getLastModifiedMillis() );
-    } else {
-      for( int i = 0; i < 15; i++ ) {
-	if( (pos < this.dateTimeLen) && (pos < this.dateTimeBytes.length) ) {
-	  this.dateTimeBytes[ this.pos++ ] = (byte) 0;
-	}
-      }
-    }
+    FileTimesData ftd = FileTimesData.createOf( file );
+    writeDateTimeEntry( ftd.getCreationMillis() );
+    writeDateTimeEntry( ftd.getLastAccessMillis() );
+    writeDateTimeEntry( ftd.getLastModifiedMillis() );
     this.pos++;
   }
 
@@ -175,7 +158,7 @@ public class DateStamper
 	synchronized( calendar ) {
 	  calendar.clear();
 	  calendar.setTimeInMillis( millis.longValue() );
-	  int year = this.calendar.get( Calendar.YEAR );
+	  int year = calendar.get( Calendar.YEAR );
 	  if( (year >= 1978) && (year < 2078) ) {
 	    this.dateTimeBytes[ this.pos++ ] = toBcdByte( year );
 	    this.dateTimeBytes[ this.pos++ ] =
@@ -191,7 +174,7 @@ public class DateStamper
 	}
       }
       if( !done ) {
-	for( int i = 0; i < 15; i++ ) {
+	for( int i = 0; i < 5; i++ ) {
 	  this.dateTimeBytes[ this.pos++ ] = (byte) 0;
 	}
       }

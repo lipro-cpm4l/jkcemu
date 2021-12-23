@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,23 +13,23 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.RAMFloppy;
-import jkcemu.base.RAMFloppiesSettingsFld;
-import jkcemu.base.RAMFloppySettingsFld;
-import jkcemu.base.SettingsFrm;
 import jkcemu.base.UserInputException;
+import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.A5105;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.RAMFloppiesSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class A5105SettingsFld extends AbstractSettingsFld
@@ -37,13 +37,15 @@ public class A5105SettingsFld extends AbstractSettingsFld
   private JTabbedPane            tabbedPane;
   private JPanel                 tabEtc;
   private RAMFloppiesSettingsFld tabRF;
+  private GIDESettingsFld        tabGIDE;
   private AutoLoadSettingsFld    tabAutoLoad;
   private AutoInputSettingsFld   tabAutoInput;
-  private JCheckBox              btnFloppyDisk;
-  private JCheckBox              btnKCNet;
-  private JCheckBox              btnVDIP;
-  private JCheckBox              btnPasteFast;
-  private JCheckBox              btnFixedScreenSize;
+  private JCheckBox              cbFloppyDisk;
+  private JCheckBox              cbK1520Sound;
+  private JCheckBox              cbKCNet;
+  private JCheckBox              cbVDIP;
+  private JCheckBox              cbPasteFast;
+  private JCheckBox              cbFixedScreenSize;
 
 
   public A5105SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -51,7 +53,7 @@ public class A5105SettingsFld extends AbstractSettingsFld
     super( settingsFrm, propPrefix );
 
     setLayout( new BorderLayout() );
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
@@ -66,8 +68,13 @@ public class A5105SettingsFld extends AbstractSettingsFld
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
 
 
+    // Tab GIDE
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
+    this.tabbedPane.addTab( "GIDE", this.tabGIDE );
+
+
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -79,33 +86,38 @@ public class A5105SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Station", true );
-    this.tabEtc.add( this.btnFloppyDisk, gbcEtc );
+    this.cbFloppyDisk = GUIFactory.createCheckBox(
+					"Floppy-Disk-Station",
+					true );
+    this.tabEtc.add( this.cbFloppyDisk, gbcEtc );
 
-    this.btnKCNet = new JCheckBox( "KCNet-kompatible Netzwerkkarte", false );
-    gbcEtc.insets.top = 0;
+    this.cbK1520Sound = GUIFactory.createCheckBox( "K1520-Sound-Karte" );
+    gbcEtc.insets.top  = 0;
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnKCNet, gbcEtc );
+    this.tabEtc.add( this.cbK1520Sound, gbcEtc );
 
-    this.btnVDIP = new JCheckBox(
-			"USB-Anschluss (Vinculum VDIP Modul)",
-			false );
+    this.cbKCNet = GUIFactory.createCheckBox(
+				"KCNet-kompatible Netzwerkkarte" );
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnVDIP, gbcEtc );
+    this.tabEtc.add( this.cbKCNet, gbcEtc );
 
-    this.btnPasteFast = new JCheckBox(
-		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs",
-		true );
-    this.btnPasteFast.addActionListener( this );
+    this.cbVDIP = GUIFactory.createCheckBox(
+				"USB-Anschluss (Vinculum VDIP Modul)" );
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnPasteFast, gbcEtc );
+    this.tabEtc.add( this.cbVDIP, gbcEtc );
 
-    this.btnFixedScreenSize = new JCheckBox(
+    this.cbPasteFast = GUIFactory.createCheckBox(
+		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs" );
+    gbcEtc.insets.top = 20;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.cbPasteFast, gbcEtc );
+
+    this.cbFixedScreenSize = GUIFactory.createCheckBox(
 		"Gleiche Fenstergr\u00F6\u00DFe in allen Bildschirmmodi" );
-    this.btnFixedScreenSize.addActionListener( this );
+    gbcEtc.insets.top    = 0;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnFixedScreenSize, gbcEtc );
+    this.tabEtc.add( this.cbFixedScreenSize, gbcEtc );
 
 
     // Tab AutoLoad
@@ -121,16 +133,19 @@ public class A5105SettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 				settingsFrm,
 				propPrefix,
+				A5105.getAutoInputCharSet(),
 				A5105.DEFAULT_SWAP_KEY_CHAR_CASE,
-				A5105.FUNCTION_KEY_COUNT,
 				A5105.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
-    this.btnFloppyDisk.addActionListener( this );
-    this.btnKCNet.addActionListener( this );
-    this.btnVDIP.addActionListener( this );
+    this.cbFloppyDisk.addActionListener( this );
+    this.cbK1520Sound.addActionListener( this );
+    this.cbKCNet.addActionListener( this );
+    this.cbVDIP.addActionListener( this );
+    this.cbPasteFast.addActionListener( this );
+    this.cbFixedScreenSize.addActionListener( this );
   }
 
 
@@ -148,27 +163,35 @@ public class A5105SettingsFld extends AbstractSettingsFld
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
+      // Tab GIDE
+      tab = this.tabGIDE;
+      this.tabGIDE.applyInput( props, selected );
+
       // Tab Sonstiges
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + A5105.PROP_FDC_ENABLED,
-		Boolean.toString( this.btnFloppyDisk.isSelected() ) );
+		this.cbFloppyDisk.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + A5105.PROP_K1520SOUND_ENABLED,
+		this.cbK1520Sound.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + A5105.PROP_KCNET_ENABLED,
-		this.btnKCNet.isSelected() );
+		this.cbKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + A5105.PROP_VDIP_ENABLED,
-                this.btnVDIP.isSelected() );
+                this.cbVDIP.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + A5105.PROP_PASTE_FAST,
-		Boolean.toString( this.btnPasteFast.isSelected() ) );
+		this.cbPasteFast.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + A5105.PROP_FIXED_SCREEN_SIZE,
-		this.btnFixedScreenSize.isSelected() );
+		this.cbFixedScreenSize.isSelected() );
 
       // Tab AutoLoad
       tab = this.tabAutoLoad;
@@ -193,7 +216,10 @@ public class A5105SettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      rv = this.tabAutoLoad.doAction( e );
+      rv = this.tabGIDE.doAction( e );
+      if( !rv ) {
+	rv = this.tabAutoLoad.doAction( e );
+      }
       if( !rv ) {
 	rv = this.tabAutoInput.doAction( e );
       }
@@ -207,46 +233,44 @@ public class A5105SettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabRF.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     this.tabRF.updFields( props );
+    this.tabGIDE.updFields( props );
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );
 
-    this.btnFloppyDisk.setSelected(
+    this.cbFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + A5105.PROP_FDC_ENABLED,
 			true ) );
 
-    this.btnKCNet.setSelected(
+    this.cbK1520Sound.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + A5105.PROP_K1520SOUND_ENABLED,
+			false ) );
+
+    this.cbKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + A5105.PROP_KCNET_ENABLED,
 			false ) );
 
-    this.btnVDIP.setSelected(
+    this.cbVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + A5105.PROP_VDIP_ENABLED,
 			false ) );
 
-    this.btnPasteFast.setSelected(
+    this.cbPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + A5105.PROP_PASTE_FAST,
 			true ) );
 
-    this.btnFixedScreenSize.setSelected(
+    this.cbFixedScreenSize.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + A5105.PROP_FIXED_SCREEN_SIZE,

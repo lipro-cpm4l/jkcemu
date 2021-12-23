@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,31 +19,51 @@ import java.awt.image.DataBufferByte;
 import java.awt.image.ImageObserver;
 import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
-import java.lang.*;
+import java.awt.image.RasterFormatException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Map;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.stream.ImageOutputStream;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
+import jkcemu.Main;
 
 
 public class AnimatedGIFWriter implements ImageObserver
 {
-  public static class FrameData
+  private static class FrameData
   {
-    public int    delayMillis;
-    public int    colorDepth;
-    public int    colorTabSize;
-    public byte[] colorTab;
-    public byte[] pixels;
+    private BufferedImage image;
+    private int           delayMillis;
+    private int           colorDepth;
+    private byte[]        reds;
+    private byte[]        greens;
+    private byte[]        blues;
+    private byte[]        pixels;
 
-    public FrameData(
-		int    colorDepth,
-		int    colorTabSize,
-		byte[] colorTab,
-		byte[] pixels )
+    private FrameData(
+		BufferedImage image,
+		int           colorDepth,
+		byte[]        reds,
+		byte[]        greens,
+		byte[]        blues,
+		byte[]        pixels )
     {
-      this.delayMillis  = 0;
-      this.colorDepth   = colorDepth;
-      this.colorTabSize = colorTabSize;
-      this.colorTab     = colorTab;
-      this.pixels       = pixels;
+      this.image       = image;
+      this.delayMillis = 0;
+      this.colorDepth  = colorDepth;
+      this.reds        = reds;
+      this.greens      = greens;
+      this.blues       = blues;
+      this.pixels      = pixels;
     }
   };
 
@@ -58,51 +78,60 @@ public class AnimatedGIFWriter implements ImageObserver
    * auf die untere Grenze des jeweiligen Bereichs gemappt werden,
    * was das Bild etwas dunkler erscheinen laesst.
    * Mit Hilfe der Tabelle wird dieser Effekt unterdrueckt.
+   *
+   * Die Werte in der Tabelle entsprechen den Web Safe Colors.
    */
-  private static final int[] color6Map = { 0, 51, 102, 153, 204, 255 };
+  private static final int[] color6Map = { 0, 0x33, 0x66, 0x99, 0xCC, 0xFF };
 
-  private OutputStream    out;
-  private boolean         infinite;
-  private boolean         firstFrame;
-  private boolean         forceColorReduction;
-  private boolean         smoothColorReduction;
-  private int             curTransparencyIdx;
-  private int             curColorDepth;
-  private int             curColorTabSize;
-  private byte[]          curColorTab;
-  private byte[]          curPixels;
-  private int             width;
-  private int             height;
-  private int             globalColorDepth;
-  private int             globalColorTabSize;
-  private byte[]          globalColorTab;
-  private IndexColorModel indexColorModel255;
-  private FrameData       prevFrame;
+  private boolean                      infinite;
+  private boolean                      force256Colors;
+  private boolean                      smoothColorReduction;
+  private boolean                      firstFrame;
+  private int                          width;
+  private int                          height;
+  private int                          globalColorDepth;
+  private byte[]                       globalReds;
+  private byte[]                       globalGreens;
+  private byte[]                       globalBlues;
+  private IndexColorModel              defaultColorModel;
+  private FrameData                    prevFrame;
+  private MemoryCacheImageOutputStream out;
+  private ImageWriter                  imgWriter;
 
 
   public AnimatedGIFWriter(
 		OutputStream out,
+		boolean      force256Colors,
 		boolean      smoothColorReduction,
 		boolean      infinite ) throws IOException
   {
-    this.out                  = out;
     this.infinite             = infinite;
+    this.force256Colors       = force256Colors;
     this.smoothColorReduction = smoothColorReduction;
-    this.forceColorReduction  = false;
     this.firstFrame           = true;
-    this.curTransparencyIdx   = -1;
-    this.curColorDepth        = 0;
-    this.curColorTabSize      = 0;
-    this.curColorTab          = null;
-    this.curPixels            = null;
     this.width                = 0;
     this.height               = 0;
     this.globalColorDepth     = 0;
-    this.globalColorTabSize   = 0;
-    this.globalColorTab       = null;
-    this.indexColorModel255   = null;
+    this.globalReds           = null;
+    this.globalGreens         = null;
+    this.globalBlues          = null;
+    this.defaultColorModel    = null;
     this.prevFrame            = null;
-    writeASCII( "GIF89a" );
+    this.imgWriter            = null;
+
+    Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName( "gif" );
+    while( iter.hasNext() ) {
+      ImageWriter imgWriter = iter.next();
+      if( imgWriter.canWriteSequence() ) {
+	this.imgWriter = imgWriter;
+      }
+    }
+    if( this.imgWriter == null ) {
+      throwAnimatedGIFFailed(
+		"Keinen passenden GIF-ImageWriter gefunden" );
+    }
+    this.out = new MemoryCacheImageOutputStream( out );
+    this.imgWriter.setOutput( this.out );
   }
 
 
@@ -117,34 +146,37 @@ public class AnimatedGIFWriter implements ImageObserver
    * auf das vorherige Frame addiert.
    */
   public void addFrame(
-			int           millisBefore,
-			BufferedImage image ) throws IOException
+		int           millisBefore,
+		BufferedImage image ) throws IOException
   {
-    boolean rv = false;
-    if( this.out != null ) {
-      if( this.prevFrame != null ) {
-	this.prevFrame.delayMillis += millisBefore;
-      }
-      FrameData frame = createFrameData( image );
-      if( frame != null ) {
-	if( this.prevFrame != null ) {
-	  if( (frame.colorDepth != this.prevFrame.colorDepth)
-	      || (frame.colorTabSize != this.prevFrame.colorTabSize)
-	      || !Arrays.equals( frame.colorTab, this.prevFrame.colorTab )
-	      || !Arrays.equals( frame.pixels, this.prevFrame.pixels ) )
-	  {
-	    writeFrame( this.prevFrame );
-	    this.prevFrame = frame;
-	  }
+    if( this.prevFrame != null ) {
+      this.prevFrame.delayMillis += millisBefore;
+    }
+    FrameData frame = createFrameData( image );
+    if( this.prevFrame != null ) {
+      if( (frame.colorDepth == this.prevFrame.colorDepth)
+	  && (frame.pixels != null) && (this.prevFrame.pixels != null)
+	  && Arrays.equals( frame.reds,   this.prevFrame.reds )
+	  && Arrays.equals( frame.greens, this.prevFrame.greens )
+	  && Arrays.equals( frame.blues,  this.prevFrame.blues ) )
+      {
+	if( Arrays.equals( frame.pixels,  this.prevFrame.pixels ) ) {
 	} else {
-	  this.width              = image.getWidth();
-	  this.height             = image.getHeight();
-	  this.globalColorDepth   = frame.colorDepth;
-	  this.globalColorTabSize = frame.colorTabSize;
-	  this.globalColorTab     = frame.colorTab;
-	  this.prevFrame          = frame;
+	  writeFrame( this.prevFrame );
+	  this.prevFrame = frame;
 	}
+      } else {
+	writeFrame( this.prevFrame );
+	this.prevFrame = frame;
       }
+    } else {
+      this.width            = image.getWidth();
+      this.height           = image.getHeight();
+      this.globalColorDepth = frame.colorDepth;
+      this.globalReds       = frame.reds;
+      this.globalGreens     = frame.greens;
+      this.globalBlues      = frame.blues;
+      this.prevFrame        = frame;
     }
     image.flush();
   }
@@ -154,24 +186,22 @@ public class AnimatedGIFWriter implements ImageObserver
    * Die Methode schreibt alle gepufferten Daten und beendet
    * das animierte GIF-Bild.
    * Der OutputStream wird nicht geschlossen.
+   *
+   * Rueckgabe:
+   *   true:  GIF-Datei enthaelt mindestens 1 Bild
+   *   false: GIF-Datei enthaelt keine Bilder
    */
   public boolean finish() throws IOException
   {
     boolean rv = false;
-    if( this.out != null ) {
-      try {
-	if( this.prevFrame != null ) {
-	  writeFrame( this.prevFrame );
-	  this.prevFrame = null;
-	  this.out.write( 0x3B );		// GIF-Endekennung
-	  this.out.flush();
-	  rv = true;
-	}
-      }
-      finally {
-	this.out = null;
-      }
+    if( this.prevFrame != null ) {
+      writeFrame( this.prevFrame );
+      this.prevFrame = null;
+      this.imgWriter.endWriteSequence();
+      this.out.flushBefore( this.out.length() );
+      rv = true;
     }
+    this.imgWriter.dispose();
     return rv;
   }
 
@@ -193,271 +223,304 @@ public class AnimatedGIFWriter implements ImageObserver
 
 	/* --- private Methoden --- */
 
+  private static void appendColorTab(
+				IIOMetadataNode parent,
+				String          nodeName,
+				byte[]          reds,
+				byte[]          greens,
+				byte[]          blues )
+  {
+    if( (reds != null) && (greens != null) && (blues != null) ) {
+      int nEntries = Math.min(
+			reds.length,
+			Math.min( greens.length, blues.length ) );
+      if( nEntries > 0 ) {
+	IIOMetadataNode node = new IIOMetadataNode( nodeName );
+	node.setAttribute( "backgroundColorIndex", "0" );
+	node.setAttribute(
+			"sizeOf" + nodeName,
+			Integer.toString( nEntries ) );
+	node.setAttribute( "sortFlag", "FALSE" );
+	for( int i = 0; i < nEntries; i++ ) {
+	  IIOMetadataNode child = new IIOMetadataNode( "ColorTableEntry" );
+	  child.setAttribute( "index", Integer.toString( i ) );
+	  child.setAttribute(
+			"red",
+			Integer.toString( (int) reds[ i ] & 0xFF ) );
+	  child.setAttribute(
+			"green",
+			Integer.toString( (int) greens[ i ] & 0xFF ) );
+	  child.setAttribute(
+			"blue",
+			Integer.toString( (int) blues[ i ] & 0xFF ) );
+	  node.appendChild( child );
+	}
+	parent.appendChild( node );
+      }
+    }
+  }
+
+
   /*
    * Die Methode erzeugt aus einem Bild ein FrameData-Objekt,
    * in dem die Bild- und Farbdaten im benoetigten Format vorliegen.
-   * Ist das nicht moeglich, wird null zurueckgeliefert.
    */
   private FrameData createFrameData( BufferedImage image )
   {
-    FrameData rv         = null;
-    this.curColorDepth   = 0;
-    this.curColorTabSize = 0;
-    this.curColorTab     = null;
-    this.curPixels       = null;
-    if( image != null ) {
-      int w = image.getWidth();
-      int h = image.getHeight();
-      if( (w > 0) && (h > 0) ) {
-	if( (this.width < 1) || (this.height < 1) ) {
-	  this.width  = w;
-	  this.height = h;
+    boolean forceNewImg = this.force256Colors;
+
+    /*
+     * wenn Farbtabelle vorhanden,
+     * dann diese bei Bedarf auf ein Vielfaches von 2 erweitern
+     */
+    byte[]          reds       = null;
+    byte[]          greens     = null;
+    byte[]          blues      = null;
+    int             colorDepth = 0;
+    IndexColorModel icm        = null;
+    if( !forceNewImg ) {
+      icm = ImageUtil.getIndexColorModel( image );
+      if( icm != null ) {
+	int nColors = icm.getMapSize();
+	if( (nColors >= 2) && (nColors <= 256) ) {
+	  int newSize = 1;
+	  int m       = nColors - 1;
+	  while( m != 0 ) {
+	    colorDepth++;
+	    newSize <<= 1;
+	    m >>= 1;
+	  }
+	  reds   = new byte[ newSize ];
+	  greens = new byte[ newSize ];
+	  blues  = new byte[ newSize ];
+	  for( int i = 0; i < nColors; i++ ) {
+	    reds[ i ]   = (byte) icm.getRed( i );
+	    greens[ i ] = (byte) icm.getGreen( i );
+	    blues[ i ]  = (byte) icm.getBlue( i );
+	  }
+	  for( int i = nColors; i < newSize; i++ ) {
+	    reds[ i ]   = (byte) 0;
+	    greens[ i ] = (byte) 0;
+	    blues[ i ]  = (byte) 0;
+	  }
+	  try {
+	    IndexColorModel newICM = new IndexColorModel(
+						colorDepth,
+						newSize,
+						reds,
+						greens,
+						blues );
+	
+	    BufferedImage newImg = new BufferedImage(
+						newICM,
+						image.getRaster(),
+						false,
+						null );
+	    image.flush();
+	    image = newImg;
+	  }
+	  catch( IllegalArgumentException | RasterFormatException ex ) {
+	    forceNewImg = true;
+	  }
+	} else {
+	  forceNewImg = true;
 	}
-	if( (w == this.width) && (h == this.height) ) {
-	  /*
-	   * Pruefen, ob die Bilddaten im benoetigten Format vorliegen,
-	   * und wenn ja, dann diese auch entsprechend auslesen
-	   */
-	  extractCompatibleImageData( image );
+      }
+    }
+
+    // ggf. Image zuschneiden
+    int wImg = image.getWidth();
+    int hImg = image.getHeight();
+    if( !forceNewImg
+	&& (((this.width > 0) && (wImg != this.width))
+		|| ((this.height > 0) && (hImg != this.height))) )
+    {
+      BufferedImage newImg = null;
+      if( (wImg >= this.width) && (hImg >= this.height) ) {
+	try {
+	  newImg = image.getSubimage( 0, 0, this.width, this.height );
+	  image.flush();
+	  image = newImg;
+	  wImg  = this.width;
+	  hImg  = this.height;
 	}
-	if( ((this.curColorDepth < 1) || (this.curColorTabSize < 1)
-		    || (this.curColorTab == null) || (this.curPixels == null))
-	    && (!this.forceColorReduction || !this.smoothColorReduction) )
-	{
-	  /*
-	   * Die Bilddaten liegen nicht im benoetigen Format vor.
-	   * Wenn die Anzahl der Farben 256 nicht uebersteigt,
-	   * kann man diese verlustfrei konvertieren.
-	   * Dazu werden alle Pixel ausgelesen und eine
-	   * Farb- sowie eine Pixelindextabelle aufgebaut.
-	   * Bei der 257. Farbe wird das ganze noch einmal gemacht,
-	   * allerdings mit Farbreduktion auf einen 6:6:6-Wuerfel,
-	   * so dass max. 6^3=216 Farben uebrig bleiben koennen.
-	   * Wenn bei einem Frame die Farbreduktion notwendig ist,
-	   * wird davon ausgegangen, dass das auch bei den nachfolgenden
-	   * Frames so sein wird und deshalb aus Gruenden der Performance
-	   * gleich die verlustbehaftete Konvertierung gestartet wird.
-	   */
-	  int    tabPos       = 0;
-	  int[]  sortedRGBs   = new int[ 256 ];
-	  byte[] colorIndexes = new byte[ 256 ];
-	  byte[] colorTab     = new byte[ 3 * 256 ];
-	  byte[] pixels       = new byte[ this.width * this.height ];
-	  do {
-	    int nColors  = 0;
-	    int pixelPos = 0;
-	    for( int y = 0; (nColors >= 0) && (y < this.height); y++ ) {
-	      for( int x = 0; x < this.width; x++ ) {
-		int rgb = 0xFF000000;			// schwarz
-		if( (x < w) && (y < h) ) {
-		  rgb = image.getRGB( x, y );
-		  if( this.forceColorReduction ) {
-		    /*
-		     * Jede Primaerfarbe wird von 256 auf 6 moegliche Werte
-		     * reduziert, indem durch 43 geteilt (ergibt 0-5)
-		     * und anschliessend ueber eine Tabelle wieder
-		     * auf den Wertebereich 0-255 gemappt wird.
-		     */
-		    int r = ((rgb >> 16) & 0xFF) / 43;
-		    int g = ((rgb >> 8) & 0xFF) / 43;
-		    int b = (rgb & 0xFF) / 43;
-		    rgb   = 0xFF000000
-				| (color6Map[ r ] << 16)
-				| (color6Map[ g ] << 8)
-				| color6Map[ b ];
-		  }
-		}
-		boolean found = false;
-		int     pos   = 0;
-		if( nColors > 0 ) {
-		  pos = Arrays.binarySearch( sortedRGBs, 0, nColors, rgb );
-		  if( pos >= 0 ) {
-		    // Farbe bereits vorhanden -> nicht einfuegen
-		    found = true;
-		  } else {
-		    if( nColors >= 256 ) {
-		      nColors = -1;		// Tabelle zu klein
-		      break;
-		    }
-		    pos = -pos - 1;
-		    for( int i = nColors - 2; i >= pos; --i ) {
-		      sortedRGBs[ i + 1 ]   = sortedRGBs[ i ];
-		      colorIndexes[ i + 1 ] = colorIndexes[ i ];
-		    }
-		  }
-		}
-		if( !found ) {
-		  sortedRGBs[ pos ]    = rgb;
-		  colorIndexes[ pos ]  = (byte) (tabPos / 3);
-		  colorTab[ tabPos++ ] = (byte) ((rgb >> 16) & 0xFF);
-		  colorTab[ tabPos++ ] = (byte) ((rgb >> 8) & 0xFF);
-		  colorTab[ tabPos++ ] = (byte) (rgb & 0xFF);
-		  nColors++;
-		}
-		if( nColors > 0 ) {
-		  pixels[ pixelPos++ ] = colorIndexes[ pos ];
-		}
-	      }
-	    }
-	    if( nColors > 0 ) {
-	      if( nColors < 256 ) {
-		Arrays.fill(
-			colorTab,
-			3 * nColors,
-			colorTab.length,
-			(byte) 0 );
-	      }
-	      this.curColorDepth   = 8;
-	      this.curColorTabSize = colorTab.length;
-	      this.curColorTab     = colorTab;
-	      this.curPixels       = pixels;
-	      break;
-	    }
-	    /*
-	     * Auf Farbreduktion umschalten
-	     * Ist "smoothColorReduction" aktiviert,
-	     * wird dies ueber ein BufferedImage erledigt.
-	     */
-	    if( this.smoothColorReduction ) {
-	      break;
-	    }
-	    if( this.forceColorReduction ) {
-	      break;			// sollte niemals erreicht werden
-	    }
-	    this.forceColorReduction = true;
-	  } while( !this.forceColorReduction );
-	}
-	if( ((this.curColorDepth < 1) || (this.curColorTabSize < 1)
-		|| (this.curColorTab == null) || (this.curPixels == null))
-	    && this.smoothColorReduction )
-	{
-	  BufferedImage convImg = new BufferedImage(
+	catch( RasterFormatException ex ) {}
+      }
+      if( newImg == null ) {
+	forceNewImg = true;
+      }
+    }
+    if( (this.width < 1) || (this.height < 1) ) {
+      this.width  = wImg;
+      this.height = hImg;
+    }
+
+    /*
+     * wenn keine Farbtabelle vorhanden,
+     * dann Standardfarbtabelle nehmen
+     */
+    if( forceNewImg || (icm == null) ) {
+      icm                  = getDefaultColorModel();
+      colorDepth           = 8;
+      boolean       done   = false;
+      BufferedImage newImg = new BufferedImage(
 					this.width,
 					this.height,
 					BufferedImage.TYPE_BYTE_INDEXED,
-					getIndexColorModel255() );
-	  Graphics g = convImg.createGraphics();
-	  if( (w < this.width) || (h < this.height) ) {
-	    g.setColor( Color.black );
-	    g.fillRect( 0, 0, this.width, this.height );
+					icm );
+      if( !this.smoothColorReduction ) {
+	// harte, pixelweise Farbumrechnung
+	DataBuffer buffer = newImg.getRaster().getDataBuffer();
+	if( buffer != null ) {
+	  if( (buffer instanceof DataBufferByte)
+	      && (buffer.getSize() == (this.width * this.height)) )
+	  {
+	    DataBufferByte bb  = (DataBufferByte) buffer;
+	    int            dst = 0;
+	    for( int y = 0; y < this.height; y++ ) {
+	      for( int x = 0; x < this.width; x++ ) {
+		int rIdx = 0;
+		int gIdx = 0;
+		int bIdx = 0;
+		if( (x < wImg) && (y < hImg) ) {
+		  int rgb = image.getRGB( x, y );
+		  rIdx    = ((rgb >> 16) & 0xFF) / 43;
+		  gIdx    = ((rgb >> 8) & 0xFF) / 43;
+		  bIdx    = (rgb & 0xFF) / 43;
+		}
+		bb.setElem( dst++, (rIdx * 36) + (gIdx * 6) + bIdx );
+	      }
+	    }
+	    done = true;
 	  }
-	  g.drawImage( image, 0, 0, this );
-	  g.dispose();
-	  extractCompatibleImageData( convImg );
-	}
-	if( (this.curColorDepth > 0) && (this.curColorTabSize > 0)
-	    && (this.curColorTab != null) && (this.curPixels != null) )
-	{
-	  rv = new FrameData(
-			this.curColorDepth,
-			this.curColorTabSize,
-			this.curColorTab,
-			this.curPixels );
 	}
       }
+      if( !done ) {
+	// weiche Farbumrechnung, bei der u.U. gerastert wird
+	Graphics g = newImg.createGraphics();
+	if( (wImg > this.width) || (hImg > this.height) ) {
+	  g.setColor( Color.BLACK );
+	  g.fillRect( 0, 0, this.width, this.height );
+	}
+	g.drawImage( image, 0, 0, this );
+	g.dispose();
+      }
+      image.flush();
+      image = newImg;
     }
-    return rv;
-  }
 
-
-  private void extractCompatibleImageData( BufferedImage image )
-  {
-    IndexColorModel icm = ImgUtil.getIndexColorModel( image );
-    if( icm != null ) {
+    // Frame-Daten ermitteln
+    if( (reds == null) || (greens == null) || (blues == null) ) {
       int mapSize = icm.getMapSize();
-      if( (mapSize > 0) && (mapSize <= 255) ) {
-	Raster raster = image.getRaster();
-	if( raster != null ) {
-	  DataBuffer dataBuf = raster.getDataBuffer();
-	  if( dataBuf != null ) {
-	    if( dataBuf instanceof DataBufferByte ) {
-	      byte[] pixels = ((DataBufferByte) dataBuf).getData();
-	      if( pixels != null ) {
-		if( pixels.length == (this.width * this.height) ) {
-		  this.curTransparencyIdx = mapSize;
-		  this.curPixels          = pixels;
-		  this.curColorDepth      = 8;
-		  this.curColorTabSize    = 3 * 256;
-		  this.curColorTab        = new byte[ 3 * mapSize ];
-
-		  // Farbpalette fuellen
-		  int src = 0;
-		  int dst = 0;
-		  while( (src < mapSize)
-			 && (dst < this.curColorTab.length) )
-		  {
-		    this.curColorTab[ dst++ ] = (byte) icm.getRed( src );
-		    this.curColorTab[ dst++ ] = (byte) icm.getGreen( src );
-		    this.curColorTab[ dst++ ] = (byte) icm.getBlue( src );
-		    src++;
-		  }
-		}
-	      }
+      colorDepth  = 1;
+      if( mapSize > 16 ) {
+	colorDepth = 8;
+      } else if( mapSize > 4 ) {
+	colorDepth = 4;
+      } else if( mapSize > 2 ) {
+	colorDepth = 2;
+      }
+      reds   = new byte[ mapSize ];
+      greens = new byte[ mapSize ];
+      blues  = new byte[ mapSize ];
+      icm.getReds( reds );
+      icm.getGreens( greens );
+      icm.getBlues( blues );
+    }
+    byte[] pixels = null;
+    Raster raster = image.getRaster();
+    if( raster != null ) {
+      DataBuffer buffer = raster.getDataBuffer();
+      if( buffer != null ) {
+	if( buffer instanceof DataBufferByte ) {
+	  byte[] p = ((DataBufferByte) buffer).getData();
+	  if( p != null ) {
+	    if( p.length > 0 ) {
+	      pixels = p;
 	    }
 	  }
 	}
       }
     }
+    return new FrameData(
+			image,
+			colorDepth,
+			reds,
+			greens,
+			blues,
+			pixels );
   }
 
 
   /*
-   * Diese Methode liefert ein indexiertes Farbmodell mit 255 Farben.
-   * Die 256. Farbe ist reserviert fuer die Transparenz und
-   * darf deshalb nicht belegt werden.
+   * Die Methode liefert ein indexiertes Farbmodell,
+   * welches verwendet wird, wenn das Bild keins hat.
+   * Das Farbmodell enthaelt 6*6*6=216 belegte Eintraege,
+   * die sortiert sind, damit man bei der Ermittlung des Farbindexes
+   * diesen direkt berechnen kann.
    */
-  private IndexColorModel getIndexColorModel255()
+  private synchronized IndexColorModel getDefaultColorModel()
   {
-    if( this.indexColorModel255 == null ) {
-      byte[] r = new byte[ 256 ];
-      byte[] g = new byte[ 256 ];
-      byte[] b = new byte[ 256 ];
-      int    p = 0;
-      // 0-215: Farben (6*6*6=216)
-      for( int i = 0; i < 6; i++ ) {
-	for( int j = 0; j < 6; j++ ) {
-	  for( int k = 0; k < 6; k++ ) {
-	    r[ p ] = (byte) color6Map[ i ];
-	    g[ p ] = (byte) color6Map[ j ];
-	    b[ p ] = (byte) color6Map[ k ];
-	    p++;
+    if( this.defaultColorModel == null ) {
+      byte[] reds   = new byte[ 256 ];
+      byte[] greens = new byte[ 256 ];
+      byte[] blues  = new byte[ 256 ];
+      int    idx    = 0;
+      for( int r = 0; r < 6; r++ ) {
+	for( int g = 0; g < 6; g++ ) {
+	  for( int b = 0; b < 6; b++ ) {
+	    reds[ idx ]   = (byte) color6Map[ r ];
+	    greens[ idx ] = (byte) color6Map[ g ];
+	    blues[ idx ]  = (byte) color6Map[ b ];
+	    idx++;
 	  }
 	}
       }
-      // 216-253: Graustufen
-      int d = 256 / (254 - p);
-      int v = d;
-      while( p < 254 ) {
-	r[ p ] = (byte) v;
-	g[ p ] = (byte) v;
-	b[ p ] = (byte) v;
-	v += d;
-	p++;
+      while( idx < reds.length ) {
+	reds[ idx ]   = (byte) 0;
+	greens[ idx ] = (byte) 0;
+	blues[ idx ]  = (byte) 0;
+	idx++;
       }
-      // 254-255: weiss (davon Position 255 fuer Transparenz reserviert)
-      this.indexColorModel255 = new IndexColorModel( 8, 255, r, g, b, 255 );
+      this.defaultColorModel = new IndexColorModel(
+						8,
+						256,
+						reds,
+						greens,
+						blues );
     }
-    return this.indexColorModel255;
+    return this.defaultColorModel;
   }
 
 
-  private void writeASCII( String s ) throws IOException
+  private static void setFromTree(
+			IIOMetadata      metadata,
+			org.w3c.dom.Node root ) throws IOException
   {
-    int n = s.length();
-    for( int i = 0; i < n; i++ ) {
-      this.out.write( (byte) s.charAt( i ) );
+    try {
+      metadata.setFromTree(
+			metadata.getNativeMetadataFormatName(),
+			root );
+    }
+    catch( Exception ex ) {
+      throwAnimatedGIFFailed( ex.getMessage() );
     }
   }
 
 
-  private void writeColorTab(
-			int    colorTabSize,
-			byte[] colorTab ) throws IOException
+  private static void throwAnimatedGIFFailed( String detailMsg )
+							throws IOException
   {
-    this.out.write( colorTab );
-    for( int i = colorTab.length; i < colorTabSize; i++ ) {
-      this.out.write( 0 );
+    StringBuilder buf = new StringBuilder( 512 );
+    buf.append( "Mit der verwendeten Java-Laufzeitumgebung k\u00F6nnen\n"
+		+ "keine animierten GIF-Dateien erzeugt werden." );
+    if( detailMsg != null ) {
+      if( !detailMsg.isEmpty() ) {
+	buf.append( "\n\nDetails:\n" );
+	buf.append( detailMsg );
+      }
     }
+    throw new IOException( buf.toString() );
   }
 
 
@@ -465,88 +528,160 @@ public class AnimatedGIFWriter implements ImageObserver
   {
     if( this.firstFrame ) {
 
+      // StreamMetadata fuer globale Einstellungen
+      IIOMetadata streamMetadata = this.imgWriter.getDefaultStreamMetadata(
+								null );
+      if( streamMetadata == null ) {
+	throwAnimatedGIFFailed( "DefaultStreamMetadata == null" );
+      }
+      IIOMetadataNode streamRoot = new IIOMetadataNode(
+			streamMetadata.getNativeMetadataFormatName() );
+
+      // Version
+      IIOMetadataNode gifVersion = new IIOMetadataNode( "Version" );
+      gifVersion.setAttribute( "value", "89a" );
+      streamRoot.appendChild( gifVersion );
+
       // Logical Screen Descriptor
-      writeWord( this.width );
-      writeWord( this.height );
+      IIOMetadataNode lsd = new IIOMetadataNode( "LogicalScreenDescriptor" );
+      lsd.setAttribute(
+		"logicalScreenWidth",
+		Integer.toString( this.width ) );
+      lsd.setAttribute(
+		"logicalScreenHeight",
+		Integer.toString( this.height ) );
+      lsd.setAttribute(
+		"colorResolution",
+		Integer.toString( this.globalColorDepth ) );
+      lsd.setAttribute( "pixelAspectRatio", "0" );	// Pixelzuordnung 1:1
+      streamRoot.appendChild( lsd );
+
       /*
-       * globale Farbpalette:
-       *   Bit 0-2: Groesse (Bits - 1)
-       *   Bit 3:   sortiert (nein)
-       *   Bit 4-6: Aufloesung
-       *   Bit 7:   Farbpalette folgt (ja)
+       * Global Color Table
+       *
+       * Der ImageWriter schreibt die hier angegebene Farbpalette
+       * nur dann als globale in die GIF-Datei,
+       * wenn die Farbtiefe 8 Bit betraegt.
+       * In allen anderen Faellen uebernimmt er eine lokale Farbpalette
+       * als globale.
+       * Da dieses Verhalten aber nicht dokumentiert ist,
+       * wird hier die globale Farbpalette trotzdem immer angegeben.
        */
-      this.out.write( 0xF0 | (this.globalColorDepth - 1) );
-      this.out.write( 0 );		// Hintergrundfarbe
-      this.out.write( 0 );		// Pixelzuordnung 1:1
-      writeColorTab( this.globalColorTabSize, this.globalColorTab );
+      appendColorTab(
+		streamRoot,
+		"GlobalColorTable",
+		this.globalReds,
+		this.globalGreens,
+		this.globalBlues );
+
+      // Bildsequenz beginnen
+      setFromTree( streamMetadata, streamRoot );
+      this.imgWriter.prepareWriteSequence( streamMetadata );
+    }
+
+    // ImageMetadata fuer jedes einzelne Bild
+    IIOMetadata imgMetadata = this.imgWriter.getDefaultImageMetadata(
+		ImageTypeSpecifier.createFromRenderedImage( frame.image ),
+		null );
+    if( imgMetadata == null ) {
+      throwAnimatedGIFFailed( "DefaultImageMetadata == null" );
+    }
+    IIOMetadataNode imgRoot = new IIOMetadataNode(
+			imgMetadata.getNativeMetadataFormatName() );
+
+    /*
+     * CommentsExtensions und ApplicationExtensions sind nur
+     * in den Bild-Metadaten moeglich.
+     * Aus diesem Grund werden sie beim ersten Bild angegeben.
+     */
+    if( this.firstFrame ) {
 
       // Kommentar
-      final String comment = "Created by JKCEMU";
-      this.out.write( 0x21 );		// Extension Block
-      this.out.write( 0xFE );		// Kommentar
-      this.out.write( comment.length() );
-      writeASCII( comment );
-      this.out.write( 0 );		// Blockende
+      IIOMetadataNode commentNode = new IIOMetadataNode(
+						"CommentExtension" );
+      commentNode.setAttribute( "value", "Created by " + Main.APPNAME );
+
+      IIOMetadataNode commentsNode = new IIOMetadataNode(
+						"CommentExtensions" );
+      commentsNode.appendChild( commentNode );
+      imgRoot.appendChild( commentsNode );
 
       // Anzahl der Wiederholungen
       if( this.infinite ) {
-	this.out.write( 0x21 );		// Extension-Kennung
-	this.out.write( 0xFF );		// Extension-Label
-	this.out.write( 11 );		// Blockgroesse
-	writeASCII( "NETSCAPE2.0" );	// Applikations-ID
-	this.out.write( 3 );		// Groesse Unterblock
-	this.out.write( 1 );		// ID fuer Loop-Block
-	writeWord( 0 );			// Anzahl Wiederholungen, 0: unendlich
-	this.out.write( 0 );		// Blockende
+	IIOMetadataNode appNode = new IIOMetadataNode(
+						"ApplicationExtension" );
+	appNode.setAttribute( "applicationID", "NETSCAPE" );
+	appNode.setAttribute( "authenticationCode", "2.0" );
+	appNode.setUserObject(
+		new byte[] { 
+			(byte) 0x01,	// ID fuer Loop-Block
+			(byte) 0x00,	// Wiederholungen, 0: unendlich
+			(byte) 0x00 } );	// Blockende
+
+	IIOMetadataNode appsNode = new IIOMetadataNode(
+					"ApplicationExtensions" );
+	appsNode.appendChild( appNode );
+	imgRoot.appendChild( appsNode );
       }
     }
 
     // Graphic Control Extension
-    this.out.write( 0x21 );		// Extension-Kennung
-    this.out.write( 0xF9 );		// GCE-Kennung
-    this.out.write( 4 );		// Datenblockgroesse
-    this.out.write( 0 );		// keine Transparenz
-    writeWord( Math.round( frame.delayMillis / 10.0F ) );	// 1/100 sec.
-    this.out.write( 0 );		// Transparenzfarbe (nicht benutzt)
-    this.out.write( 0 );		// Blockende
+    IIOMetadataNode gce = new IIOMetadataNode( "GraphicControlExtension" );
+    gce.setAttribute( "disposalMethod", "none" );
+    gce.setAttribute( "userInputFlag", "FALSE" );
+    gce.setAttribute( "transparentColorFlag", "FALSE" );
+    gce.setAttribute(
+		"delayTime",
+		Integer.toString( Math.round( frame.delayMillis / 10.0F ) ) );
+    gce.setAttribute( "transparentColorIndex", "0" );	// nicht benutzt
+    imgRoot.appendChild( gce );
 
-    // Image Descriptor
-    this.out.write( 0x2C );		// Kennung fuer Bildblock
-    writeWord( 0 );			// Bildposition X-Koordinate
-    writeWord( 0 );			// Bildposition Y-Koordinate
-    writeWord( this.width );		// Bildbreite
-    writeWord( this.height );		// Bildhoehe
-    if( Arrays.equals( frame.colorTab, this.globalColorTab ) ) {
-      this.out.write( 0 );		// keine lokale Farbpalette
-    } else {
-      /*
-       * lokale Farbpalette:
-       *   Bit 0-2: Groesse (Bits - 1)
-       *   Bit 3-4: reserviert
-       *   Bit 5:   sortiert (nein)
-       *   Bit 6:   interlace (nein)
-       *   Bit 7:   Farbpalette folgt (ja)
-       */
-      this.out.write( 0x80 | (frame.colorDepth - 1) );
-      writeColorTab( frame.colorTabSize, frame.colorTab );
+    // Image descriptor
+    IIOMetadataNode imd = new IIOMetadataNode( "ImageDescriptor" );
+    imd.setAttribute( "imageLeftPosition", "0" );
+    imd.setAttribute( "imageTopPosition", "0" );
+    imd.setAttribute(
+		"imageWidth",
+		Integer.toString( this.width ) );
+    imd.setAttribute(
+		"imageHeight",
+		Integer.toString( this.height ) );
+    imd.setAttribute( "interlaceFlag", "FALSE" );
+    imgRoot.appendChild( imd );
+
+    /*
+     * Auch wenn die lokale Farbpalette sich nicht von der globalen
+     * unterscheidet, muss sie hier in dem Fall angegeben werden,
+     * wenn die Farbtiefe weniger als 8 Bit ist.
+     * Anderenfalls ist in der GIF-Datei ueberhaupt keine Farbpalette
+     * enthalten und die Anzeige ist dann nur schwarz/weiss.
+     * Jedoch uebernimmt der ImageWriter die hier angegebene
+     * lokale Farbpalette bei Bedarf auch als globale in die GIF-Datei.
+     */
+    if( (this.globalColorDepth < 8)
+	&& (!Arrays.equals( frame.reds, this.globalReds )
+		|| !Arrays.equals( frame.greens, this.globalGreens )
+		|| !Arrays.equals( frame.blues, this.globalBlues )) )
+    {
+      appendColorTab(
+		imgRoot,
+		"LocalColorTable",
+		frame.reds,
+		frame.greens,
+		frame.blues );
     }
 
-    // Pixeldaten schreiben
-    (new LZWEncoder(
-		frame.pixels,
-		Math.max( frame.colorDepth, 2 ) )).encode( this.out );
-
+    // Bild hinzufuegen
+    setFromTree( imgMetadata, imgRoot );
+    try {
+      this.imgWriter.writeToSequence(
+			new IIOImage( frame.image, null, imgMetadata ),
+			null );
+    }
+    catch( UnsupportedOperationException ex ) {
+      throwAnimatedGIFFailed( "Die Java-Laufzeitumgebung unterst\u00FCtzt"
+		+ " keine animierten GIF-Dateien." );
+    }
     this.firstFrame = false;
   }
-
-
-  /*
-   * Die Methode schreibt einen 16-Bit-Wert (Littel Endian)
-   */
-  private void writeWord( int value ) throws IOException
-  {
-    this.out.write( value & 0xFF );
-    this.out.write( (value >> 8) & 0xFF );
-  }
 }
-

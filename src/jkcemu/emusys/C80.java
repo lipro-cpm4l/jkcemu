@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,20 +11,22 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.C80KeyboardFld;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 
 
-public class C80 extends EmuSys
+public class C80 extends EmuSys implements
+					Z80MaxSpeedListener,
+					Z80PIOPortListener
 {
   public static final String SYSNAME     = "C80";
   public static final String SYSTEXT     = "C-80";
@@ -48,7 +50,6 @@ public class C80 extends EmuSys
   private long           curDisplayTStates;
   private long           displayCheckTStates;
   private boolean        displayReset;
-  private boolean        tapeInPhase;
   private Z80PIO         pio1;
   private Z80PIO         pio2;
 
@@ -77,6 +78,9 @@ public class C80 extends EmuSys
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
+    this.pio1.addPIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pio1.addPIOPortListener( this, Z80PIO.PortInfo.B );
+
     z80MaxSpeedChanged( cpu );
   }
 
@@ -104,6 +108,90 @@ public class C80 extends EmuSys
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio1)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      if( port == Z80PIO.PortInfo.A ) {
+	int v = this.pio1.fetchOutValuePortA( 0xFF );
+	if( (v & 0x20) == 0 ) {
+	  this.displayReset = true;
+	}
+	this.tapeOutPhase = ((v & 0x40) != 0);
+      }
+      else if( port == Z80PIO.PortInfo.B ) {
+	int     v       = 0xFF;
+	boolean dirty   = false;
+	boolean ready   = this.pio1.isReadyPortB();
+	this.pio1BValue = this.pio1.fetchOutValuePortB( 0xFF, ready );
+	if( ready ) {
+
+	  // Anzeige aktualisieren
+	  synchronized( this.digitValues ) {
+	    if( displayReset ) {
+	      this.curDigitIdx = 0;
+	      displayReset     = false;
+	    } else {
+	      if( (this.curDigitIdx >= 0)
+		  && (this.curDigitIdx < (this.digitValues.length - 1)) )
+	      {
+		this.curDigitIdx++;
+	      } else {
+		this.curDigitIdx = -1;
+	      }
+	    }
+	    if( (this.curDigitIdx >= 0)
+		&& (this.curDigitIdx < this.digitValues.length) )
+	    {
+	      this.digitStatus[ this.curDigitIdx ] = 2;
+	      if( this.pio1BValue != this.digitValues[ this.curDigitIdx ] ) {
+		this.digitValues[ this.curDigitIdx ] = this.pio1BValue;
+		dirty = true;
+	      }
+	    }
+	  }
+
+	  // fuer 1 ms A4=0
+	  this.a4TStates = this.emuThread.getZ80CPU().getMaxSpeedKHz();
+	  v &= 0xEF;
+	}
+
+	// Tastatur
+	synchronized( this.keyboardMatrix ) {
+	  int m = 0x01;
+	  for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
+	    if( (this.pio1BValue & m) == 0 ) {
+	      v &= ~this.keyboardMatrix[ i ];
+	    }
+	    m <<= 1;
+	  }
+	}
+	this.pio1.putInValuePortA( v, 0x17 );
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+      }
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -116,7 +204,7 @@ public class C80 extends EmuSys
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public C80KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new C80KeyboardFld( this );
     return this.keyboardFld;
@@ -130,6 +218,11 @@ public class C80 extends EmuSys
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    this.pio1.removePIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pio1.removePIOPortListener( this, Z80PIO.PortInfo.B );
+
+    super.die();
   }
 
 
@@ -143,7 +236,7 @@ public class C80 extends EmuSys
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorRedDark;
@@ -230,7 +323,7 @@ public class C80 extends EmuSys
 	  break;
 
 	case KeyEvent.VK_ESCAPE:
-	  this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+	  this.emuThread.fireReset( false );
 	  rv = true;
 	  break;
 
@@ -321,14 +414,6 @@ public class C80 extends EmuSys
 	case 1:
 	  rv &= this.pio1.readDataB();
 	  break;
-
-	case 2:
-	  rv &= this.pio1.readControlA();
-	  break;
-
-	case 3:
-	  rv &= this.pio1.readControlB();
-	  break;
       }
     }
     if( (port & 0x80) == 0 ) {
@@ -340,14 +425,6 @@ public class C80 extends EmuSys
 	case 1:
 	  rv &= this.pio2.readDataB();
 	  break;
-
-	case 2:
-	  rv &= this.pio2.readControlA();
-	  break;
-
-	case 3:
-	  rv &= this.pio2.readControlB();
-	  break;
       }
     }
     return rv;
@@ -355,12 +432,14 @@ public class C80 extends EmuSys
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
     }
+    this.pio1.reset( powerOn );
+    this.pio2.reset( powerOn );
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitStatus, 0 );
       Arrays.fill( this.digitValues, 0 );
@@ -370,7 +449,6 @@ public class C80 extends EmuSys
     }
     this.pio1.putInValuePortA( 0xFF, false );
     this.displayReset = false;
-    this.tapeInPhase = this.emuThread.readTapeInPhase();
   }
 
 
@@ -413,70 +491,23 @@ public class C80 extends EmuSys
 
 
   @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio1.putInValuePortA( this.tapeInPhase ? 0x80 : 0, 0x80 );
+  }
+
+
+  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
-    boolean dirty = false;
-    boolean ready = false;
-    int     v     = 0;
     if( (port & 0x40) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
 	  this.pio1.writeDataA( value );
-	  v = this.pio1.fetchOutValuePortA( false );
-	  if( (v & 0x20) == 0 ) {
-	    this.displayReset = true;
-	  }
-	  this.tapeOutPhase = ((v & 0x40) != 0);
 	  break;
 
 	case 1:
 	  this.pio1.writeDataB( value );
-	  ready           = this.pio1.isReadyPortB();
-	  this.pio1BValue = this.pio1.fetchOutValuePortB( ready );
-	  v               = 0xFF;
-	  if( ready ) {
-
-	    // Anzeige aktualisieren
-	    synchronized( this.digitValues ) {
-	      if( displayReset ) {
-		this.curDigitIdx = 0;
-		displayReset     = false;
-	      } else {
-		if( (this.curDigitIdx >= 0)
-		    && (this.curDigitIdx < (this.digitValues.length - 1)) )
-		{
-		  this.curDigitIdx++;
-		} else {
-		  this.curDigitIdx = -1;
-		}
-	      }
-	      if( (this.curDigitIdx >= 0)
-		  && (this.curDigitIdx < this.digitValues.length) )
-	      {
-		this.digitStatus[ this.curDigitIdx ] = 2;
-		if( this.pio1BValue != this.digitValues[ this.curDigitIdx ] ) {
-		  this.digitValues[ this.curDigitIdx ] = this.pio1BValue;
-		  dirty = true;
-		}
-	      }
-	    }
-
-	    // fuer 1 ms A4=0
-	    this.a4TStates = this.emuThread.getZ80CPU().getMaxSpeedKHz();
-	    v &= 0xEF;
-	  }
-
-	  // Tastatur
-	  synchronized( this.keyboardMatrix ) {
-	    int m = 0x01;
-	    for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
-	      if( (this.pio1BValue & m) == 0 ) {
-		v &= ~this.keyboardMatrix[ i ];
-	      }
-	      m <<= 1;
-	    }
-	  }
-	  this.pio1.putInValuePortA( v, 0x17 );
 	  break;
 
 	case 2:
@@ -507,17 +538,6 @@ public class C80 extends EmuSys
 	  break;
       }
     }
-    if( dirty ) {
-      this.screenFrm.setScreenDirty( true );
-    }
-  }
-
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
   }
 
 
@@ -525,12 +545,6 @@ public class C80 extends EmuSys
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
-
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio1.putInValuePortA( this.tapeInPhase ? 0x80 : 0, 0x80 );
-    }
     if( this.a4TStates > 0 ) {
       this.a4TStates -= tStates;
       if( this.a4TStates <= 0 ) {

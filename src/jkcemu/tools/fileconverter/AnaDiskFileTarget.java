@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.AnaDisk;
+import jkcemu.file.FileUtil;
 
 
 public class AnaDiskFileTarget extends AbstractConvertTarget
@@ -35,14 +34,14 @@ public class AnaDiskFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getAnaDiskFileFilter();
+    return FileUtil.getAnaDiskFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".dump" );
+    return FileUtil.replaceExtension( srcFile, ".dump" );
   }
 
 

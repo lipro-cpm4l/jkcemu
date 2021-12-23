@@ -1,5 +1,5 @@
 /*
- * (c) 2017 Jens Mueller
+ * (c) 2017-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@ package jkcemu.emusys.lc80;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
@@ -67,18 +66,14 @@ public class TVTerminal
   }
 
 
-  public void keyCharQueueEmpty()
+  public void processNextQueuedKeyChar()
   {
     CharacterIterator iter = this.pasteIter;
     if( iter != null ) {
       char ch = iter.current();
       iter.next();
       if( ch == CharacterIterator.DONE ) {
-	this.pasteIter = null;
-	AbstractScreenFrm screenFrm = getScreenFrm();
-	if( screenFrm != null ) {
-	  screenFrm.firePastingTextFinished();
-	}
+	cancelPastingText();
       } else {
 	if( ch == '\n' ) {
 	  ch = '\r';
@@ -94,6 +89,7 @@ public class TVTerminal
     this.pasteIter     = null;
     this.screenByteBuf = 0;
     clearScreen();
+    informPastingTextStatusChanged( false );
     int len = START_MSG.length();
     for( int i = 0; i < len; i++ ) {
       write( START_MSG.charAt( i ) );
@@ -192,7 +188,7 @@ public class TVTerminal
 	      }
 	    }
 	    if( dirty ) {
-	      setScreenDirty();
+	      setScreenDirty( true );
 	    }
 	  }
 	  break;
@@ -215,7 +211,7 @@ public class TVTerminal
 	      cursorRight();
 	    }
 	    if( dirty ) {
-	      setScreenDirty();
+	      setScreenDirty( true );
 	    }
 	  }
 	  break;
@@ -351,10 +347,7 @@ public class TVTerminal
   public void cancelPastingText()
   {
     this.pasteIter = null;
-    AbstractScreenFrm screenFrm = getScreenFrm();
-    if( screenFrm != null ) {
-      screenFrm.firePastingTextFinished();
-    }
+    informPastingTextStatusChanged( false );
   }
 
 
@@ -418,7 +411,7 @@ public class TVTerminal
   @Override
   public CharRaster getCurScreenCharRaster()
   {
-    return new CharRaster( COL_COUNT, ROW_COUNT, 9, 9, 8, 0 );
+    return new CharRaster( COL_COUNT, ROW_COUNT, 9, 8, 9 );
   }
 
 
@@ -426,6 +419,13 @@ public class TVTerminal
   public EmuThread getEmuThread()
   {
     return this.lc80.getEmuThread();
+  }
+
+
+  @Override
+  public KeyListener getKeyListener()
+  {
+    return this;
   }
 
 
@@ -504,7 +504,8 @@ public class TVTerminal
   public void startPastingText( String text )
   {
     this.pasteIter = new StringCharacterIterator( text );
-    keyCharQueueEmpty();
+    informPastingTextStatusChanged( true );
+    processNextQueuedKeyChar();
   }
 
 
@@ -533,7 +534,7 @@ public class TVTerminal
     }
     this.cursorX = 0;
     this.cursorY = 0;
-    setScreenDirty();
+    setScreenDirty( true );
   }
 
 
@@ -590,14 +591,6 @@ public class TVTerminal
       }
       Arrays.fill( tmpRow, (byte) 0x20 );
       this.screenRows[ this.screenRows.length - 1 ] = tmpRow;
-    }
-  }
-
-  private void setScreenDirty()
-  {
-    AbstractScreenFrm screenFrm = getScreenFrm();
-    if( screenFrm != null ) {
-      screenFrm.setScreenDirty( true );
     }
   }
 

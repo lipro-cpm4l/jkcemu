@@ -1,0 +1,130 @@
+<html>
+<body>
+ <h1>Bildschirmvideo aufnehmen</h1>
+  JKCEMU bietet die M&ouml;glichkeit,
+  die Bildschirmausgabe des emulierten Systems oder ein JKCEMU-Fenster
+  als Video aufzunehmen und anschlie&szlig;end wieder abzuspielen
+  bzw. zu speichern.
+  Die Speicherung erfolgt in Form einer animierten GIF-Datei.
+  Zwar ist dies nicht die &uuml;blichste bzw. beste Art
+  zur Speicherung von Videos,
+  jedoch lassen sich so die erstellten Filmsequenzen problemlos
+  in Web-Seiten einbinden bzw. in Web-Browsern abspielen.
+ <br/><br/>
+  Zum Aufnehmen eines Bildschirmvideos nutzen Sie im JKCEMU-Hauptfenster
+  den Men&uuml;punkt <em>Extra</em> &rarr; <em>Bildschirmvideo...</em>.
+  Es &ouml;ffnet sich ein Fenster, in dem Sie die Aufnahme
+  des Videos steuern.
+  Die weitere Beschreibung bezieht sich auf dieses Fenster.
+ <br/><br/>
+  <b>Achtung</b> Die Erzeugung der animierten GIF-Dateien erfolgt mit
+  Hilfe entsprechender Funktionalit&auml;ten der Java-Laufzeitumgebung.
+  Sollte wider Erwarten die von Ihnen verwendete Java-Laufzeitumgebung
+  diese Funktionalit&auml;ten nicht zur Verf&uuml;gung stellen,
+  k&ouml;nnen Sie keine Bildschirmvideos aufnehmen.
+ <br/><br/> 
+
+
+ <h2>1. Aufzunehmender Bereich</h2>
+  Hier legen Sie fest, was aufgenommen wird.
+  Im ersten Punkt wird die Bildschirmausgabe des emulierten Systems
+  aufgenommen.
+  Bei den anderen beiden Punkten wird ein ganzes Fenster
+  inklusive Rahmen und Dekoration aufgezeichnet,
+  und zwar so, wie sie es auf dem Bildschirm sehen.
+  Das hei&szlig;t, wenn Sie das aufzunehmende Fenster mit einem
+  anderen Fenster &uuml;berdecken, ist in der Aufnahme das
+  &uuml;berdeckende Fenster zu sehen.
+ <br/><br/>
+
+
+ <h2>2. Optionen</h2>
+
+ <h3>2.1. Zeit f&uuml;r Fensterauswahl</h3>
+  Diese Option ist nur bei der Aufnahme eines beliebigen JKCEMU-Fensters
+  relevant und legt fest, wieviel Zeit Sie zur Auswahl des aufzunehmenden
+  Fensters haben.
+  Nach Ablauf der eingestellten Zeit wird die Aufnahme f&uuml;r
+  das JKCEMU-Fenster gestartet, welches zu dem Zeitpunkt aktiv ist.
+ <br/><br/>
+
+ <h3>2.2. Bilder pro Sekunde</h3>
+  Hier legen Sie fest, wieviel Bilder pro Sekunden aufgenommen
+  werden sollen.
+  Je mehr, desto fl&uuml;ssiger l&auml;uft das Video,
+  desto gr&ouml;&szlig;er wird aber auch die Ausgabedatei.
+ <br/><br/>
+
+ <h3>2.3. Aufnahme erst nach RESET starten</h3>
+  Ist diese Option angeklickt, m&uuml;ssen Sie nach Dr&uuml;cken
+  auf <em>Aufnehmen</em> im Emulatorfenster erst ein RESET ausl&ouml;sen,
+  damit die eigentliche Aufnahme beginnt.
+ <br/><br/>
+
+ <h3>2.4. Automatische Pause bei inaktivem Fenster</h3>
+  Ist diese Option angeklickt, werden immer nur dann Bilder aufgenommen,
+  wenn das Emulatorfenster bzw. das aufzunehmende Fenster aktiv ist.
+  Sinnvoll ist die Option, wenn Sie w&auml;hrend der Aufnahme
+  Dinge tun m&uuml;ssen, die man in der Aufnahme nicht sieht
+  und die somit den Betrachter des Videos zu einer st&ouml;renden
+  Wartezeit zwinkt.
+  Solch zu erledigenden Dinge k&ouml;nnen z.B. das Einlegen
+  einer Diskette in die emulierte Diskettenstation
+  oder das Vorbereiten einer Kassettenaufzeichnung
+  f&uuml;r die emulierte Kassettenschnittstelle sein.
+  Haben die die Option aktiviert, k&ouml;nnen Sie in aller Ruhe
+  diese Dinge (in einem anderen Fenster) tun,
+  ohne dass sich die daf&uuml;r ben&ouml;tigte Zeit im Video wiederfindet.
+ <br/><br/>
+
+ <h3>2.5. Ausgabedatei immer mit 256&nbsp;Farben erzeugen</h3>
+  Animierte GIF-Dateien k&ouml;nnen bis zu 256&nbsp;Farben enthalten.
+  Allerdings wird die Datei um so gr&ouml;&szlig;er,
+  je mehr Farben es sind.
+  Da aber die Bildschirmausgaben der emulierten Systeme deutlich weniger
+  Farben bieten, werden nur diese wenigen Farben als Farbpalette
+  in die GIF-Datei geschrieben,
+  wodurch die Datei nicht sinnlos aufgebl&auml;ht wird.
+  Probleme kann es jedoch geben, wenn sich w&auml;hrend der Aufnahme
+  die Anzahl der m&ouml;glichen Farben und somit die Farbpalette
+  &auml;ndert, z.B. weil Sie auf ein anderes emuliertes System
+  umschalten oder wenn das emulierte System mehrere Grafikmodi bietet
+  und der Grafikmodus gewechselt wird.
+  In dem Fall sollten Sie die Option
+  <em>Ausgabedatei immer mit 256&nbsp;Farben erzeugen</em> einschalten.
+  Dies bewirkt, dass eine Standardfarbpalette verwendet wird,
+  die das gesamte Farbspektrum abdeckt,
+  so dass jede vom emulierten System ausgegebene Farbe
+  (zumindest ann&auml;hernd) korrekt angezeigt wird.
+ <br/><br/>
+
+ <h3>2.6. Farbanpassung</h3>
+  Wenn Sie ein Fenster aufnehmen, werden wahrscheinlich mehr Farben
+  aufgenommen, als die Ausgabedatei speichern kann.
+  In dem Fall muss eine Farbanpassung vorgenommen werden.
+  Eine Farbanpassung kann auch notwendig werden,
+  wenn die Option <em>Ausgabedatei immer mit 256&nbsp;Farben erzeugen</em>
+  eingeschaltet ist, da in dem Fall eine Standardfarbpalette vewendet wird,
+  die nicht unbedingt jede vom emulierten System ausgegebene Farbe
+  exakt abbildet.
+ <br/><br/>
+  Sie k&ouml;nnen w&auml;hlen, ob die Farbanpassung <em>hart</em>
+  oder <em>weich</em> erfolgen soll.
+  Bei <em>hart</em> werden die Farben 1:1 umgerechnet,
+  so dass Fl&auml;chen mit nur einer Farbe
+  auch danach nur eine Farbe enthalten.
+  Bei <em>weich</em> wird versucht,
+  fehlende Zwischenfarben optisch durch Rasterung nachzubilden,
+  woduch allerdings einfarbige Fl&auml;chen mehrfarbig werden k&ouml;nnen.
+  Welche Methode der Farbanpassung man verwendet,
+  h&auml;ngt vom pers&ouml;nlichen Geschmack und dem Anwendungsfall ab.
+ <br/><br/>
+
+ <h3>2.7. Wiedergabe</h3>
+  In animierten GIF-Dateien kann man die Information speichern,
+  ob bei der Wiedergabe die Filmsequenz nur einmal oder in einer Schleife
+  st&auml;ndig wiederholend abgespielt werden soll.
+  Mit der Option <em>Wiedergabe</em> geben Sie an,
+  welcher Abspielmodus in der Datei hinterlegt werden soll.
+</body>
+</html>

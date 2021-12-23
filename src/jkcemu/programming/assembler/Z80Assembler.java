@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.programming.assembler;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,9 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
-import jkcemu.base.FileSaver;
-import jkcemu.base.LoadData;
+import jkcemu.etc.ReadableByteArrayOutputStream;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileSaver;
+import jkcemu.file.FileUtil;
+import jkcemu.file.LoadData;
 import jkcemu.programming.PrgException;
 import jkcemu.programming.PrgLogger;
 import jkcemu.programming.PrgOptions;
@@ -34,61 +35,67 @@ public class Z80Assembler
 {
   public static enum Syntax { ALL, ZILOG_ONLY, ROBOTRON_ONLY };
 
-  private static String[] sortedReservedWords = {
-	"ADC", "ADD", "AND", "BINCLUDE", "BIT",
+  private static final String[] sortedReservedWords = {
+	"ADC", "ADD", "ALIGN", "AND", "BINCLUDE", "BIT",
 	"CALL", "CCF", "CPD", "CPDR", "CPI", "CPIR", "CPL", "CPU",
 	"DA", "DAA", "DB", "DEC", "DEFA", "DEFB", "DEFH",
 	"DEFM", "DEFS", "DEFW",
 	"DFB", "DFH", "DFS", "DFW", "DI", "DJNZ", "DW",
-	"EI", "ELSE", "END", "ENDIF", "ENT", "EQU", "EX", "EXX",
+	"EI", "ELSE", "END", "ENDIF", "ENT", "ENTRY", "EQU",
+	"ERROR", "EVEN", "EX", "EXX",
 	"HALT", "HEX",
-	"IF1", "IF2", "IFDEF", "IFE", "IFF", "IFNDEF", "IM",
+	"IFDEF", "IFE", "IFF", "IFNDEF", "IM",
 	"IN", "INC", "INCLUDE", "IND", "INDR", "INI", "INIR",
 	"JP", "JR",
-	"LD", "LDD", "LDDR", "LDI", "LDIR",
-	"NEG", "NOP",
+	"LD", "LDD", "LDDR", "LDI", "LDIR", "LISTOFF", "LISTON",
+	"NAME", "NEG", "NEWPAGE", "NOP",
 	"OR", "ORG", "OTDR", "OTIR", "OUT", "OUTD", "OUTI",
-	"POP", "PUSH",
+	"PAGE", "POP", "PUSH",
 	"RES", "RET", "RETI", "RETN", "RL", "RLA", "RLC", "RLCA", "RLD",
 	"RR", "RRA", "RRC", "RRCA", "RRD", "RST",
-	"SBC", "SCF", "SET", "SLA", "SRA", "SRL", "SUB",
-	"XOR", "Z80" };
+	"SBC", "SCF", "SET", "SLA", "SRA", "SRL", "SUB", "TITLE",
+	"U880", "U880UNDOC", "XOR", "Z80", "Z80UNDOC" };
 
-  private static String[] sortedReservedRobotronWords = {
+  private static final String[] sortedReservedRobotronWords = {
 	"CAC", "CAM", "CANC", "CANZ", "CAP", "CAPE", "CAPO", "CAZ", "CMP",
 	"EXAF", "INF", "JMP", "JPC", "JPM", "JPNC", "JPNZ", "JPP",
 	"JPPE", "JPPO", "JPZ", "JRC", "JRNC", "JRNZ", "JRZ",
 	"RC", "RM", "RNC", "RNZ", "RP", "RPE", "RPO", "RZ" };
 
-  private static String BUILT_IN_LABEL = "__JKCEMU__";
+  private static final String BUILT_IN_LABEL = "__JKCEMU__";
 
-  private PrgSource             curSource;
-  private PrgSource             mainSource;
-  private PrgOptions            options;
-  private PrgLogger             logger;
-  private Stack<AsmStackEntry>  stack;
-  private Map<File,byte[]>      file2Bytes;
-  private Map<File,PrgSource>   file2Source;
-  private Map<String,AsmLabel>  labels;
-  private AsmLabel[]            sortedLabels;
-  private StringBuilder         srcOut;
-  private ByteArrayOutputStream codeBuf;
-  private byte[]                codeOut;
-  private boolean               addrOverflow;
-  private boolean               endReached;
-  private boolean               interactive;
-  private boolean               orgOverlapped;
-  private boolean               relJumpsTooLong;
-  private boolean               suppressLineAddr;
-  private boolean               status;
-  private volatile boolean      execEnabled;
-  private Integer               entryAddr;
-  private int                   begAddr;
-  private int                   endAddr;
-  private int                   curAddr;
-  private int                   instBegAddr;
-  private int                   passNum;
-  private int                   errCnt;
+  private PrgSource                     curSource;
+  private PrgSource                     mainSource;
+  private PrgOptions                    options;
+  private PrgLogger                     logger;
+  private Stack<AsmStackEntry>          stack;
+  private Map<File,byte[]>              file2Bytes;
+  private Map<File,PrgSource>           file2Source;
+  private Map<String,AsmLabel>          labels;
+  private AsmLabel[]                    sortedLabels;
+  private StringBuilder                 srcOut;
+  private StringBuilder                 listOut;
+  private ReadableByteArrayOutputStream codeBuf;
+  private byte[]                        codeOut;
+  private String                        appName;
+  private boolean                       addrOverflow;
+  private boolean                       cpuDone;
+  private boolean                       interactive;
+  private boolean                       orgOverlapped;
+  private boolean                       relJumpsTooLong;
+  private boolean                       restartAsm;
+  private boolean                       suppressLineAddr;
+  private boolean                       status;
+  private boolean                       listEnabled;
+  private volatile boolean              execEnabled;
+  private Integer                       entryAddr;
+  private int                           begAddr;
+  private int                           endAddr;
+  private int                           curAddr;
+  private int                           instBegAddr;
+  private int                           passNum;
+  private int                           listLineNum;
+  private int                           errCnt;
 
 
   public Z80Assembler(
@@ -99,42 +106,27 @@ public class Z80Assembler
 		PrgLogger  logger,
 		boolean    interactive )
   {
-    this.curSource        = null;
-    this.mainSource       = null;
-    this.options          = options;
-    this.logger           = logger;
-    this.interactive      = interactive;
-    this.stack            = new Stack<>();
-    this.file2Bytes       = new HashMap<>();
-    this.file2Source      = new HashMap<>();
-    this.labels           = new HashMap<>();
-    this.sortedLabels     = null;
-    this.srcOut           = null;
-    this.codeBuf          = null;
-    this.codeOut          = null;
-    this.addrOverflow     = false;
-    this.endReached       = false;
-    this.orgOverlapped    = false;
-    this.relJumpsTooLong  = false;
-    this.suppressLineAddr = false;
-    this.status           = true;
-    this.execEnabled      = true;
-    this.entryAddr        = null;
-    this.begAddr          = -1;
-    this.endAddr          = -1;
-    this.curAddr          = 0;
-    this.instBegAddr      = 0;
-    this.passNum          = 0;
-    this.errCnt           = 0;
+    this.curSource   = null;
+    this.mainSource  = null;
+    this.options     = options;
+    this.logger      = logger;
+    this.interactive = interactive;
+    this.cpuDone     = false;
+    this.srcOut      = null;
+    this.listOut     = null;
+    this.codeBuf     = null;
+    this.appName     = null;
+    this.stack       = new Stack<>();
+    this.file2Bytes  = new HashMap<>();
+    this.file2Source = new HashMap<>();
+    this.labels      = new HashMap<>();
     if( this.options.getFormatSource() && (srcText != null) ) {
       this.srcOut = new StringBuilder( Math.max( srcText.length(), 16 ) );
     }
     if( this.options.getCreateCode() ) {
-      this.codeBuf = new ByteArrayOutputStream( 0x8000 );
+      this.codeBuf = new ReadableByteArrayOutputStream( 0x8000 );
     }
-
-    // vordefinierte Marke
-    this.labels.put( BUILT_IN_LABEL, new AsmLabel( BUILT_IN_LABEL, 1 ) );
+    init();
 
     // Quelltext oeffnen
     if( srcText != null ) {
@@ -161,52 +153,66 @@ public class Z80Assembler
   }
 
 
-  public boolean addLabel( String labelName, int value )
+  public boolean addLabel( String labelName, int value, boolean addrLabel )
   {
     if( !options.getLabelsCaseSensitive() ) {
       labelName = labelName.toUpperCase();
     }
     return (this.labels.put(
 		labelName,
-		new AsmLabel( labelName, value ) ) == null);
+		new AsmLabel( labelName, value, addrLabel ) ) == null);
   }
 
 
-  public boolean assemble(
-			String  appName,
-			boolean forZ9001 ) throws IOException
+  public boolean assemble( boolean forZ9001 ) throws IOException
   {
-    this.errCnt      = 0;
-    this.passNum     = 1;
-    this.execEnabled = true;
-    this.endReached  = false;
-    this.curSource   = this.mainSource;
     try {
-      parseAsm();
-      computeMissingLabelValues();
-      if( this.execEnabled && this.status ) {
-	if( this.mainSource != null ) {
-	  this.mainSource.reset();
-	}
-	this.passNum    = 2;
-	this.endReached = false;
-	this.curSource  = this.mainSource;
+      do {
+	reset();
+        this.passNum = 1;
 	parseAsm();
-	if( this.codeBuf != null ) {
-	  this.codeBuf.close();
-	  if( this.execEnabled && this.status ) {
-	    this.codeOut = this.codeBuf.toByteArray();
-	  }
-	}
+	computeMissingLabelValues();
 	if( this.execEnabled && this.status ) {
-	  if( this.options.getPrintLabels() ) {
-	    printLabels();
+	  if( this.mainSource != null ) {
+	    this.mainSource.reset();
 	  }
-	  if( this.options.getCodeToFile() ) {
-	    writeCodeToFile( appName, forZ9001 );
+	  this.passNum   = 2;
+	  this.curSource = this.mainSource;
+	  if( this.options.getCreateAsmListing() ) {
+	    this.listEnabled = true;
+	    this.listOut     = new StringBuilder( 0x4000 );
+	    this.listOut.append( "Assembler-Listing erzeugt von JKCEMU\n" );
+	    if( this.mainSource != null ) {
+	      String srcName = this.mainSource.getName();
+	      if( srcName != null ) {
+		this.listOut.append( "Quelle: " );
+		this.listOut.append( srcName );
+		this.listOut.append( '\n' );
+	      }
+	    }
+	    printListTableHeader();
+	  }
+	  parseAsm();
+	  if( this.restartAsm ) {
+	    appendToOutLog( "Assembliere erneut...\n" );
+	  } else {
+	    if( this.codeBuf != null ) {
+	      this.codeBuf.close();
+	      if( this.execEnabled && this.status ) {
+		this.codeOut = this.codeBuf.toByteArray();
+	      }
+	    }
+	    if( this.execEnabled && this.status ) {
+	      if( this.options.getPrintLabels() ) {
+		printLabels();
+	      }
+	      if( this.options.getCodeToFile() ) {
+		writeCodeToFile( forZ9001 );
+	      }
+	    }
 	  }
 	}
-      }
+      } while( this.restartAsm );
     }
     catch( TooManyErrorsException ex ) {
       appendToErrLog( "\nAbgebrochen aufgrund zu vieler Fehler\n" );
@@ -271,6 +277,12 @@ public class Z80Assembler
       }
     }
     return rv;
+  }
+
+
+  public StringBuilder getListing()
+  {
+    return this.listOut;
   }
 
 
@@ -386,7 +398,54 @@ public class Z80Assembler
 
 	/* --- private Methoden --- */
 
-  public void appendLineNumMsgToErrLog( String msg, String msgType )
+  private void appendCharsToListing( char ch, int count )
+  {
+    if( this.listEnabled && (this.listOut != null) ) {
+      for( int i = 0; i < count; i++ ) {
+	this.listOut.append( ch );
+      }
+    }
+  }
+
+
+  private int appendCodeBytesToListing( int addr, int maxCnt )
+  {
+    int rv = 0;
+    if( this.listEnabled
+	&& (this.listOut != null)
+	&& (this.codeBuf != null)
+	&& (addr < this.curAddr) )
+    {
+      this.listOut.append( String.format( "   %04X  ", addr ) );
+      while( (addr < this.curAddr) && (maxCnt > 0) ) {
+	addr++;
+	int b = this.codeBuf.getFromEnd( this.curAddr - addr );
+	if( b < 0 ) {
+	  break;
+	}
+	this.listOut.append( String.format( " %02X", b ) );
+	--maxCnt;
+	rv++;
+      }
+    }
+    return rv;
+  }
+
+
+  private void appendEndOfIncludeToListing()
+  {
+    if( this.listEnabled && (this.listOut != null) ) {
+      appendLineNumToListing();
+      appendCharsToListing( '\u0020', 3 );
+      appendCharsToListing( '-', 20 );
+      this.listOut.append( " Ende der Include-Datei " );
+      appendCharsToListing( '-', 20 );
+      this.listOut.append( '\n' );
+    }
+  }
+
+
+  private void appendLineNumMsgToErrLog( String msg, String msgType )
   {
     StringBuilder buf = new StringBuilder( 128 );
     if( this.curSource != null ) {
@@ -412,9 +471,16 @@ public class Z80Assembler
       buf.append( msg );
     }
     if( !msg.endsWith( "\n" ) ) {
-      buf.append( (char) '\n' );
+      buf.append( '\n' );
     }
     appendToErrLog( buf.toString() );
+  }
+
+
+  private void appendLineNumToListing()
+  {
+    if( this.listEnabled && (this.listOut != null) )
+      this.listOut.append( String.format( "%5d", this.listLineNum++ ) );
   }
 
 
@@ -461,6 +527,8 @@ public class Z80Assembler
     boolean computed = false;
     boolean failed   = false;
     do {
+      computed = false;
+      failed   = false;
       for( AsmLabel label : this.labels.values() ) {
 	Object o = label.getLabelValue();
 	if( o != null ) {
@@ -475,7 +543,7 @@ public class Z80Assembler
 				false,
 				this.options.getLabelsCaseSensitive() );
 		if( v != null ) {
-		  label.setLabelValue( v );
+		  label.setLabelValue( v, false );
 		  computed = true;
 		} else {
 		  failed = true;
@@ -486,7 +554,29 @@ public class Z80Assembler
 	  }
 	}
       }
-    } while( computed && failed );
+    } while( this.execEnabled && computed && failed );
+  }
+
+
+  private void init()
+  {
+    this.sortedLabels     = null;
+    this.codeOut          = null;
+    this.addrOverflow     = false;
+    this.orgOverlapped    = false;
+    this.relJumpsTooLong  = false;
+    this.restartAsm       = false;
+    this.suppressLineAddr = false;
+    this.status           = true;
+    this.execEnabled      = true;
+    this.entryAddr        = null;
+    this.begAddr          = -1;
+    this.endAddr          = -1;
+    this.curAddr          = 0;
+    this.instBegAddr      = 0;
+    this.passNum          = 0;
+    this.errCnt           = 0;
+    this.listLineNum      = 1;
   }
 
 
@@ -510,15 +600,13 @@ public class Z80Assembler
     this.curAddr     = 0;
     this.instBegAddr = 0;
     this.stack.clear();
-    while( this.execEnabled
-	   && !this.endReached
-	   && (this.curSource != null) )
-    {
+    while( this.execEnabled && (this.curSource != null) ) {
       String line = this.curSource.readLine();
       if( line != null ) {
 	parseLine( line );
       } else {
 	if( this.curSource != this.mainSource ) {
+	  appendEndOfIncludeToListing();
 	  this.curSource = this.mainSource;
 	} else {
 	  this.curSource = null;
@@ -535,7 +623,7 @@ public class Z80Assembler
 	  buf.append( lineNum );
 	}
 	buf.append( " nicht geschlossen (ENDIF fehlt)" );
-	appendLineNumMsgToErrLog( buf.toString(), "Fehler" );
+	appendLineNumMsgToErrLog( buf.toString(), EmuUtil.TEXT_ERROR );
 	this.status = false;
 	this.errCnt++;
       }
@@ -569,7 +657,11 @@ public class Z80Assembler
   {
     this.instBegAddr      = this.curAddr;
     this.suppressLineAddr = false;
-    String labelName      = null;
+    boolean isBinIncl     = false;
+    boolean isSrcIncl     = false;
+    boolean listCode      = false;
+    boolean listOff       = false;
+    String  labelName     = null;
     try {
       AsmLine asmLine = AsmLine.scanLine(
 				this,
@@ -585,7 +677,7 @@ public class Z80Assembler
 	    }
 	    this.labels.put(
 			labelName,
-			new AsmLabel( labelName, this.curAddr ) );
+			new AsmLabel( labelName, this.curAddr, true ) );
 	    this.sortedLabels = null;
 	  }
 	}
@@ -602,12 +694,6 @@ public class Z80Assembler
 	    {
 	      parseIF( asmLine, false );
 	    }
-	    else if( instruction.equals( "IF1" ) ) {
-	      parseIfInPass( asmLine, 1 );
-	    }
-	    else if( instruction.equals( "IF2" ) ) {
-	      parseIfInPass( asmLine, 2 );
-	    }
 	    else if( instruction.equals( "IFDEF" ) ) {
 	      parseIFDEF( asmLine );
 	    }
@@ -621,16 +707,17 @@ public class Z80Assembler
 	      parseENDIF( asmLine );
 	    } else {
 	      if( isAssemblingEnabled() ) {
-		if( instruction.equals( "Z80" )
-		    || instruction.equals( ".Z80" ) )
-		{
-		  // leer
-		}
-		else if( instruction.equals( "ADD" ) ) {
+		listCode = true;
+		if( instruction.equals( "ADD" ) ) {
 		  parseADD( asmLine );
 		}
 		else if( instruction.equals( "ADC" ) ) {
 		  parseADC_SBC( asmLine, 0x88, 0x4A );
+		}
+		else if( instruction.equals( "ALIGN" )
+			 || instruction.equals( ".ALIGN" ) )
+		{
+		  parseALIGN( asmLine );
 		}
 		else if( instruction.equals( "AND" ) ) {
 		  parseBiOp8( asmLine, 0xA0 );
@@ -639,6 +726,7 @@ public class Z80Assembler
 			 || instruction.equals( ".BINCLUDE" ) )
 		{
 		  parseBINCLUDE( asmLine );
+		  isBinIncl = true;
 		}
 		else if( instruction.equals( "BIT" ) ) {
 		  parseSingleBit( asmLine, 0x40 );
@@ -771,7 +859,7 @@ public class Z80Assembler
 		  putCode( 0xF3 );
 		}
 		else if( instruction.equals( "DJNZ" ) ) {
-		  int d = getAddrDiff( asmLine.nextArg() );
+		  int d = getAddrDiff( asmLine, asmLine.nextArg() );
 		  asmLine.checkEOL();
 		  putCode( 0x10 );
 		  putCode( d );
@@ -786,14 +874,27 @@ public class Z80Assembler
 		  parseEND( asmLine );
 		}
 		else if( instruction.equals( "ENT" )
-			 || instruction.equals( ".ENT" ) )
+			 || instruction.equals( ".ENT" )
+			 || instruction.equals( "ENTRY" )
+			 || instruction.equals( ".ENTRY" ) )
 		{
-		  parseENT( asmLine );
+		  parseENTRY( asmLine );
 		}
 		else if( instruction.equals( "EQU" )
 			 || instruction.equals( ".EQU" ) )
 		{
 		  parseEQU( asmLine );
+		  listCode = false;
+		}
+		else if( instruction.equals( "ERROR" )
+			 || instruction.equals( ".ERROR" ) )
+		{
+		  parseERROR( asmLine );
+		}
+		else if( instruction.equals( "EVEN" )
+			 || instruction.equals( ".EVEN" ) )
+		{
+		  parseEVEN( asmLine );
 		}
 		else if( instruction.equals( "EX" ) ) {
 		  parseEX( asmLine );
@@ -824,6 +925,7 @@ public class Z80Assembler
 			 || instruction.equals( ".INCLUDE" ) )
 		{
 		  parseINCLUDE( asmLine );
+		  isSrcIncl = true;
 		}
 		else if( instruction.equals( "INF" ) ) {
 		  asmLine.checkEOL();
@@ -894,28 +996,28 @@ public class Z80Assembler
 		  parseJR( asmLine );
 		}
 		else if( instruction.equals( "JRC" ) ) {
-		  int d = getAddrDiff( asmLine.nextArg() );
+		  int d = getAddrDiff( asmLine, asmLine.nextArg() );
 		  asmLine.checkEOL();
 		  putCode( 0x38 );
 		  putCode( d );
 		  robotronMnemonic();
 		}
 		else if( instruction.equals( "JRNC" ) ) {
-		  int d = getAddrDiff( asmLine.nextArg() );
+		  int d = getAddrDiff( asmLine, asmLine.nextArg() );
 		  asmLine.checkEOL();
 		  putCode( 0x30 );
 		  putCode( d );
 		  robotronMnemonic();
 		}
 		else if( instruction.equals( "JRNZ" ) ) {
-		  int d = getAddrDiff( asmLine.nextArg() );
+		  int d = getAddrDiff( asmLine, asmLine.nextArg() );
 		  asmLine.checkEOL();
 		  putCode( 0x20 );
 		  putCode( d );
 		  robotronMnemonic();
 		}
 		else if( instruction.equals( "JRZ" ) ) {
-		  int d = getAddrDiff( asmLine.nextArg() );
+		  int d = getAddrDiff( asmLine, asmLine.nextArg() );
 		  asmLine.checkEOL();
 		  putCode( 0x28 );
 		  putCode( d );
@@ -944,10 +1046,40 @@ public class Z80Assembler
 		  putCode( 0xED );
 		  putCode( 0xB0 );
 		}
+		else if( instruction.equals( "LISTOFF" )
+			 || instruction.equals( ".LISTOFF" ) )
+		{
+		  asmLine.checkEOL();
+		  listOff = true;
+		}
+		else if( instruction.equals( "LISTON" )
+			 || instruction.equals( ".LISTON" ) )
+		{
+		  asmLine.checkEOL();
+		  this.listEnabled = true;
+		}
+		else if( instruction.equals( "NAME" )
+			 || instruction.equals( ".NAME" )
+			 || instruction.equals( "TITLE" )
+			 || instruction.equals( ".TITLE" ) )
+		{
+		  parseNAME( asmLine );
+		}
 		else if( instruction.equals( "NEG" ) ) {
 		  asmLine.checkEOL();
 		  putCode( 0xED );
 		  putCode( 0x44 );
+		}
+		else if( instruction.equals( "NEWPAGE" )
+			 || instruction.equals( ".NEWPAGE" )
+			 || instruction.equals( "PAGE" )
+			 || instruction.equals( ".PAGE" ) )
+		{
+		  asmLine.checkEOL();
+		  if( this.listEnabled && (this.listOut != null) ) {
+		    this.listOut.append( '\f' );
+		    printListTableHeader();
+		  }
 		}
 		else if( instruction.equals( "NOP" ) ) {
 		  asmLine.checkEOL();
@@ -960,6 +1092,7 @@ public class Z80Assembler
 			 || instruction.equals( ".ORG" ) )
 		{
 		  parseORG( asmLine );
+		  listCode = false;
 		}
 		else if( instruction.equals( "OTDR" ) ) {
 		  asmLine.checkEOL();
@@ -1111,6 +1244,26 @@ public class Z80Assembler
 		}
 		else if( instruction.equals( "XOR" ) ) {
 		  parseBiOp8( asmLine, 0xA8 );
+		}
+		else if( instruction.equals( "U880" )
+			 || instruction.equals( ".U880" ) )
+		{
+		  parseCPU( asmLine, Syntax.ROBOTRON_ONLY, false );
+		}
+		else if( instruction.equals( "U880UNDOC" )
+			 || instruction.equals( ".U880UNDOC" ) )
+		{
+		  parseCPU( asmLine, Syntax.ROBOTRON_ONLY, true );
+		}
+		else if( instruction.equals( "Z80" )
+			 || instruction.equals( ".Z80" ) )
+		{
+		  parseCPU( asmLine, Syntax.ZILOG_ONLY, false );
+		}
+		else if( instruction.equals( "Z80UNDOC" )
+			 || instruction.equals( ".Z80UNDOC" ) )
+		{
+		  parseCPU( asmLine, Syntax.ZILOG_ONLY, true );
 		} else {
 		  throw new PrgException(
 			    "\'" + instruction + "\': Unbekannte Mnemonik" );
@@ -1121,21 +1274,12 @@ public class Z80Assembler
 	}
 	if( (this.srcOut != null) && (this.passNum == 2) ) {
 	  asmLine.appendFormattedTo( this.srcOut );
-	  this.srcOut.append( (char) '\n' );
+	  this.srcOut.append( '\n' );
 	}
       }
     }
     catch( PrgException ex ) {
-      String msg = ex.getMessage();
-      if( msg == null ) {
-        msg = "Unbekannter Fehler";
-      }
-      appendLineNumMsgToErrLog( msg, "Fehler" );
-      this.status = false;
-      this.errCnt++;
-      if( this.errCnt >= 100 ) {
-	throw new TooManyErrorsException();
-      }
+      putError( ex.getMessage() );
     }
     finally {
       if( this.interactive
@@ -1161,6 +1305,52 @@ public class Z80Assembler
 	  }
 	}
       }
+    }
+
+    // Zeile ggf. an Listing anhaengen
+    if( this.listEnabled && (this.listOut != null) ) {
+      int lineBegIdx = this.listOut.length();
+      int addr       = this.instBegAddr;
+      appendLineNumToListing();
+      if( listCode && !isBinIncl && !isSrcIncl
+	  && (this.codeBuf != null) && (addr < this.curAddr) )
+      {
+	addr += appendCodeBytesToListing( addr, 5 );
+      }
+      if( !line.isEmpty() ) {
+	for( int i = this.listOut.length(); i < (lineBegIdx + 32); i++ ) {
+	  this.listOut.append( '\u0020' );
+	}
+	this.listOut.append( line );
+      }
+      if( isBinIncl || isSrcIncl ) {
+	this.listOut.append( '\n' );
+	appendLineNumToListing();
+	appendCharsToListing( '\u0020', 3 );
+	appendCharsToListing( '-', 19 );
+	this.listOut.append( " Anfang der Include-Datei " );
+	appendCharsToListing( '-', 19 );
+      }
+      if( listCode && (this.codeBuf != null) ) {
+	while( addr < this.curAddr ) {
+	  lineBegIdx = this.listOut.length();
+	  this.listOut.append( '\n' );
+	  appendLineNumToListing();
+	  int n = appendCodeBytesToListing( addr, isBinIncl ? 16 : 5 );
+	  if( n <= 0 ) {
+	    this.listOut.setLength( lineBegIdx );
+	    break;
+	  }
+	  addr += n;
+	}
+      }
+      this.listOut.append( '\n' );
+      if( isBinIncl ) {
+	appendEndOfIncludeToListing();
+      }
+    }
+    if( listOff ) {
+      this.listEnabled = false;
     }
   }
 
@@ -1272,6 +1462,32 @@ public class Z80Assembler
   }
 
 
+  private void parseALIGN( AsmLine asmLine ) throws PrgException
+  {
+    this.suppressLineAddr = true;
+
+    int v = nextWordArg( asmLine );
+    if( (v < 1) || (Integer.bitCount( v ) != 1) ) {
+      throw new PrgException( "Zweierpotenz (1, 2, 4, 8, %10, %20 usw.)"
+				      + " als Argument erwartet" );
+    }
+    if( asmLine.hasMoreArgs() ) {
+      int b = getByte( asmLine.nextArg() );
+      if( v > 1 ) {
+	--v;
+	while( (this.curAddr & v) != 0 ) {
+	  putCode( b );
+	}
+      }
+    } else {
+      int m = v - 1;
+      this.curAddr = (this.curAddr + m) & ~m;
+      checkAddr();
+    }
+    asmLine.checkEOL();
+  }
+
+
   private void parseBINCLUDE( AsmLine asmLine ) throws PrgException
   {
     File file = getIncludeFile( asmLine );
@@ -1279,7 +1495,7 @@ public class Z80Assembler
     byte[] fileBytes = this.file2Bytes.get( file );
     try {
       if( fileBytes == null ) {
-	fileBytes = EmuUtil.readFile( file, false, 0x10000 );
+	fileBytes = FileUtil.readFile( file, false, 0x10000 );
 	this.file2Bytes.put( file, fileBytes );
       }
       if( fileBytes == null ) {
@@ -1362,20 +1578,49 @@ public class Z80Assembler
   private void parseCPU( AsmLine asmLine ) throws PrgException
   {
     boolean done = false;
-    String  text = asmLine.nextArg().toString();
+    String  text = stripEnclosedText(
+				asmLine.nextArg().toString(),
+				"CPU-Typ" );
     if( text != null ) {
       text = text.toUpperCase();
       if( text.equals( "U880" ) ) {
-	robotronSyntax();
+	parseCPU( asmLine, Syntax.ROBOTRON_ONLY, false );
+	done = true;
+      }
+      else if( text.equals( "U880UNDOC" ) ) {
+	parseCPU( asmLine, Syntax.ROBOTRON_ONLY, true );
 	done = true;
       }
       else if( text.equals( "Z80" ) ) {
-	zilogSyntax();
+	parseCPU( asmLine, Syntax.ZILOG_ONLY, false );
+	done = true;
+      }
+      else if( text.equals( "Z80UNDOC" ) ) {
+	parseCPU( asmLine, Syntax.ZILOG_ONLY, true );
 	done = true;
       }
     }
     if( !done ) {
-      throw new PrgException( "\'Z80\' oder \'U880\' erwartet" );
+      throw new PrgException( "\'Z80\', \'Z80UNDOC\',"
+			+ " \'U880\' oder \'U880UNDOC\' erwartet" );
+    }
+  }
+
+
+  private void parseCPU(
+		AsmLine asmLine,
+		Syntax  syntax,
+		boolean allowUndocInst ) throws PrgException
+  {
+    if( passNum == 1 ) {
+      if( this.cpuDone ) {
+	throw new PrgException(
+		"Mehrfaches Festlegen des CPU-Modells nicht erlaubt" );
+      }
+      this.cpuDone = true;
+      this.options = new PrgOptions( this.options );
+      this.options.setAsmSyntax( syntax );
+      this.options.setAllowUndocInst( allowUndocInst );
     }
     asmLine.checkEOL();
   }
@@ -1486,7 +1731,9 @@ public class Z80Assembler
 
   private void parseEND( AsmLine asmLine ) throws PrgException
   {
-    this.endReached = true;
+    if( this.curSource != null ) {
+      this.curSource.setEOF();
+    }
     asmLine.checkEOL();
   }
 
@@ -1504,11 +1751,12 @@ public class Z80Assembler
   }
 
 
-  private void parseENT( AsmLine asmLine ) throws PrgException
+  private void parseENTRY( AsmLine asmLine ) throws PrgException
   {
     if( this.passNum == 1 ) {
       if( this.entryAddr != null ) {
-	throw new PrgException( "Mehrfache ENT-Anweisungen nicht erlaubt" );
+	throw new PrgException(
+		"Mehrfache ENT- bzw. ENTRY-Anweisungen nicht erlaubt" );
       }
       this.entryAddr = this.curAddr;
     }
@@ -1523,24 +1771,73 @@ public class Z80Assembler
     String labelName = asmLine.getLabel();
     if( labelName != null ) {
       /*
-       * Die Marke wurde bereits beim Zerlegen der Zeile erkannt und
+       * Die Marke wurde evtl. bereits beim Parsen der Zeile erkannt und
        * der Markentabelle mit dem Wert der aktuellen Adresse hinzugefuegt.
        * Hier muss nur der Wert korrigiert werden.
+       * Waehrend der Berechnung des Werts wird die Marke
+       * von der Markentabelle entfernt,
+       * damit es zu keiner Falschberechnung kommt,
+       * falls die Marke selbst im Ausdruck steht.
        */
-      AsmLabel label = this.labels.get( labelName );
-      if( label != null ) {
+      AsmLabel label = this.labels.remove( labelName );
+      Object   value = null;
+      try {
 	String  argText = asmLine.nextArg().toString();
-	Integer value   = ExprParser.parse(
+
+	value = ExprParser.parse(
 				argText,
 				this.instBegAddr,
 				this.labels,
 				this.passNum == 2,
 				this.options.getLabelsCaseSensitive() );
-	label.setLabelValue( value != null ? value : argText );
+	if( (value == null) && (this.passNum == 1) ) {
+	  /*
+	   * Wenn im Lauf 1 der Wert nicht errechnet werden kann,
+	   * dann den Text des Ausdrucks speichern,
+	   * um die Berechnung spaeter erneut zu versuchen.
+	   */
+	  value = argText;
+	}
+      }
+      finally {
+	switch( this.passNum ) {
+	  case 1:
+	    label.setLabelValue( value, false );
+	    break;
+	  case 2:
+	    if( (value != null) && !label.hasIntValue() ) {
+	      label.setLabelValue( value, false );
+	    }
+	    break;
+	}
+	this.labels.put( labelName, label );
       }
       asmLine.checkEOL();
     } else {
       throw new PrgException( "EQU ohne Marke" );
+    }
+  }
+
+
+  private void parseERROR( AsmLine asmLine ) throws PrgException
+  {
+    String msg = stripEnclosedText(
+				asmLine.nextArg().toString(),
+				"Meldungstext" );
+    if( msg == null ) {
+      throw new PrgException( "Meldungstext erwartet" );
+    }
+    asmLine.checkEOL();
+    throw new PrgException( msg );
+  }
+
+
+  private void parseEVEN( AsmLine asmLine ) throws PrgException
+  {
+    this.suppressLineAddr = true;
+    asmLine.checkEOL();
+    if( (this.curAddr & 0x0001) != 0 ) {
+      skipCode( 1 );
     }
   }
 
@@ -1585,6 +1882,39 @@ public class Z80Assembler
   }
 
 
+  private void parseIF(
+		AsmLine asmLine,
+		boolean condValue ) throws
+					PrgException,
+					TooManyErrorsException
+  {
+    boolean state = false;
+    Integer value = ExprParser.parse(
+			asmLine.nextArg().toString(),
+			this.instBegAddr,
+			this.labels,
+			true,
+			this.options.getLabelsCaseSensitive() );
+    if( value != null ) {
+      if( condValue == (value.intValue() != 0) ) {
+	state = true;
+      }
+    } else {
+      /*
+       * Fehler hier ausgeben und keine Exception werfen,
+       * damit bei ELSEIF, ELSE oder ENDIF
+       * kein Strukturfehler auftritt
+       */
+      putError( "Wert nicht ermittelbar"
+			+ " (Vorw\u00E4rtsreferenzen"
+			+ " in Marken an der Stelle nicht erlaubt)" );
+    }
+    this.stack.push(
+		new AsmStackEntry( this.curSource.getLineNum(), state ) );
+    asmLine.checkEOL();
+  }
+
+
   private void parseIFDEF( AsmLine asmLine ) throws PrgException
   {
     AsmArg a = asmLine.nextArg();
@@ -1592,6 +1922,20 @@ public class Z80Assembler
 	new AsmStackEntry(
 		this.curSource.getLineNum(),
 		this.labels.containsKey(
+			this.options.getLabelsCaseSensitive() ?
+						a.toString()
+						: a.toUpperString() ) ) );
+    asmLine.checkEOL();
+  }
+
+
+  private void parseIFNDEF( AsmLine asmLine ) throws PrgException
+  {
+    AsmArg a = asmLine.nextArg();
+    this.stack.push(
+	new AsmStackEntry(
+		this.curSource.getLineNum(),
+		!this.labels.containsKey(
 			this.options.getLabelsCaseSensitive() ?
 						a.toString()
 						: a.toUpperString() ) ) );
@@ -1766,13 +2110,15 @@ public class Z80Assembler
 		"In sich geschachtelte INCLUDE-Befehle nicht erlaubt" );
     }
     asmLine.checkEOL();
-    this.curSource = this.file2Source.get( file );
-    if( this.curSource != null ) {
-      this.curSource.reset();
+    PrgSource source = this.file2Source.get( file );
+    if( source != null ) {
+      source.reset();
+      this.curSource = source;
     } else {
       try {
-	this.curSource = PrgSource.readFile( file );
-	this.file2Source.put( file, this.curSource );
+	source = PrgSource.readFile( file );
+	this.file2Source.put( file, source );
+	this.curSource = source;
       }
       catch( IOException ex ) {
 	String msg = ex.getMessage();
@@ -1885,28 +2231,28 @@ public class Z80Assembler
       AsmArg a2 = asmLine.nextArg();
       asmLine.checkEOL();
       if( a1.equalsUpper( "NZ" ) ) {
-	int d = getAddrDiff( a2 );
+	int d = getAddrDiff( asmLine, a2 );
 	asmLine.checkEOL();
 	putCode( 0x20 );
 	putCode( d );
 	zilogSyntax();
       }
       else if( a1.equalsUpper( "Z" ) ) {
-	int d = getAddrDiff( a2 );
+	int d = getAddrDiff( asmLine, a2 );
 	asmLine.checkEOL();
 	putCode( 0x28 );
 	putCode( d );
 	zilogSyntax();
       }
       else if( a1.equalsUpper( "NC" ) ) {
-	int d = getAddrDiff( a2 );
+	int d = getAddrDiff( asmLine, a2 );
 	asmLine.checkEOL();
 	putCode( 0x30 );
 	putCode( d );
 	zilogSyntax();
       }
       else if( a1.equalsUpper( "C" ) ) {
-	int d = getAddrDiff( a2 );
+	int d = getAddrDiff( asmLine, a2 );
 	asmLine.checkEOL();
 	putCode( 0x38 );
 	putCode( d );
@@ -1915,7 +2261,7 @@ public class Z80Assembler
 	throwNoSuchInstArgs();
       }
     } else {
-      int d = getAddrDiff( a1 );
+      int d = getAddrDiff( asmLine, a1 );
       putCode( 0x18 );
       putCode( d );
     }
@@ -2290,53 +2636,6 @@ public class Z80Assembler
   }
 
 
-  private void parseIF(
-		AsmLine asmLine,
-		boolean condValue ) throws PrgException
-  {
-    Integer v = ExprParser.parse(
-			asmLine.nextArg().toString(),
-			this.instBegAddr,
-			this.labels,
-			true,
-			this.options.getLabelsCaseSensitive() );
-    if( v == null ) {
-     throw new PrgException( "Wert nicht ermittelbar"
-			+ " (bei IF sind keine Vorw\u00E4rtsreferenzen"
-			+ " auf Marken erlaubt.)" );
-    }
-    this.stack.push(
-	new AsmStackEntry(
-		this.curSource.getLineNum(),
-		condValue == (v.intValue() != 0) ) );
-    asmLine.checkEOL();
-  }
-
-
-  private void parseIFNDEF( AsmLine asmLine ) throws PrgException
-  {
-    AsmArg a = asmLine.nextArg();
-    this.stack.push(
-	new AsmStackEntry(
-		this.curSource.getLineNum(),
-		!this.labels.containsKey(
-			this.options.getLabelsCaseSensitive() ?
-						a.toString()
-						: a.toUpperString() ) ) );
-    asmLine.checkEOL();
-  }
-
-
-  private void parseIfInPass( AsmLine asmLine, int passNum ) throws PrgException
-  {
-    this.stack.push(
-	new AsmStackEntry(
-		this.curSource.getLineNum(),
-		passNum == this.passNum ) );
-    asmLine.checkEOL();
-  }
-
-
   private void parseORG( AsmLine asmLine ) throws PrgException
   {
     this.suppressLineAddr = true;
@@ -2346,12 +2645,31 @@ public class Z80Assembler
     if( a < this.curAddr ) {
       this.orgOverlapped = true;
       throw new PrgException( "Zur\u00FCcksetzen des"
-			+ " Addressz\u00E4hlers nicht erlaubt" );
+			+ " Adressz\u00E4hlers nicht erlaubt" );
     }
     if( (this.curAddr > 0) && (a > this.curAddr) ) {
       skipCode( a - this.curAddr );
     }
     this.curAddr = a;
+  }
+
+
+  private void parseNAME( AsmLine asmLine ) throws PrgException
+  {
+    String appName = stripEnclosedText(
+				asmLine.nextArg().toString(),
+				"Name/Titel" );
+    if( appName == null ) {
+      throw new PrgException( "Programmname bzw. Titel erwartet" );
+    }
+    if( this.passNum == 1 ) {
+      if( this.appName != null ) {
+	throw new PrgException( "Mehrfaches Festlegen"
+			+ " des Programmnames bzw. Titels nicht erlaubt" );
+      }
+      this.appName = appName;
+    }
+    asmLine.checkEOL();
   }
 
 
@@ -2731,6 +3049,20 @@ public class Z80Assembler
   }
 
 
+  private void putError( String msg ) throws TooManyErrorsException
+  {
+    if( msg == null ) {
+      msg = "Unbekannter Fehler";
+    }
+    appendLineNumMsgToErrLog( msg, EmuUtil.TEXT_ERROR );
+    this.status = false;
+    this.errCnt++;
+    if( this.errCnt >= 100 ) {
+      throw new TooManyErrorsException();
+    }
+  }
+
+
   private int nextWordArg( AsmLine asmLine ) throws PrgException
   {
     return getWord( asmLine.nextArg() );
@@ -2742,7 +3074,9 @@ public class Z80Assembler
    * ist der Adresszaehler noch nicht auf den naechsten Befehl gestellt,
    * d.h., der Wert muss um zwei erhoeht werden.
    */
-  private int getAddrDiff( AsmArg asmArg ) throws PrgException
+  private int getAddrDiff(
+			AsmLine asmLine,
+			AsmArg  asmArg ) throws PrgException
   {
     int v = 0;
     if( this.passNum == 2 ) {
@@ -2752,8 +3086,51 @@ public class Z80Assembler
       }
       v = getWord( s ) - ((this.curAddr + 2) & 0xFFFF);
       if( (v < ~0x7F) || (v > 0x7F) ) {
-	this.relJumpsTooLong = true;
-	throw new PrgException( "Relative Sprungdistanz zu gro\u00DF" );
+	boolean done = false;
+	if( (this.curSource != null)
+	    && this.options.getReplaceTooLongRelJumps() )
+	{
+	  int begOfInst = asmLine.getBegOfInstruction();
+	  if( begOfInst >= 0 ) {
+	    String line = this.curSource.getCurLine();
+	    if( line != null ) {
+	      StringBuilder buf = new StringBuilder( line );
+	      if( (begOfInst + 1) < buf.length() ) {
+		if( (Character.toUpperCase( buf.charAt( begOfInst ) ) == 'J')
+		    && (Character.toUpperCase(
+				buf.charAt( begOfInst + 1 ) ) == 'R') )
+		{
+		  buf.setCharAt( begOfInst + 1, 'P' );
+		  /*
+		   * Wenn nur Robotron-Syntax erlaubt ist,
+		   * muss bei einem unbedingen relativen Sprung
+		   * JR in JMP geaendert werden.
+		   * Bei JRC, JRNC, JRZ und JRNZ wird dagegen weiterhin
+		   * nur das R durch ein P ersetzt.
+		   */
+		  if( this.options.getAsmSyntax() == Syntax.ROBOTRON_ONLY ) {
+		    String instr = asmLine.getInstruction();
+		    if( instr != null ) {
+		      if( instr.length() == 2 ) {
+			buf.replace( begOfInst, begOfInst + 2, "JMP" );
+		      }
+		    }
+		  }
+		  if( this.curSource.replaceCurLine( buf.toString() ) ) {
+		    putWarning( "Relativer Sprung wird als absoluter"
+			+ " \u00FCbersetzt, da Sprungdistanz zu gro\u00DF" );
+		    this.restartAsm = true;
+		    done            = true;
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	if( !done ) {
+	  this.relJumpsTooLong = true;
+	  throw new PrgException( "Relative Sprungdistanz zu gro\u00DF" );
+	}
       }
     }
     return v;
@@ -2765,21 +3142,7 @@ public class Z80Assembler
     String fileName = null;
     String text     = asmLine.nextArg().toString();
     if( text != null ) {
-      int len = text.length();
-      if( len > 0 ) {
-	char ch = text.charAt( 0 );
-	if( (ch == '\'') || (ch == '\"') ) {
-	  if( (len < 2) || (text.charAt( len - 1 ) != ch) ) {
-	    throw new PrgException(
-			  "Dateiname nicht mit " + ch + " abgeschlossen" );
-	  }
-	  if( len > 2 ) {
-	    fileName = text.substring( 1, len - 1 );
-	  }
-	} else {
-	  fileName = text;
-	}
-      }
+      fileName = stripEnclosedText( text, "Dateiname" );
     }
     if( fileName == null ) {
       throw new PrgException( "Dateiname erwartet" );
@@ -2895,6 +3258,28 @@ public class Z80Assembler
   }
 
 
+  private void reset()
+  {
+    init();
+    this.curSource = this.mainSource;
+    this.appName   = null;
+    this.stack.clear();
+    this.labels.clear();
+    this.labels.put(
+		BUILT_IN_LABEL,
+		new AsmLabel( BUILT_IN_LABEL, 1, false ) );
+    if( this.curSource != null ) {
+      this.curSource.reset();
+    }
+    if( this.codeBuf != null ) {
+      this.codeBuf.reset();
+    }
+    if( this.srcOut != null ) {
+      this.srcOut.setLength( 0 );
+    }
+  }
+
+
   /*
    * Die Methode wird aufgerufen,
    * wenn eine Robotron-Mnemonik verwendet wird,
@@ -2943,6 +3328,29 @@ public class Z80Assembler
   }
 
 
+  private static String stripEnclosedText(
+				String text,
+				String itemDesc ) throws PrgException
+  {
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+	char ch = text.charAt( 0 );
+	if( (ch == '\'') || (ch == '\"') ) {
+	  if( (len < 2) || (text.charAt( len - 1 ) != ch) ) {
+	    throw new PrgException( itemDesc
+			  + " nicht mit " + ch + " abgeschlossen" );
+	  }
+	  if( len > 2 ) {
+	    text = text.substring( 1, len - 1 );
+	  }
+	}
+      }
+    }
+    return text;
+  }
+
+
   private void undocInst()
   {
     if( !this.options.getAllowUndocInst() )
@@ -2966,35 +3374,59 @@ public class Z80Assembler
 
   private void printLabels()
   {
-    boolean    firstLabel = true;
-    AsmLabel[] labels     = getSortedLabels();
+    StringBuilder buf = this.listOut;
+    if( buf != null ) {
+      buf.append( '\n' );
+    } else {
+      buf = new StringBuilder( 0x1000 );
+    }
+    boolean    missingValue = false;
+    boolean    firstLabel   = true;
+    AsmLabel[] labels       = getSortedLabels();
     if( labels != null ) {
       for( int i = 0; i < labels.length; i++ ) {
 	if( firstLabel ) {
 	  firstLabel = false;
-	  appendToOutLog( "\nMarkentabelle:\n" );
+	  buf.append( "\nMarkentabelle:\n" );
 	}
-	String vText = "????";
-	Object value = labels[ i ].getLabelValue();
+	boolean vMissing = true;
+	String  vText    = "k.W.";
+	Object  value    = labels[ i ].getLabelValue();
 	if( value != null ) {
 	  if( value instanceof Integer ) {
-	    vText = String.format(
+	    vMissing = false;
+	    vText    = String.format(
 			"%04X",
 			((Integer) value).intValue() & 0xFFFF );
 	  }
 	}
-	appendToOutLog(
-		String.format(
+	buf.append( String.format(
 			"    %s   %s\n",
 			vText,
 			labels[ i ].getLabelName() ) );
+	missingValue |= vMissing;
       }
     }
     if( firstLabel ) {
-      appendToOutLog( "Markentabelle ist leer.\n" );
-    } else {
-      appendToOutLog( "\n" );
+      buf.append( "Markentabelle ist leer." );
+    } else if( missingValue ) {
+      buf.append(
+	"\n    k.W.: Numerischer Wert konnte nicht berechnet werden." );
     }
+    buf.append( '\n' );
+    if( this.listOut == null ) {
+      appendToOutLog( buf.toString() );
+    }
+  }
+
+
+  private void printListTableHeader()
+  {
+    this.listOut.append( "\nZeile   Adr    Maschinen-Code   Quelltext\n" );
+    for( int i = 0; i < 72; i++ ) {
+      this.listOut.append( '-' );
+    }
+    this.listOut.append( '\n' );
   }
 
 
@@ -3005,7 +3437,7 @@ public class Z80Assembler
   }
 
 
-  private boolean writeCodeToFile( String appName, boolean forZ9001 )
+  private boolean writeCodeToFile( boolean forZ9001 )
   {
     boolean status = false;
     byte[] codeBytes = this.codeOut;
@@ -3065,8 +3497,8 @@ public class Z80Assembler
 	     * Dies vermeidet nicht nur Verwirrung,
 	     * sondern ist z.B. beim Z9001 auch zwingend notwendig.
 	     */
-	    if( appName != null ) {
-	      if( !appName.isEmpty() ) {
+	    if( this.appName != null ) {
+	      if( !this.appName.isEmpty() ) {
 		fileDesc = appName;
 	      }
 	    }
@@ -3093,8 +3525,7 @@ public class Z80Assembler
 		this.begAddr,
 		sAddr,
 		fileDesc,
-		fileType,
-		null );
+		fileType );
 	  status = true;
 	}
 	catch( IOException ex ) {
@@ -3107,7 +3538,7 @@ public class Z80Assembler
 	      buf.append( msg );
 	    }
 	  }
-	  buf.append( (char) '\n' );
+	  buf.append( '\n' );
 	  appendToErrLog( buf.toString() );
 	}
       } else {

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,41 +11,45 @@ package jkcemu.disk;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.util.Arrays;
 
 
 public class SectorData extends SectorID
 {
+  private static final int sectorSizes[] = {
+				0x80, 0x100, 0x200, 0x400,
+				0x800, 0x1000, 0x2000, 0x4000,
+				0x8000, 0x10000 };
+
   public class Reader
   {
     private byte[]  buf;
     private int     pos;
     private int     len;
-    private boolean deleted;
+    private boolean dataDeleted;
 
     private Reader(
 		byte[]  buf,
 		int     pos,
 		int     len,
-		boolean deleted )
+		boolean dataDeleted )
     {
-      this.buf     = buf;
-      this.pos     = pos;
-      this.len     = len;
-      this.deleted = deleted;
+      this.buf         = buf;
+      this.pos         = pos;
+      this.len         = len;
+      this.dataDeleted = dataDeleted;
+    }
+
+
+    public boolean getDataDeleted()
+    {
+      return this.dataDeleted;
     }
 
 
     public boolean isByteAvailable()
     {
       return this.len > 0;
-    }
-
-
-    public boolean isSectorDeleted()
-    {
-      return this.deleted;
     }
 
 
@@ -73,7 +77,7 @@ public class SectorData extends SectorID
   private boolean            shared;
   private boolean            bogusID;
   private boolean            err;
-  private boolean            deleted;
+  private boolean            dataDeleted;
   private long               filePos;
   private int                filePortionLen;
   private int                idxOnCyl;
@@ -98,12 +102,12 @@ public class SectorData extends SectorID
     this.shared         = true;
     this.bogusID        = false;
     this.err            = false;
-    this.deleted        = false;
+    this.dataDeleted    = false;
     this.filePos        = -1;
     this.filePortionLen = 0;
     this.disk           = null;
     if( (sizeCode < 0) && (this.dataLen > 0) ) {
-      setSizeCode( getSizeCode( this.dataLen ) );
+      setSizeCode( getSizeCodeBySize( this.dataLen ) );
     }
   }
 
@@ -153,6 +157,12 @@ public class SectorData extends SectorID
   }
 
 
+  public boolean getDataDeleted()
+  {
+    return this.dataDeleted;
+  }
+
+
   public int getDataLength()
   {
     return this.dataLen;
@@ -183,12 +193,20 @@ public class SectorData extends SectorID
   }
 
 
-  public static int getSizeCode( int sectorSize )
+  public static int getSizeBySizeCode( int sizeCode )
+  {
+    return (sizeCode >= 0) && (sizeCode < sectorSizes.length) ?
+		sectorSizes[ sizeCode ]
+		: -1;
+  }
+
+
+  public static int getSizeCodeBySize( int sectorSize )
   {
     int rv = -1;
     if( sectorSize >= 0 ) {
-      if( sectorSize > 128 ) {
-	int m = 128;
+      if( sectorSize > 0x80 ) {
+	int m = 0x80;
 	int v = 0;
 	while( (m > 0) && (m < sectorSize) ) {
 	  v++;
@@ -208,12 +226,6 @@ public class SectorData extends SectorID
   public boolean hasBogusID()
   {
     return this.bogusID;
-  }
-
-
-  public boolean isDeleted()
-  {
-    return this.deleted;
   }
 
 
@@ -255,7 +267,7 @@ public class SectorData extends SectorID
 		this.dataBuf,
 		this.dataOffs,
 		this.dataLen,
-		this.deleted );
+		this.dataDeleted );
   }
 
 
@@ -266,12 +278,12 @@ public class SectorData extends SectorID
 
 
   public synchronized void setData(
-				boolean deleted,
+				boolean dataDeleted,
 				byte[]  dataBuf,
 				int     dataLen )
   {
-    this.deleted  = deleted;
-    this.dataOffs = 0;
+    this.dataDeleted = dataDeleted;
+    this.dataOffs    = 0;
     if( dataBuf != null ) {
       int newLen = Math.min( dataBuf.length, dataLen );
       int oldLen = 0;
@@ -307,9 +319,9 @@ public class SectorData extends SectorID
   }
 
 
-  public void setDeleted( boolean state )
+  public void setDataDeleted( boolean state )
   {
-    this.deleted = state;
+    this.dataDeleted = state;
   }
 
 

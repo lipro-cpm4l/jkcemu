@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,64 +11,65 @@ package jkcemu.disk;
 import java.awt.EventQueue;
 import java.awt.Frame;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
 public abstract class AbstractFloppyDisk
 {
-  public static final String PROP_CYLINDERS       = "cylinders";
-  public static final String PROP_FILE            = "file";
-  public static final String PROP_READONLY        = "readonly";
-  public static final String PROP_RESOURCE        = "resource";
-  public static final String PROP_SECTORS_PER_CYL = "sectors_per_cylinder";
-  public static final String PROP_SECTORSIZE      = "sectorsize";
-  public static final String PROP_SIDES           = "sides";
+  public static final String PROP_CYLINDERS         = "cylinders";
+  public static final String PROP_FILE              = "file";
+  public static final String PROP_READONLY          = "readonly";
+  public static final String PROP_RESOURCE          = "resource";
+  public static final String PROP_SECTORS_PER_TRACK = "sectors_per_track";
+  public static final String PROP_SECTORSIZE        = "sectorsize";
+  public static final String PROP_SIDES             = "sides";
 
   private Frame           owner;
-  private volatile int    sides;
   private volatile int    cyls;
-  private volatile int    sectorsPerCyl;
+  private volatile int    sides;
+  private volatile int    sectorsPerTrack;
   private volatile int    sectorSize;
   private volatile String fmtText;
   private String          mediaText;
   private String          warningText;
+  private boolean         repaired;
   private int[]           sectorIdxMap;
 
 
   protected AbstractFloppyDisk(
 			Frame owner,
-			int   sides,
 			int   cyls,
-			int   sectorsPerCyl,
+			int   sides,
+			int   sectorsPerTrack,
 			int   sectorSize,
 			int   interleave )
   {
-    this.owner         = owner;
-    this.sides         = sides;
-    this.cyls          = cyls;
-    this.sectorsPerCyl = sectorsPerCyl;
-    this.sectorSize    = sectorSize;
-    this.fmtText       = null;
-    this.mediaText     = null;
-    this.warningText   = null;
-    this.sectorIdxMap  = null;
+    this.owner           = owner;
+    this.cyls            = cyls;
+    this.sides           = sides;
+    this.sectorsPerTrack = sectorsPerTrack;
+    this.sectorSize      = sectorSize;
+    this.fmtText         = null;
+    this.mediaText       = null;
+    this.warningText     = null;
+    this.sectorIdxMap    = null;
+    this.repaired        = false;
     if( (interleave > 1)
-	&& (interleave < sectorsPerCyl)
-	&& (sectorsPerCyl > 2) )
+	&& (interleave < sectorsPerTrack)
+	&& (sectorsPerTrack > 2) )
     {
-      this.sectorIdxMap = new int[ sectorsPerCyl ];
+      this.sectorIdxMap = new int[ sectorsPerTrack ];
       Arrays.fill( this.sectorIdxMap, -1 );
       int srcIdx = 0;
       int dstIdx = 0;
-      while( srcIdx < sectorsPerCyl ) {
+      while( srcIdx < sectorsPerTrack ) {
 	while( this.sectorIdxMap[ dstIdx ] >= 0 ) {
-	  dstIdx = (dstIdx + 1) % sectorsPerCyl;
+	  dstIdx = (dstIdx + 1) % sectorsPerTrack;
 	}
 	this.sectorIdxMap[ dstIdx ] = srcIdx++;
-	dstIdx = (dstIdx + interleave) % sectorsPerCyl;
+	dstIdx = (dstIdx + interleave) % sectorsPerTrack;
       }
     }
   }
@@ -76,16 +77,16 @@ public abstract class AbstractFloppyDisk
 
   protected AbstractFloppyDisk(
 			Frame owner,
-			int   sides,
 			int   cyls,
-			int   sectorsPerCyl,
+			int   sides,
+			int   sectorsPerTrack,
 			int   sectorSize )
   {
-    this( owner, sides, cyls, sectorsPerCyl, sectorSize, 0 );
+    this( owner, cyls, sides, sectorsPerTrack, sectorSize, 0 );
   }
 
 
-  public void closeSilent()
+  public void closeSilently()
   {
     // leer
   }
@@ -96,16 +97,7 @@ public abstract class AbstractFloppyDisk
     if( this.owner instanceof FloppyDiskStationFrm ) {
       ((FloppyDiskStationFrm) this.owner).fireShowDiskError( this, msg, ex );
     } else {
-      final Frame owner = this.owner;
-      EventQueue.invokeLater(
-		new Runnable()
-		{
-		  @Override
-		  public void run()
-		  {
-		    BaseDlg.showErrorDlg( owner, msg, ex );
-		  }
-		} );
+      EmuUtil.fireShowErrorDlg( owner, msg, ex );
     }
   }
 
@@ -202,7 +194,7 @@ public abstract class AbstractFloppyDisk
 
   public int getDiskSize()
   {
-    return this.sides * this.cyls * this.sectorsPerCyl * this.sectorSize;
+    return this.cyls * this.sides * this.sectorsPerTrack * this.sectorSize;
   }
 
 
@@ -213,18 +205,18 @@ public abstract class AbstractFloppyDisk
   {
     if( this.fmtText == null ) {
       StringBuilder buf = new StringBuilder( 128 );
-      if( (this.sides > 0)
-	  && (this.cyls > 0)
-	  && (this.sectorsPerCyl > 0)
+      if( (this.cyls > 0)
+	  && (this.sides > 0)
+	  && (this.sectorsPerTrack > 0)
 	  && (this.sectorSize > 0) )
       {
-	int kBytes  = this.sides * this.cyls * this.sectorsPerCyl
+	int kBytes  = this.cyls * this.sides * this.sectorsPerTrack
 						* this.sectorSize / 1024;
 	int sysTracks = getSysTracks();
 	if( (sysTracks > 0) && (sysTracks < this.cyls) ) {
-	  buf.append( this.sides * (this.cyls - sysTracks)
-			* this.sectorsPerCyl * this.sectorSize / 1024 );
-	  buf.append( (char) '/' );
+	  buf.append( (this.cyls - sysTracks) * this.sides
+			* this.sectorsPerTrack * this.sectorSize / 1024 );
+	  buf.append( '/' );
 	  buf.append( kBytes );
 	  buf.append( " KByte, " );
 	} else {
@@ -233,7 +225,7 @@ public abstract class AbstractFloppyDisk
 	}
 	buf.append( this.cyls );
 	buf.append( " Spuren a " );
-	buf.append( this.sectorsPerCyl );
+	buf.append( this.sectorsPerTrack );
 	buf.append( " * " );
 	buf.append( this.sectorSize );
 	buf.append( " Bytes" );
@@ -277,8 +269,8 @@ public abstract class AbstractFloppyDisk
     for( int cyl = 0; cyl < cyls; cyl++ ) {
       for( int head = 0; head < sides; head++ ) {
 	int minSectorNum = -1;
-	int cylSectors   = getSectorsOfCylinder( cyl, head );
-	for( int i = 0; i < cylSectors; i++ ) {
+	int trackSectors = getSectorsOfTrack( cyl, head );
+	for( int i = 0; i < trackSectors; i++ ) {
 	  SectorData sector = getSectorByIndex( cyl, head, i );
 	  if( sector != null ) {
 	    int sectorNum = sector.getSectorNum();
@@ -310,9 +302,9 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  public int getSectorsPerCylinder()
+  public int getSectorsPerTrack()
   {
-    return this.sectorsPerCyl;
+    return this.sectorsPerTrack;
   }
 
 
@@ -357,7 +349,7 @@ public abstract class AbstractFloppyDisk
       }
     }
     if( rv == null ) {
-      int n = getSectorsOfCylinder( physCyl, physHead );
+      int n = getSectorsOfTrack( physCyl, physHead );
       for( int i = 0; i < n; i++ ) {
 	if( i != idx ) {
 	  SectorData sector = getSectorByIndex( physCyl, physHead, i );
@@ -382,18 +374,19 @@ public abstract class AbstractFloppyDisk
    * Die Methode liefert die Anzahl der Sektoren
    * auf einer gegebenen Spur und einer gegebenen Seite.
    * Die Standard-Implementierung liefert nur dann den richtigen Wert,
-   * wenn auf allen Spuren immer die gleiche Anzahl von Sektoren zu finden ist.
+   * wenn auf allen Spuren immer die gleiche Anzahl von Sektoren
+   * zu finden ist.
    * Abgeleitete Klassen, die ein von dieser Einschraenkung abweichendes
    * Format repraesentieren, muessen die Methode ueberschreiben.
    */
-  public int getSectorsOfCylinder( int physCyl, int physHead )
+  public int getSectorsOfTrack( int physCyl, int physHead )
   {
-    int rv = 0;
+    int rv    = 0;
     int sides = getSides();
-    if( (physHead < sides) && (sides >= 1) ) {
-      if( (physCyl >= 0) && (physCyl < getCylinders()) ) {
-	rv = getSectorsPerCylinder();
-      }
+    if( (physCyl >= 0) && (physCyl < getCylinders())
+	&& (physHead < sides) && (sides >= 1) )
+    {
+      rv = getSectorsPerTrack();
     }
     return rv;
   }
@@ -426,9 +419,21 @@ public abstract class AbstractFloppyDisk
   }
 
 
+  public boolean isHD()
+  {
+    return DiskUtil.isHD( this.sectorsPerTrack, this.sectorSize );
+  }
+
+
   public boolean isReadOnly()
   {
     return true;
+  }
+
+
+  public boolean isRepaired()
+  {
+    return this.repaired;
   }
 
 
@@ -439,14 +444,14 @@ public abstract class AbstractFloppyDisk
 		prefix + PROP_READONLY,
 		Boolean.toString( isReadOnly() ) );
       props.setProperty(
-		prefix + PROP_SIDES,
-		Integer.toString( getSides() ) );
-      props.setProperty(
 		prefix + PROP_CYLINDERS,
 		Integer.toString( getCylinders() ) );
       props.setProperty(
-		prefix + PROP_SECTORS_PER_CYL,
-		Integer.toString( getSectorsPerCylinder() ) );
+		prefix + PROP_SIDES,
+		Integer.toString( getSides() ) );
+      props.setProperty(
+		prefix + PROP_SECTORS_PER_TRACK,
+		Integer.toString( getSectorsPerTrack() ) );
       props.setProperty(
 		prefix + PROP_SECTORSIZE,
 		Integer.toString( getSectorSize() ) );
@@ -486,6 +491,12 @@ public abstract class AbstractFloppyDisk
   }
 
 
+  public void setRepaired( boolean state )
+  {
+    this.repaired = state;
+  }
+
+
   public void setSectorSize( int sectorSize )
   {
     if( sectorSize != this.sectorSize ) {
@@ -495,10 +506,10 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  public void setSectorsPerCylinder( int sectorsPerCyl )
+  public void setSectorsPerTrack( int sectorsPerTrack )
   {
-    if( sectorsPerCyl != this.sectorsPerCyl ) {
-      this.sectorsPerCyl = sectorsPerCyl;
+    if( sectorsPerTrack != this.sectorsPerTrack ) {
+      this.sectorsPerTrack = sectorsPerTrack;
       fireDiskFmtChanged();
     }
   }
@@ -519,7 +530,7 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  public boolean supportsDeletedSectors()
+  public boolean supportsDeletedDataSectors()
   {
     return false;
   }
@@ -561,7 +572,7 @@ public abstract class AbstractFloppyDisk
 			SectorData sector,
 			byte[]     dataBuf,
 			int        dataLen,
-			boolean    deleted )
+			boolean    dataDeleted )
   {
     return false;
   }

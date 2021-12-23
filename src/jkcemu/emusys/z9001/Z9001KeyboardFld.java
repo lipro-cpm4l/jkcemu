@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -85,11 +84,11 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
     this.colorKeyLight    = new Color( 180, 180, 180 );
     this.colorKeyDark     = new Color( 20, 20, 20 );
     this.colorKeySelected = new Color( 120, 120, 120 );
-    this.colorLEDGreenOn  = Color.green;
+    this.colorLEDGreenOn  = Color.GREEN;
     this.colorLEDGreenOff = new Color( 60, 120, 60 );
-    this.fontSmall        = new Font( "SansSerif", Font.PLAIN, FS_SMALL );
-    this.fontKey          = new Font( "SansSerif", Font.BOLD, FS_KEY );
-    this.fontSpecialKey   = new Font( "SansSerif", Font.PLAIN, FS_SKEY );
+    this.fontSmall        = new Font( Font.SANS_SERIF, Font.PLAIN, FS_SMALL );
+    this.fontKey          = new Font( Font.SANS_SERIF, Font.BOLD, FS_KEY );
+    this.fontSpecialKey   = new Font( Font.SANS_SERIF, Font.PLAIN, FS_SKEY );
     this.kbMatrix         = new int[ 8 ];
     this.curIdx           = 0;
 
@@ -242,7 +241,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	fireWarmResetAfterDelay();
+	fireResetAfterDelay();
       }
       super.mousePressed( e );
     }
@@ -395,9 +394,9 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
     // Power-LED
     int x = X_KEY13 + LKEY_W - KEY_W;
     y = Y_KEY0 + KEY_ROW_H - ((KEY_W - KEY_H) / 2);
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.drawRect( x, y, KEY_W, KEY_W );
-    g.setColor( Color.red );
+    g.setColor( Color.RED );
     x += ((KEY_W - LED_W) / 2);
     y += ((KEY_W - LED_W) / 2);
     g.fillOval( x, y, LED_W, LED_W );
@@ -405,7 +404,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
     // GRAPHIC-LED
     x = X_KEY0 - MARGIN_FRM;
     y = Y_KEY0 + (2 * KEY_ROW_H) - MARGIN_FRM;
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.drawRect(
 	x,
 	y,
@@ -429,7 +428,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
     for( KeyData key : this.keys ) {
       g.setColor( isKeySelected( key ) ? this.colorKeySelected : key.color );
       g.fillRect( key.x, key.y, key.w, key.h );
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       g.drawRect( key.x, key.y, key.w, key.h );
     }
   }
@@ -562,4 +561,3 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
     }
   }
 }
-

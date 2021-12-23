@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,53 +9,90 @@
 
 package jkcemu.audio;
 
-import java.lang.*;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
+import java.io.IOException;
 import javax.sound.sampled.DataLine;
-import javax.sound.sampled.SourceDataLine;
-import z80emu.Z80CPU;
+import jkcemu.Main;
+import jkcemu.base.ScreenFrm;
 
 
 public abstract class AudioIO
 {
-  protected AudioIOObserver observer;
-  protected Z80CPU          z80cpu;
-  protected int             frameRate;
-  protected int             sampleSizeInBits;
-  protected int             channels;
-  protected boolean         dataSigned;
-  protected boolean         bigEndian;
-  protected boolean         firstCall;
-  protected boolean         lastPhase;
-  protected long            lastTStates;
-  protected int             tStatesPerFrame;
-  protected int             bytesPerSample;
-  protected String          formatText;
+  public static final String ERROR_LINE_UNAVAILABLE =
+	"Der Audiokanal ist nicht verf\u00FCgbar.\n"
+		+ "M\u00F6glicherweise wird er bereits durch eine andere"
+		+ " Applikation verwendet.";
 
-  private volatile SourceDataLine monitorLine;
-  private volatile byte[]         monitorBuf;
-  private volatile int            monitorPos;
+  public static final String ERROR_NO_LINE =
+	"Der Audiokanal konnte nicht ge\u00F6ffnet werden.";
+
+  public static final String ERROR_RECORDING_OUT_OF_MEMORY =
+	"Kein Speicher mehr f\u00FCr die Aufzeichnung\n"
+		+ "der Audiodaten verf\u00FCgbar.";
+
+  protected AudioIOObserver  observer;
+  protected int              frameRate;
+  protected int              sampleSizeInBits;
+  protected int              channels;
+  protected boolean          bigEndian;
+  protected boolean          dataSigned;
+  protected volatile boolean stopRequested;
+  protected int              bytesPerSample;
+
+  private static volatile DataLine cpuSyncLine = null;
+
+  private volatile boolean   finishedFired;
+  private String             errorText;
 
 
-  protected AudioIO( AudioIOObserver observer, Z80CPU z80cpu )
+  protected AudioIO( AudioIOObserver observer )
   {
     this.observer         = observer;
-    this.z80cpu           = z80cpu;
     this.frameRate        = 0;
     this.sampleSizeInBits = 0;
     this.channels         = 0;
-    this.dataSigned       = false;
     this.bigEndian        = false;
-    this.firstCall        = true;
-    this.lastPhase        = false;
-    this.lastTStates      = 0L;
-    this.tStatesPerFrame  = 0;
+    this.dataSigned       = false;
+    this.stopRequested    = false;
+    this.finishedFired    = false;
     this.bytesPerSample   = 0;
-    this.formatText       = null;
-    this.monitorLine      = null;
-    this.monitorBuf       = null;
-    this.monitorPos       = 0;
+    this.errorText        = null;
+  }
+
+
+  public static void checkOpenExclCPUSynchronLine() throws IOException
+  {
+    if( cpuSyncLine != null ) {
+      throw new IOException(
+	"Es ist bereits ein Audiokanal ge\u00F6ffnet,"
+		+ " der synchron zum emulierten Mikroprozessor"
+		+ " bedient wird.\n"
+		+ "Sie m\u00FCssen zuerst dieses Audiokanal schlie\u00DFen,"
+		+ " bevor Sie einen anderen \u00F6ffnen k\u00F6nnen." );
+    }
+  }
+
+
+  protected void closeDataLine( DataLine line )
+  {
+    if( line != null ) {
+      try {
+	line.stop();
+	line.flush();
+	line.close();
+      }
+      catch( Exception ex ) {}
+      finally {
+	if( line == cpuSyncLine ) {
+	  cpuSyncLine = null;
+	}
+      }
+    }
+  }
+
+
+  public void closeLine()
+  {
+    // leer
   }
 
 
@@ -73,15 +110,24 @@ public abstract class AudioIO
   }
 
 
-  public int getChannels()
+  protected synchronized void finished()
   {
-    return this.channels;
+    if( !this.finishedFired ) {
+      this.observer.fireFinished( this, this.errorText );
+      this.finishedFired = true;
+    }
   }
 
 
-  public String getFormatText()
+  public void fireStop()
   {
-    return this.formatText;
+    this.stopRequested = true;
+  }
+
+
+  public int getChannels()
+  {
+    return this.channels;
   }
 
 
@@ -97,75 +143,37 @@ public abstract class AudioIO
   }
 
 
-  public boolean isLineOpen()
+  public static boolean isCPUSynchronLineOpen()
   {
-    return this.monitorLine != null;
+    return cpuSyncLine != null;
   }
 
 
-  public boolean isMonitorActive()
+  protected static boolean isEmuThread()
   {
-    return this.monitorLine != null;
+    ScreenFrm screenFrm = Main.getScreenFrm();
+    return screenFrm != null ?
+		(screenFrm.getEmuThread() == Thread.currentThread())
+		: false;
   }
 
 
-  protected void openMonitorLine()
+  protected void setErrorText( String errorText )
   {
-    AudioFormat fmt = new AudioFormat(
-				(float) this.frameRate,
-				this.sampleSizeInBits,
-				this.channels,
-				this.dataSigned,
-				this.bigEndian );
-    if( supportsMonitor()
-	&& (this.monitorLine == null)
-	&& (fmt != null) )
-    {
-      DataLine.Info  info = new DataLine.Info( SourceDataLine.class, fmt );
-      SourceDataLine line = null;
-      try {
-	if( AudioSystem.isLineSupported( info ) ) {
-	  line = (SourceDataLine) AudioSystem.getLine( info );
-	  if( line != null ) {
-	    line.open( fmt );
-	    line.start();
-
-	    // Buffer anlegen
-	    int r = Math.round( fmt.getSampleRate() );
-	    int n = line.getBufferSize() / 32;
-	    if( n < r / 8 ) {
-	      n = r / 8;		// min. 1/8 Sekunde
-	    }
-	    else if( n > r / 2 ) {
-	      n = r / 2;		// max. 1/2 Sekunde
-	    }
-	    if( n < 1 ) {
-	      n = 1;
-	    }
-	    this.monitorBuf = new byte[ n ];
-	  }
-	}
-      }
-      catch( Exception ex ) {
-	DataLineCloser.closeDataLine( line );
-	line = null;
-      }
-      this.monitorLine = line;
-    }
+    this.errorText = errorText;
   }
 
 
-  protected void closeMonitorLine()
+  protected void registerCPUSynchronLine( DataLine line )
+						throws IOException
   {
-    DataLine line    = this.monitorLine;
-    this.monitorLine = null;
-    if( line != null ) {
-      DataLineCloser.closeDataLine( line );
-    }
+    checkOpenExclCPUSynchronLine();
+    cpuSyncLine = line;
   }
 
 
   protected void setFormat(
+			String  fmtTextPrefix,
 			int     frameRate,
 			int     sampleSizeInBits,
 			int     channels,
@@ -181,6 +189,9 @@ public abstract class AudioIO
 
     // Formattext erzeugen
     StringBuilder buf = new StringBuilder( 128 );
+    if( fmtTextPrefix != null ) {
+      buf.append( fmtTextPrefix );
+    }
     buf.append( frameRate );
     buf.append( " Hz, " );
     buf.append( sampleSizeInBits );
@@ -198,7 +209,7 @@ public abstract class AudioIO
 	buf.append( " Kan\u00E4le" );
 	break;
     }
-    this.formatText = buf.toString();
+    this.observer.fireFormatChanged( this, buf.toString() );
 
     // Wertebereich der Pegelanzeige festlegen
     if( this.bytesPerSample == 1 ) {
@@ -213,36 +224,6 @@ public abstract class AudioIO
       } else {
 	this.observer.setVolumeLimits( 0, 65535 );
       }
-    }
-  }
-
-
-  protected boolean supportsMonitor()
-  {
-    return false;
-  }
-
-
-  protected void writeMonitorLine( byte[] buf )
-  {
-    SourceDataLine line = this.monitorLine;
-    if( (line != null) && (buf != null) ) {
-      line.write( buf, 0, buf.length );
-    }
-  }
-
-
-  protected void writeMonitorLine( int frameValue )
-  {
-    SourceDataLine line = this.monitorLine;
-    byte[]         buf  = this.monitorBuf;
-    if( (line != null) && (buf != null) ) {
-      if( this.monitorPos >= buf.length ) {
-	line.write( buf, 0, buf.length );
-	this.monitorPos = 0;
-      }
-      buf[ this.monitorPos ] = (byte) frameValue;
-      this.monitorPos++;
     }
   }
 }

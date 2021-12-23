@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,9 @@ package jkcemu.base;
 
 public interface ByteDataSource
 {
-  public int getAddrOffset();
-  public int getDataByte( int addr );
-  public int getDataLength();
+  public int     getAddrOffset();
+  public int     getDataByte( int addr );
+  public int     getDataLength();
+  public boolean getDataReadOnly();
+  public boolean setDataByte( int addr, int value );
 }

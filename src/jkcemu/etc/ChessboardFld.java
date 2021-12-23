@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,6 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.MediaTracker;
 import java.awt.Toolkit;
-import java.lang.*;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,6 +24,7 @@ import java.util.Map;
 import javax.swing.JComponent;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class ChessboardFld extends JComponent
@@ -49,7 +49,7 @@ public class ChessboardFld extends JComponent
     this.swapped          = false;
     if( imgMap == null ) {
       imgMap = new HashMap<>();
-      Toolkit tk = getToolkit();
+      Toolkit tk = EmuUtil.getToolkit( this );
       if( tk != null ) {
 	addImage( imgMap, tk, EmuSys.Chessman.WHITE_PAWN,   "pawn_w.png" );
 	addImage( imgMap, tk, EmuSys.Chessman.WHITE_KNIGHT, "knight_w.png" );
@@ -81,7 +81,7 @@ public class ChessboardFld extends JComponent
 	}
       }
     }
-    setFont( new Font( "SansSerif", Font.PLAIN, 12 ) );
+    setFont( new Font( Font.SANS_SERIF, Font.PLAIN, 12 ) );
   }
 
 
@@ -151,16 +151,16 @@ public class ChessboardFld extends JComponent
 
   private void drawChessboard( Graphics g, int x, int y )
   {
-    g.setColor( Color.white );
+    g.setColor( Color.WHITE );
     g.fillRect( x, y, PREFERRED_WIDTH, PREFERRED_WIDTH );
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.drawRect( x, y, PREFERRED_WIDTH, PREFERRED_WIDTH );
     g.setFont( getFont() );
     for( int i = 0; i < 8; i++ ) {
       String s = Character.toString(
 			(char) (this.swapped ? ('1' + i) : ('8' - i)) );
       int    tmpY = y + MARGIN + (i * SQUARE_WIDTH) + (SQUARE_WIDTH / 2) + 4;
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       g.drawString( s, x + 6, tmpY );
       g.drawString( s, x + MARGIN + (8 * SQUARE_WIDTH) + 6, tmpY );
       for( int k = 0; k < 8; k++ ) {
@@ -175,7 +175,7 @@ public class ChessboardFld extends JComponent
       }
     }
     FontMetrics fm = g.getFontMetrics();
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     for( int k = 0; k < 8; k++ ) {
       String s = Character.toString(
 			(char) (this.swapped ? ('H' - k) : ('A' + k)) );

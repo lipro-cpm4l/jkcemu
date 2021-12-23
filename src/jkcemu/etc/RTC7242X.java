@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
 import java.util.Calendar;
 
 

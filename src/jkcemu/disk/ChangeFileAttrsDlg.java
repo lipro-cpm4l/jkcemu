@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,30 +13,30 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 
 
 public class ChangeFileAttrsDlg extends BaseDlg
 {
+  private boolean      notified;
   private Boolean      readOnly;
   private Boolean      sysFile;
   private Boolean      archive;
-  private JRadioButton btnReadOnlyUnchanged;
-  private JRadioButton btnReadOnlyYes;
-  private JRadioButton btnReadOnlyNo;
-  private JRadioButton btnSysFileUnchanged;
-  private JRadioButton btnSysFileYes;
-  private JRadioButton btnSysFileNo;
-  private JRadioButton btnArchiveUnchanged;
-  private JRadioButton btnArchiveYes;
-  private JRadioButton btnArchiveNo;
+  private JRadioButton rbReadOnlyUnchanged;
+  private JRadioButton rbReadOnlyYes;
+  private JRadioButton rbReadOnlyNo;
+  private JRadioButton rbSysFileUnchanged;
+  private JRadioButton rbSysFileYes;
+  private JRadioButton rbSysFileNo;
+  private JRadioButton rbArchiveUnchanged;
+  private JRadioButton rbArchiveYes;
+  private JRadioButton rbArchiveNo;
   private JButton      btnOK;
   private JButton      btnCancel;
 
@@ -44,6 +44,7 @@ public class ChangeFileAttrsDlg extends BaseDlg
   public ChangeFileAttrsDlg( Window owner )
   {
     super( owner, "Dateiattribute \u00E4ndern" );
+    this.notified = false;
     this.readOnly = null;
     this.sysFile  = null;
     this.archive  = null;
@@ -62,25 +63,25 @@ public class ChangeFileAttrsDlg extends BaseDlg
 					0, 0 );
 
     // Schreibgeschuetzt
-    add( new JLabel( "Schreibgesch\u00FCtzt:" ), gbc );
+    add( GUIFactory.createLabel( "Schreibgesch\u00FCtzt:" ), gbc );
 
     ButtonGroup readOnlyGrp = new ButtonGroup();
 
-    this.btnReadOnlyUnchanged = new JRadioButton( "Nicht \u00E4ndern", true );
-    readOnlyGrp.add( this.btnReadOnlyUnchanged );
+    this.rbReadOnlyUnchanged = createRadioButtonUnchanged();
+    readOnlyGrp.add( this.rbReadOnlyUnchanged );
     gbc.anchor = GridBagConstraints.WEST;
     gbc.gridx++;
-    add( this.btnReadOnlyUnchanged, gbc );
+    add( this.rbReadOnlyUnchanged, gbc );
 
-    this.btnReadOnlyYes = new JRadioButton( "Ja", false );
-    readOnlyGrp.add( this.btnReadOnlyYes );
+    this.rbReadOnlyYes = createRadioButtonYes();
+    readOnlyGrp.add( this.rbReadOnlyYes );
     gbc.gridx++;
-    add( this.btnReadOnlyYes, gbc );
+    add( this.rbReadOnlyYes, gbc );
 
-    this.btnReadOnlyNo = new JRadioButton( "Nein", false );
-    readOnlyGrp.add( this.btnReadOnlyNo );
+    this.rbReadOnlyNo = createRadioButtonNo();
+    readOnlyGrp.add( this.rbReadOnlyNo );
     gbc.gridx++;
-    add( this.btnReadOnlyNo, gbc );
+    add( this.rbReadOnlyNo, gbc );
 
 
     // Systemdatei
@@ -88,54 +89,55 @@ public class ChangeFileAttrsDlg extends BaseDlg
     gbc.insets.top = 0;
     gbc.gridx      = 0;
     gbc.gridy++;
-    add( new JLabel( "Systemdatei:" ), gbc );
+    add( GUIFactory.createLabel( "Systemdatei:" ), gbc );
 
     ButtonGroup sysFileGrp = new ButtonGroup();
 
-    this.btnSysFileUnchanged = new JRadioButton( "Nicht \u00E4ndern", true );
-    sysFileGrp.add( this.btnSysFileUnchanged );
+    this.rbSysFileUnchanged = createRadioButtonUnchanged();
+    sysFileGrp.add( this.rbSysFileUnchanged );
     gbc.anchor = GridBagConstraints.WEST;
     gbc.gridx++;
-    add( this.btnSysFileUnchanged, gbc );
+    add( this.rbSysFileUnchanged, gbc );
 
-    this.btnSysFileYes = new JRadioButton( "Ja", false );
-    sysFileGrp.add( this.btnSysFileYes );
+    this.rbSysFileYes = createRadioButtonYes();
+    sysFileGrp.add( this.rbSysFileYes );
     gbc.gridx++;
-    add( this.btnSysFileYes, gbc );
+    add( this.rbSysFileYes, gbc );
 
-    this.btnSysFileNo = new JRadioButton( "Nein", false );
-    sysFileGrp.add( this.btnSysFileNo );
+    this.rbSysFileNo = createRadioButtonNo();
+    sysFileGrp.add( this.rbSysFileNo );
     gbc.gridx++;
-    add( this.btnSysFileNo, gbc );
+    add( this.rbSysFileNo, gbc );
 
 
     // Archiviert
     gbc.anchor = GridBagConstraints.EAST;
     gbc.gridx  = 0;
     gbc.gridy++;
-    add( new JLabel( "Archiv:" ), gbc );
+    add( GUIFactory.createLabel( "Archiv:" ), gbc );
 
     ButtonGroup archiveGrp = new ButtonGroup();
 
-    this.btnArchiveUnchanged = new JRadioButton( "Nicht \u00E4ndern", true );
-    archiveGrp.add( this.btnArchiveUnchanged );
+    this.rbArchiveUnchanged = createRadioButtonUnchanged();
+    archiveGrp.add( this.rbArchiveUnchanged );
     gbc.anchor = GridBagConstraints.WEST;
     gbc.gridx++;
-    add( this.btnArchiveUnchanged, gbc );
+    add( this.rbArchiveUnchanged, gbc );
 
-    this.btnArchiveYes = new JRadioButton( "Ja", false );
-    archiveGrp.add( this.btnArchiveYes );
+    this.rbArchiveYes = createRadioButtonYes();
+    archiveGrp.add( this.rbArchiveYes );
     gbc.gridx++;
-    add( this.btnArchiveYes, gbc );
+    add( this.rbArchiveYes, gbc );
 
-    this.btnArchiveNo = new JRadioButton( "Nein", false );
-    archiveGrp.add( this.btnArchiveNo );
+    this.rbArchiveNo = createRadioButtonNo();
+    archiveGrp.add( this.rbArchiveNo );
     gbc.gridx++;
-    add( this.btnArchiveNo, gbc );
+    add( this.rbArchiveNo, gbc );
 
 
     // Knopfe
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn   = GUIFactory.createPanel(
+					new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor        = GridBagConstraints.CENTER;
     gbc.insets.top    = 20;
     gbc.insets.bottom = 10;
@@ -144,16 +146,14 @@ public class ChangeFileAttrsDlg extends BaseDlg
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
+
+    // Fenstergroesse und -position
     pack();
     setParentCentered();
   }
@@ -180,25 +180,37 @@ public class ChangeFileAttrsDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.btnOK.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
     if( e != null ) {
       Object src = e.getSource();
       if( src == this.btnOK ) {
-	if( this.btnReadOnlyYes.isSelected() ) {
+	if( this.rbReadOnlyYes.isSelected() ) {
 	  this.readOnly = Boolean.TRUE;
-	} else if( this.btnReadOnlyNo.isSelected() ) {
+	} else if( this.rbReadOnlyNo.isSelected() ) {
 	  this.readOnly = Boolean.FALSE;
 	}
-	if( this.btnSysFileYes.isSelected() ) {
+	if( this.rbSysFileYes.isSelected() ) {
 	  this.sysFile = Boolean.TRUE;
-	} else if( this.btnSysFileNo.isSelected() ) {
+	} else if( this.rbSysFileNo.isSelected() ) {
 	  this.sysFile = Boolean.FALSE;
 	}
-	if( this.btnArchiveYes.isSelected() ) {
+	if( this.rbArchiveYes.isSelected() ) {
 	  this.archive = Boolean.TRUE;
-	} else if( this.btnArchiveNo.isSelected() ) {
+	} else if( this.rbArchiveNo.isSelected() ) {
 	  this.archive = Boolean.FALSE;
 	}
 	doClose();
@@ -210,5 +222,37 @@ public class ChangeFileAttrsDlg extends BaseDlg
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private static JRadioButton createRadioButtonNo()
+  {
+    return GUIFactory.createRadioButton( "Nein" );
+  }
+
+
+  private static JRadioButton createRadioButtonUnchanged()
+  {
+    return GUIFactory.createRadioButton( "Nicht \u00E4ndern", true );
+  }
+
+
+  private static JRadioButton createRadioButtonYes()
+  {
+    return GUIFactory.createRadioButton( "Ja" );
   }
 }

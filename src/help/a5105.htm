@@ -76,10 +76,16 @@
     <a href="a5105.htm#disks">3. Enthaltene Diskettenabbilder</a>
     <ul>
      <li>
-      <a href="a5105.htm#rbas_disks">3.1. Hinweise zu den RBASIC-Disketten</a>
+      <a href="a5105.htm#rbas_picdisk">3.1. RBASIC Diskette mit Bildern</a>
      </li>
      <li>
-      <a href="a5105.htm#scpx_disk">3.2. Hinweise zur SCPX-Systemdiskette</a>
+      <a href="a5105.htm#rbas_prgdisk">3.2. RBASIC Programmdiskette</a>
+     </li>
+     <li>
+      <a href="a5105.htm#rbas_sysdisk">3.3. RBASIC Systemdiskette</a>
+     </li>
+     <li>
+      <a href="a5105.htm#scpx_disk">3.4. SCPX Systemdiskette</a>
      </li>
     </ul>
    </li>
@@ -125,7 +131,12 @@
     Optional:
     <ul>
      <li><a href="floppydisk.htm">Floppy-Disk-Station</a></li>
+     <li>
+      <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+      an der E/A-Basisadresse&nbsp;D0h
+     </li>
      <li>Zwei <a href="ramfloppy.htm">RAM-Floppies</a></li>
+     <li><a href="k1520sound.htm">K1520-Sound-Karte</a></li>
      <li>
       <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
       an der E/A-Basisadresse&nbsp;C0h
@@ -170,11 +181,11 @@
  <br/><br/>
 
  <h3><a name="sound">1.2. Sound-Generator / Tonausgabe</a></h3>
-  Zum H&ouml;ren des Tastenklicks sowie der vom Sound-Generator
-  ausgegebenen T&ouml;ne m&uuml;ssen Sie im Fenster
-  <em>Audio/Kassette</em> den
-  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
-  aktivieren.
+  Zum H&ouml;ren des Tastenklicks sowie des im Grundger&auml;t
+  enthaltenen Sound-Generators m&uuml;ssen Sie im Fenster
+  <em>Audio/Kassette</em> im Reiter
+  <a href="audio.htm#sound_out">Sound-Generator</a>
+  die Tonausgabe aktivieren.
  <br/><br/>
   <b>Achtung!</b> Im Original befindet sich in der Datenspeichereinheit
   ein Lautsprecher, der &uuml;ber die IO-Adresse&nbsp;70h
@@ -216,7 +227,8 @@
       190&nbsp;PRINT:PRINT&nbsp;"Abbruch&nbsp;mit&nbsp;beliebiger&nbsp;Taste"&#10;<br/>
       200&nbsp;IF LEN(INKEY$)=0 THEN 200&#10;<br/>
       210&nbsp;SOUND&nbsp;7,0&#10;<br/>
-      220&nbsp;END
+      220&nbsp;SOUND&nbsp;13,0&#10;<br/>
+      230&nbsp;END
      </tt>
     </td>
     <td>&nbsp;</td>
@@ -247,7 +259,8 @@
       190&nbsp;PRINT:PRINT&nbsp;"Abbruch&nbsp;mit&nbsp;beliebiger&nbsp;Taste"&#10;<br/>
       200&nbsp;IF LEN(INKEY$)=0 THEN 200&#10;<br/>
       210&nbsp;SOUND&nbsp;7,0&#10;<br/>
-      220&nbsp;END
+      220&nbsp;SOUND&nbsp;13,0&#10;<br/>
+      230&nbsp;END
      </tt>
     </td>
     <td>&nbsp;</td>
@@ -264,7 +277,8 @@
       180&nbsp;PRINT:PRINT&nbsp;"Abbruch&nbsp;mit&nbsp;beliebiger&nbsp;Taste"&#10;<br/>
       190&nbsp;IF LEN(INKEY$)=0 THEN 190&#10;<br/>
       200&nbsp;SOUND&nbsp;7,0&#10;<br/>
-      210&nbsp;END
+      210&nbsp;SOUND&nbsp;13,0&#10;<br/>
+      220&nbsp;END
      </tt>
     </td>
    </tr>
@@ -294,40 +308,52 @@
   JKCEMU enth&auml;lt f&uuml;r die A5105-Emulation
   folgende Diskettenabbilder:
   <ul>
-   <li>
-    RBASIC-Programmdiskette mit einigen ausgew&auml;hlten
-    Demonstrations-, Spiel- und Anwendungsprogrammen
-   </li>
-   <li>RBASIC-Systemdiskette, enth&auml;lt u.a. das BIC-DEMO-Programm</li>
-   <li>SCPX-Systemdiskette</li>
+   <li>RBASIC Diskette mit Bildern</li>
+   <li>RBASIC Programmdiskette</li>
+   <li>RBASIC Systemdiskette</li>
+   <li>SCPX Systemdiskette</li>
   </ul>
  <br/>
   F&uuml;r die Nutzung der Diskettenabbilder muss die Emulation
   der Floppy-Disk-Station aktiviert werden.
  <br/><br/>
 
- <h3><a name="rbas_disks">3.1. Hinweise zu den RBASIC-Disketten</a></h3>
-  Die RBASIC-Programme haben die Endung <em>.bas</em>
-  und werden gestartet mit:
+ <h3><a name="rbas_picdisk">3.1. RBASIC Diskette mit Bildern</a></h3>
+  Die Diskette enth&auml;lt Fotos, die mit der im JKCEMU enthaltenen
+  Bildbearbeitung aufbereitet und in das A5105-Format konvertiert wurden.
+  Die Bilder k&ouml;nnen folgenderma&szlig;en als Slideshow angezeigt werden:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>run "abspiel.bas"</tt>
+ <br/><br/>
+  Es ist auch m&ouml;glich, die Bilder einzeln anzuzeigen:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>run "viewscr.bas"</tt>
+ <br/><br/>
+
+ <h3><a name="rbas_prgdisk">3.2. RBASIC Programmdiskette</a></h3>
+  Die RBASIC Programmdiskette enth&auml;lt einige ausgew&auml;hlte
+  Demonstrations-, Spiel- und Anwendungsprogramme.
+  Gestartet werden die Programme mit:
  <br/><br/>
   &nbsp;&nbsp;<tt>run "programm.bas"</tt>
  <br/><br/>
-  Anstelle von <em>programm.bas</em> ist der richtige Dateiname anzugeben.
-  Das BIC-Demo-Programm auf der RBASIC-Systemdiskette hat keine Dateiendung
-  und wird deshalb gestartet mit:
+  Anstelle von <em>programm.bas</em> ist dabei der richtige Dateiname
+  anzugeben.
+ <br/><br/>
+
+ <h3><a name="rbas_sysdisk">3.3. RBASIC Systemdiskette</a></h3>
+  Die im Emulator enthaltene RBASIC Systemdiskette entspricht inhaltlich
+  weitgehend der originalen Systemdiskette und enth&auml;lt u.a.
+  auch das BIC-Demonstrationsprogramm.
+  Gestartet wird dieses so:
  <br/><br/>
   &nbsp;&nbsp;<tt>run "bicdemo"</tt>
  <br/><br/>
-  Das Verzeichnis l&auml;sst man sich anzeigen mit:
- <br/><br/>
-  &nbsp;&nbsp;<tt>files</tt>
- <br/><br/>
-  oder z.B. nur die BASIC-Dateien mit:
- <br/><br/>
-  &nbsp;&nbsp;<tt>files "*.bas"</tt>
+  Des weiteren ist auf der Diskette auch das Bildbetrachtungsprogramm
+  <em>viewscr.bas</em> zu finden.
  <br/><br/>
 
- <h3><a name="scpx_disk">3.2. Hinweise zur SCPX-Systemdiskette</a></h3>
+ <h3><a name="scpx_disk">3.4. SCPX Systemdiskette</a></h3>
   Das SCPX verlangt beim Booten eine beschreibbare Diskette.
   Da die im Emulator integrierten Diskettenabbilder aber nicht
   beschreibbar sind,
@@ -349,6 +375,13 @@
   Die SCPX-Systemdiskette ist als Laufwerk <em>A:</em> sichtbar
   und enth&auml;lt auch Treiber f&uuml;r die beiden RAM-Floppies
   (<em>RAFBIC20.COM</em> und <em>RAFBIC24.COM</em>).
+ <br/><br/>
+  <b>Achtung!</b> Auf der Diskette ist auch die leere Datei
+  <a href="go_com.htm">GO.COM</a> enthalten.
+  Diese dient zum Starten eines im Arbeitsspeicher befindlichen
+  CP/M-kompatiblen Programms.
+  Wird <em>GO</em> aufgerufen ohne dass ein Programm im Arbeitsspeicher
+  vorhanden ist, f&uuml;hrt das zu einem Absturz.
  <br/><br/>
 
 
@@ -495,8 +528,7 @@
   Zur Anzeige im JKCEMU Bildbetrachter m&uuml;ssen die Dateien
   die Endung <em>*.scr</em> haben.
   Umgekehrt k&ouml;nnen mit dem Bildbetrachter solche Bilddateien
-  erzeugt werden,
-  indem man sie einfach mit der Endung <em>*.scr</em> speichert.
+  erzeugt werden.
   Das Laden und Anzeigen solcher Dateien auf dem A5105
   ist mit folgendem kleinen RBASIC-Programm m&ouml;glich:
  <br/>
@@ -517,11 +549,13 @@
   Der Dateiname kann dabei auch ohne die Endung <em>.SCR</em>
   eingegeben werden.
  <br/><br/>
-  Eine erweiterte Version dieses Programms ist auf der
-  im Emulator enthaltenen <em>BIC A5105 RBASIC Systemdiskette</em>
-  vorhanden.
-  Wenn Sie diese Diskette im Fenster <em>JKCEMU Diskettenstation</em>
-  eingelegt haben und sich im RBASIC befinden,
+  Eine erweiterte Version dieses Programms ist auf den
+  im Emulator enthaltenen Diskettenabbildern
+  <em>BIC A5105 RBASIC Diskette mit Bildern</em> und
+  <em>BIC A5105 RBASIC Systemdiskette</em> vorhanden.
+  Wenn Sie eine dieser beiden Disketten im Fenster
+  <em>JKCEMU Diskettenstation</em> eingelegt haben
+  und sich im RBASIC befinden,
   k&ouml;nnen Sie das Programm starten mit:
  <br/><br/>
   &nbsp;&nbsp;<tt>run &quot;viewscr.bas&quot;</tt>

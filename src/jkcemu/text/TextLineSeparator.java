@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,8 +7,6 @@
  */
 
 package jkcemu.text;
-
-import java.lang.*;
 
 
 public class TextLineSeparator
@@ -54,18 +52,28 @@ public class TextLineSeparator
   @Override
   public boolean equals( Object o )
   {
+    boolean rv = false;
     if( o != null ) {
       if( o instanceof TextLineSeparator ) {
-	String lineEnd = ((TextLineSeparator) o).lineEnd;
-	if( (lineEnd == null) && (this.lineEnd == null) ) {
-	  return true;
+	String lineEnd = ((TextLineSeparator) o).getLineEnd();
+	if( lineEnd == null ) {
+	  lineEnd = "";
 	}
-	else if( (lineEnd != null) && (this.lineEnd != null) ) {
-	  return lineEnd.equals( this.lineEnd );
-	}
+	rv = lineEnd.equals( this.lineEnd != null ? this.lineEnd : "" );
       }
     }
-    return super.equals( o );
+    return rv;
+  }
+
+
+  @Override
+  public int hashCode()
+  {
+    String s = this.lineEnd;
+    if( s == null ) {
+      s = "";
+    }
+    return s.hashCode() ^ 0x46265139;
   }
 
 

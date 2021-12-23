@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,9 @@
 package jkcemu.base;
 
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.event.KeyListener;
 import java.awt.Graphics;
-import java.lang.*;
 import java.util.Properties;
 
 
@@ -19,11 +20,11 @@ public abstract class AbstractScreenDevice
   protected static final int BLACK = 0;
   protected static final int WHITE = 1;
 
-  protected Color colorWhite;
-  protected Color colorRedLight;
-  protected Color colorRedDark;
-  protected Color colorGreenLight;
-  protected Color colorGreenDark;
+  protected volatile Color colorWhite;
+  protected volatile Color colorRedLight;
+  protected volatile Color colorRedDark;
+  protected volatile Color colorGreenLight;
+  protected volatile Color colorGreenDark;
 
 
   // Basiskoordinaten eines horizontalen Segments einer 7-Segment-Anzeige
@@ -43,13 +44,14 @@ public abstract class AbstractScreenDevice
 
   protected AbstractScreenDevice( Properties props )
   {
-    createColors( props );
+    createBaseColors( props );
   }
 
 
   public void applySettings( Properties props )
   {
-    createColors( props );
+    createBaseColors( props );
+    setScreenDirty( true );
   }
 
 
@@ -62,6 +64,15 @@ public abstract class AbstractScreenDevice
   public boolean canExtractScreenText()
   {
     return false;
+  }
+
+
+  public void fireScreenSizeChanged()
+  {
+    AbstractScreenFrm screenFrm = getScreenFrm();
+    if( screenFrm != null ) {
+      screenFrm.fireScreenSizeChanged();
+    }
   }
 
 
@@ -106,7 +117,7 @@ public abstract class AbstractScreenDevice
 
   public Color getColor( int colorIdx )
   {
-    return colorIdx == WHITE ? this.colorWhite : Color.black;
+    return colorIdx == WHITE ? this.colorWhite : Color.BLACK;
   }
 
 
@@ -129,6 +140,16 @@ public abstract class AbstractScreenDevice
 
 
   public abstract EmuThread getEmuThread();
+
+
+  /*
+   * Wenn die zweite Anzeigeeinheit auf Tastaurereignisse reagieren soll,
+   * musss diese Methode den zugehoerigen KeyListener liefern,
+   */
+  public KeyListener getKeyListener()
+  {
+    return null;
+  }
 
 
   /*
@@ -160,6 +181,12 @@ public abstract class AbstractScreenDevice
 
   public abstract int getScreenHeight();
   public abstract int getScreenWidth();
+
+
+  public Dimension getScreenSize()
+  {
+    return new Dimension( getScreenWidth(), getScreenHeight() );
+  }
 
 
   public String getScreenText()
@@ -201,18 +228,18 @@ public abstract class AbstractScreenDevice
 	    if( chY1 < chY2 ) {
 	      nSpaces++;
 	    } else {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	    }
 	  } else {
 	    while( nSpaces > 0 ) {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	      --nSpaces;
 	    }
 	    buf.append( (char) (b > 0 ? b : '_') );
 	  }
 	  chX1++;
 	  if( chX1 >= nCols ) {
-	    buf.append( (char) '\n' );
+	    buf.append( '\n' );
 	    nSpaces = 0;
 	    chX1    = 0;
 	    chY1++;
@@ -230,11 +257,24 @@ public abstract class AbstractScreenDevice
   public abstract String getTitle();
 
 
+  protected boolean isFullScreenMode()
+  {
+    boolean           rv  = false;
+    AbstractScreenFrm asf = this.screenFrm;
+    if( asf != null ) {
+      if( asf instanceof ScreenFrm ) {
+	rv = ((ScreenFrm) asf).isFullScreenMode();
+      }
+    }
+    return rv;
+  }
+
+
   /*
    * Malen einer Stelle einer 7-Segment-Anzeige
    * in der Basisgroesse 50x85 (BxH)
    *
-   * Kodierung der Segmente
+   * Kodierung der Segmente:
    *   A: Bit0
    *   B: Bit1
    *   C: Bit2
@@ -243,6 +283,15 @@ public abstract class AbstractScreenDevice
    *   F: Bit6
    *   G: Bit7
    *   P: Bit8
+   *
+   * Anordnung der Segment:
+   *     AA
+   *   F   B
+   *   F   B
+   *    GG
+   *   E  C
+   *   E  C
+   *    DD  P
    */
   protected static void paint7SegDigit(
 				Graphics g,
@@ -284,9 +333,18 @@ public abstract class AbstractScreenDevice
   }
 
 
+  public void informPastingTextStatusChanged( boolean pasting )
+  {
+    AbstractScreenFrm screenFrm = getScreenFrm();
+    if( screenFrm != null ) {
+      screenFrm.pastingTextStatusChanged( pasting );
+    }
+  }
+
+
   public void setScreenDirty( boolean state )
   {
-    AbstractScreenFrm screenFrm = this.screenFrm;
+    AbstractScreenFrm screenFrm = getScreenFrm();
     if( screenFrm != null ) {
       screenFrm.setScreenDirty( state );
     }
@@ -338,7 +396,7 @@ public abstract class AbstractScreenDevice
 
 	/* --- private Methoden --- */
 
-  private void createColors( Properties props )
+  private void createBaseColors( Properties props )
   {
     int value            = getMaxRGBValue( props );
     this.colorWhite      = new Color( value, value, value );

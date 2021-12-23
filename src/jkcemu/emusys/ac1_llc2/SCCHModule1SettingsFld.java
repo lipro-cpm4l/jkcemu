@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,8 +12,6 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.ButtonGroup;
@@ -24,11 +22,12 @@ import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import jkcemu.base.AbstractSettingsFld;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.SettingsFrm;
-import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class SCCHModule1SettingsFld
@@ -39,11 +38,11 @@ public class SCCHModule1SettingsFld
   private ROMFileSettingsFld fldRomDisk;
   private ROMFileSettingsFld fldBasicRom;
   private JLabel             labelBasicRomAddr;
-  private JRadioButton       btnBasicRom2000;
-  private JRadioButton       btnBasicRom4000;
+  private JRadioButton       rbBasicRom2000;
+  private JRadioButton       rbBasicRom4000;
   private JLabel             labelRomDiskAddr;
-  private JRadioButton       btnRomDisk8000;
-  private JRadioButton       btnRomDiskC000;
+  private JRadioButton       rbRomDisk8000;
+  private JRadioButton       rbRomDiskC000;
 
 
   public SCCHModule1SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -78,31 +77,32 @@ public class SCCHModule1SettingsFld
     gbc.gridy++;
     add( this.fldRomDisk, gbc );
 
-    JPanel panelRomDiskAddr = new JPanel(
+    JPanel panelRomDiskAddr = GUIFactory.createPanel(
 				new FlowLayout( FlowLayout.LEFT, 5, 0 ) );
     gbc.insets.top = 0;
     gbc.gridy++;
     add( panelRomDiskAddr, gbc );
 
-    this.labelRomDiskAddr = new JLabel( "ROM-Disk einblenden ab Adresse:" );
+    this.labelRomDiskAddr = GUIFactory.createLabel(
+				"ROM-Disk einblenden ab Adresse:" );
     panelRomDiskAddr.add( this.labelRomDiskAddr );
 
     ButtonGroup grpRomDiskAddr = new ButtonGroup();
 
-    this.btnRomDisk8000 = new JRadioButton( "8000h", false );
-    grpRomDiskAddr.add( this.btnRomDisk8000 );
-    panelRomDiskAddr.add( this.btnRomDisk8000 );
+    this.rbRomDisk8000 = GUIFactory.createRadioButton( "8000h" );
+    grpRomDiskAddr.add( this.rbRomDisk8000 );
+    panelRomDiskAddr.add( this.rbRomDisk8000 );
 
-    this.btnRomDiskC000 = new JRadioButton( "C000h", true );
-    grpRomDiskAddr.add( this.btnRomDiskC000 );
-    panelRomDiskAddr.add( this.btnRomDiskC000 );
+    this.rbRomDiskC000 = GUIFactory.createRadioButton( "C000h", true );
+    grpRomDiskAddr.add( this.rbRomDiskC000 );
+    panelRomDiskAddr.add( this.rbRomDiskC000 );
     updRomDiskAddrFieldsEnabled();
 
     // Trennlinie
     gbc.insets.top    = 10;
     gbc.insets.bottom = 10;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     // BASIC-ROM
     this.fldBasicRom = new ROMFileSettingsFld(
@@ -114,23 +114,24 @@ public class SCCHModule1SettingsFld
     gbc.gridy++;
     add( this.fldBasicRom, gbc );
 
-    JPanel panelBasicRomAddr = new JPanel(
+    JPanel panelBasicRomAddr = GUIFactory.createPanel(
 				new FlowLayout( FlowLayout.LEFT, 5, 0 ) );
     gbc.insets.top = 0;
     gbc.gridy++;
     add( panelBasicRomAddr, gbc );
 
-    this.labelBasicRomAddr = new JLabel( "BASIC-ROM einblenden ab Adresse:" );
+    this.labelBasicRomAddr = GUIFactory.createLabel(
+				"BASIC-ROM einblenden ab Adresse:" );
     panelBasicRomAddr.add( this.labelBasicRomAddr );
     ButtonGroup grpBasicRomAddr = new ButtonGroup();
 
-    this.btnBasicRom2000 = new JRadioButton( "2000h", false );
-    grpBasicRomAddr.add( this.btnBasicRom2000 );
-    panelBasicRomAddr.add( this.btnBasicRom2000 );
+    this.rbBasicRom2000 = GUIFactory.createRadioButton( "2000h" );
+    grpBasicRomAddr.add( this.rbBasicRom2000 );
+    panelBasicRomAddr.add( this.rbBasicRom2000 );
 
-    this.btnBasicRom4000 = new JRadioButton( "4000h", true );
-    grpBasicRomAddr.add( this.btnBasicRom4000 );
-    panelBasicRomAddr.add( this.btnBasicRom4000 );
+    this.rbBasicRom4000 = GUIFactory.createRadioButton( "4000h", true );
+    grpBasicRomAddr.add( this.rbBasicRom4000 );
+    panelBasicRomAddr.add( this.rbBasicRom4000 );
     updBasicRomAddrFieldsEnabled();
 
 
@@ -140,11 +141,11 @@ public class SCCHModule1SettingsFld
 
     // Listener
     this.fldRomDisk.addChangeListener( this );
-    this.btnRomDisk8000.addActionListener( this );
-    this.btnRomDiskC000.addActionListener( this );
+    this.rbRomDisk8000.addActionListener( this );
+    this.rbRomDiskC000.addActionListener( this );
     this.fldBasicRom.addChangeListener( this );
-    this.btnBasicRom2000.addActionListener( this );
-    this.btnBasicRom4000.addActionListener( this );
+    this.rbBasicRom2000.addActionListener( this );
+    this.rbBasicRom4000.addActionListener( this );
   }
 
 
@@ -175,11 +176,11 @@ public class SCCHModule1SettingsFld
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + AbstractSCCHSys.PROP_BASIC_ADDR,
-		this.btnBasicRom2000.isSelected() ? "2000" : "4000" );
+		this.rbBasicRom2000.isSelected() ? "2000" : "4000" );
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + AbstractSCCHSys.PROP_ROMDISK_ADDR,
-		this.btnRomDisk8000.isSelected() ? "8000" : "C000" );
+		this.rbRomDisk8000.isSelected() ? "8000" : "C000" );
   }
 
 
@@ -221,9 +222,9 @@ public class SCCHModule1SettingsFld
 		props,
 		this.propPrefix + AbstractSCCHSys.PROP_BASIC_ADDR );
     if( text.startsWith( "2000" ) ) {
-      this.btnBasicRom2000.setSelected( true );
+      this.rbBasicRom2000.setSelected( true );
     } else {
-      this.btnBasicRom4000.setSelected( true );
+      this.rbBasicRom4000.setSelected( true );
     }
     updBasicRomAddrFieldsEnabled();
 
@@ -231,9 +232,9 @@ public class SCCHModule1SettingsFld
 		props,
 		this.propPrefix + AbstractSCCHSys.PROP_ROMDISK_ADDR );
     if( text.startsWith( "8000" ) ) {
-      this.btnRomDisk8000.setSelected( true );
+      this.rbRomDisk8000.setSelected( true );
     } else {
-      this.btnRomDiskC000.setSelected( true );
+      this.rbRomDiskC000.setSelected( true );
     }
     updRomDiskAddrFieldsEnabled();
   }
@@ -246,8 +247,8 @@ public class SCCHModule1SettingsFld
       state = false;
     }
     this.labelBasicRomAddr.setEnabled( state );
-    this.btnBasicRom2000.setEnabled( state );
-    this.btnBasicRom4000.setEnabled( state );
+    this.rbBasicRom2000.setEnabled( state );
+    this.rbBasicRom4000.setEnabled( state );
   }
 
 
@@ -258,7 +259,7 @@ public class SCCHModule1SettingsFld
       state = false;
     }
     this.labelRomDiskAddr.setEnabled( state );
-    this.btnRomDisk8000.setEnabled( state );
-    this.btnRomDiskC000.setEnabled( state );
+    this.rbRomDisk8000.setEnabled( state );
+    this.rbRomDiskC000.setEnabled( state );
   }
 }

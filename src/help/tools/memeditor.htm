@@ -1,69 +1,108 @@
 <html>
 <body>
-  <h1>Speichereditor</h1>
-    Der Speichereditor dient zum Ansehen und Ver&auml;ndern
-    der Bytes im Arbeitsspeicher des Emulators.
-  <br/><br/>
+ <h1>Speichereditor</h1>
+  Der Speichereditor dient zum Ansehen und Ver&auml;ndern
+  der Bytes im Arbeitsspeicher des Emulators.
+ <br/><br/>
+  <ul>
+   <li><a href="memeditor.htm#show">1. Speicherbereich anzeigen</a></li>
+   <li>
+    <a href="memeditor.htm#change">2. Speicherbereich beschreiben</a>
+    <ul>
+     <li>
+      <a href="memeditor.htm#overwrite">2.1. Bytes direkt &uuml;berschreiben</a>
+     </li>
+    </ul>
+   </li>
+   <li>
+    <a href="memeditor.htm#copy">3. Ausgew&auml;hlte Bytes kopieren</a>
+   </li>
+   <li><a href="memeditor.htm#font">4. Schrift</a></li>
+  </ul>
+ <br/>
 
 
-  <h2>1. Speicherbereich anzeigen</h2>
-    Das Fenster enth&auml;lt im oberen Bereich zwei Felder
-    zur Eingabe der Anfangs- und Endadresse.
-    F&uuml;llen Sie diese hexadezimal aus und w&auml;hlen Sie
-    den Men&uuml;punkt <em>Datei</em> &rarr; <em>Aktualisieren</em> an.
-    Nun wird der entsprechende Bereich des Arbeitsspeichers
-    in dem Fenster angezeigt.
-  <br/><br/>
-    Sie k&ouml;nnen auch aktualisieren,
-    indem Sie auf die <em>Enter</em>-Taste dr&uuml;cken,
-    w&auml;hrend der Cursor im Eingabefeld f&uuml;r die Endadresse steht.
-  <br/><br/>
-    <b>Achtung!</b> Sie sehen immer den Speicherbereich,
-    den auch der Mikroprozessor zum Zeitpunkt des Aktualisierens sieht.
-    Wenn das emulierte System in dem Adressbereich mehrere
-    parallel liegende Speicherb&auml;nke hat,
-    m&uuml;ssen Sie selbst sicherstellen,
-    dass die richtige Bank eingeblendet ist.
-  <br/><br/>
+ <h2><a name="show">1. Speicherbereich anzeigen</a></h2>
+  Das Fenster enth&auml;lt im oberen Bereich zwei Felder
+  zur Eingabe der Anfangs- und Endadresse.
+  F&uuml;llen Sie diese hexadezimal aus und w&auml;hlen Sie
+  den Men&uuml;punkt <em>Datei</em> &rarr; <em>Aktualisieren</em> an.
+  Nun wird der entsprechende Bereich des Arbeitsspeichers
+  in dem Fenster angezeigt.
+ <br/><br/>
+  Sie k&ouml;nnen auch aktualisieren,
+  indem Sie auf die <em>Enter</em>-Taste dr&uuml;cken,
+  w&auml;hrend der Cursor im Eingabefeld f&uuml;r die Endadresse steht.
+ <br/><br/>
+  <b>Achtung!</b> Sie sehen immer den Speicherbereich,
+  den auch der Mikroprozessor zum Zeitpunkt des Aktualisierens sieht.
+  Wenn das emulierte System in dem Adressbereich mehrere
+  parallel liegende Speicherb&auml;nke hat,
+  m&uuml;ssen Sie selbst sicherstellen,
+  dass die richtige Bank eingeblendet ist.
+ <br/><br/>
 
 
-  <h2>2. Speicherbereich beschreiben</h2>
-    Setzen Sie zuerst mit einem Mausklick den Cursor auf die Speicherstelle,
-    die sie beschreiben m&ouml;chten.
-    Anschlie&szlig;end rufen Sie im Men&uuml; die Funktion
-    <em>Bearbeiten</em> &rarr; <em>Bytes &uuml;berschreiben...</em> auf.
-    In dem sich &ouml;ffnenden Dialog geben Sie die zu schreibenden Bytes ein
-    und dr&uuml;cken auf <em>OK</em>.
-  <br/><br/>
-    Zum Positionieren des Cursors k&ouml;nnen Sie auch in eines
-    der beiden Felder im Bereich <em>Adresse</em> die gw&uuml;nschte Adresse
-    eingeben und <em>Enter</em> dr&uuml;cken.
-  <br/><br/>
-    <b>Achtung!</b> Wenn das emulierte System in dem Adressbereich
-    mehrere parallel liegende Speicherb&auml;nke hat,
-    werden die Bytes in die Speicherbank geschrieben,
-    die zum Zeitpunkt des Schreibens der Mikroprozessor gerade sieht.
-    Sie m&uuml;ssen selbst sicherstellen,
-    dass die richtige Bank eingeblendet ist.
-  <br/><br/>
+ <h2><a name="change">2. Speicherbereich beschreiben</a></h2>
+  Setzen Sie zuerst mit einem Mausklick den Cursor auf die Speicherstelle,
+  die sie beschreiben m&ouml;chten.
+  Anschlie&szlig;end rufen Sie im Men&uuml; die Funktion
+  <em>Bearbeiten</em> &rarr; <em>Bytes &uuml;berschreiben...</em> auf.
+  In dem sich &ouml;ffnenden Dialog geben Sie die zu schreibenden Bytes ein
+  und dr&uuml;cken auf <em>OK</em>.
+ <br/><br/>
+  Zum Positionieren des Cursors k&ouml;nnen Sie auch in eines
+  der beiden Felder im Bereich <em>Adresse</em> die gw&uuml;nschte Adresse
+  eingeben und <em>Enter</em> dr&uuml;cken.
+ <br/><br/>
+  <b>Achtung!</b> Wenn das emulierte System in dem Adressbereich
+  mehrere parallel liegende Speicherb&auml;nke hat,
+  werden die Bytes in die Speicherbank geschrieben,
+  die zum Zeitpunkt des Schreibens der Mikroprozessor gerade sieht.
+  Sie m&uuml;ssen selbst sicherstellen,
+  dass die richtige Bank eingeblendet ist.
+ <br/><br/>
+
+ <h3><a name="overwrite">2.1. Bytes direkt &uuml;berschreiben</a></h3>
+  Neben dem oben beschriebenen Ablauf zum Beschreiben des Speicherbereichs
+  gibt es auch die M&ouml;glichkeit,
+  die Datenbytes direkt in der Anzeige zu &auml;ndern,
+  indem man einfach zwei hexadezimale Ziffern eingibt
+  und so den neuen Wert des markierten Datenbytes festlegt.
+  Diese direkte Eingabem&ouml;glichkeit kann jedoch leicht zu einem
+  versehentlichen &Uuml;berschreiben des Speicherbereichs f&uuml;hren.
+  Aus diesem Grund ist sie standardm&auml;&szlig;ig deaktiviert.
+  Sie aktivieren diese Eingabem&ouml;glichkeit
+  &uuml;ber den Men&uuml;punkt <em>Einstellungen</em> &rarr;
+  <em>Bytes durch direkte Eingabe &uuml;berschreiben</em>.
+  Beim <a href="../settings.htm#profiles">Speichern eines Profils</a>
+  wird auch diese Einstellung auch mit gespeichert.
+ <br/><br/>
 
 
-  <h2>3. Ausgew&auml;hlte Bytes kopieren</h2>
-    Mit dieser Funktion, die Sie im Men&uuml; <em>Bearbeiten</em> finden,
-    k&ouml;nnen Sie die ausgew&auml;hlten Bytes als Hex-String
-    in die Zwischenablage kopieren
-    und von da aus dann z.B. in den Dialog zum Suchen oder
-    &Uuml;berschreiben von Bytes wieder einf&uuml;gen.
-    W&auml;hlen Sie dazu die gew&uuml;nschten Bytes aus,
-    indem Sie die Maus mit gedr&uuml;ckter Maustaste ziehen
-    oder indem Sie die Cursor-Tasten bei gedr&uuml;ckter Shift-Taste
-    bet&auml;tigen.
-  <br/><br/>
-    <b>Achtung!</b> Die zu kopierenden Bytes werden dirket aus
-    dem Arbeitsspeicher gelesen.
-    Wenn nun zwischenzeitlich diese Bytes ge&auml;ndert wurden
-    (z.B. duch Laden von Dateien oder durch das emulierte System selbst),
-    werden somit andere Bytes kopiert als im Speichereditor angezeigt werden.
+ <h2><a name="copy">3. Ausgew&auml;hlte Bytes kopieren</a></h2>
+  Mit dieser Funktion, die Sie im Men&uuml; <em>Bearbeiten</em> finden,
+  k&ouml;nnen Sie die ausgew&auml;hlten Bytes als Hex-String
+  in die Zwischenablage kopieren
+  und von da aus dann z.B. in den Dialog zum Suchen oder
+  &Uuml;berschreiben von Bytes wieder einf&uuml;gen.
+  W&auml;hlen Sie dazu die gew&uuml;nschten Bytes aus,
+  indem Sie die Maus mit gedr&uuml;ckter Maustaste ziehen
+  oder indem Sie die Cursor-Tasten bei gedr&uuml;ckter Shift-Taste
+  bet&auml;tigen.
+ <br/><br/>
+  <b>Achtung!</b> Die zu kopierenden Bytes werden dirket aus
+  dem Arbeitsspeicher gelesen.
+  Wenn nun zwischenzeitlich diese Bytes ge&auml;ndert wurden
+  (z.B. duch Laden von Dateien oder durch das emulierte System selbst),
+  werden somit andere Bytes kopiert als im Speichereditor angezeigt werden.
+ <br/><br/>
+
+
+ <h2><a name="font">4. Schrift</a></h2>
+  Die Schrift f&uuml;r die Datenanzeige kann man im Fenster
+  <a href="../settings.htm">JKCEMU-Einstellungen</a>
+  im Reiter <em>Schriften/Symbole</em> unter
+  <em>Schrift f&uuml;r Code-Bereiche</em> &auml;ndern.
 </body>
 </html>
-

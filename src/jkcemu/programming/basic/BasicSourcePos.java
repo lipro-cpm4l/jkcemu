@@ -1,26 +1,35 @@
 /*
- * (c) 2014 Jens Mueller
+ * (c) 2014-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Abstraktion einer BASIC-Quelltextstelle
+ * Daten einer BASIC-Quelltextstelle
+ *
+ * Beim Anlegen eines BasicSourcePos-Objektes wird
+ * die aktuelle Quelltextstelle im BasicSourcePos-Objekte fixiert.
  */
 
 package jkcemu.programming.basic;
 
-import java.lang.*;
 import jkcemu.programming.PrgSource;
 
 
 public class BasicSourcePos
 {
-  private PrgSource source;
-  private long      basicLineNum;
+  private String srcName;
+  private int    srcLineNum;
+  private long   basicLineNum;
 
 
   public BasicSourcePos( PrgSource source, long basicLineNum )
   {
-    this.source       = source;
+    if( source != null ) {
+      this.srcName    = source.getName();
+      this.srcLineNum = source.getLineNum();
+    } else {
+      this.srcName    = null;
+      this.srcLineNum = -1;
+    }
     this.basicLineNum = basicLineNum;
   }
 
@@ -28,16 +37,10 @@ public class BasicSourcePos
   public boolean appendMsgPrefixTo( String msgType, StringBuilder buf )
   {
     boolean appended   = false;
-    String  srcName    = null;
-    int     srcLineNum = 0;
-    if( this.source != null ) {
-      srcLineNum = this.source.getLineNum();
-      srcName    = this.source.getName();
-    }
-    if( (srcLineNum > 0) || (this.basicLineNum >= 0) ) {
-      if( srcName != null ) {
-	if( !srcName.isEmpty() ) {
-	   buf.append( srcName );
+    if( (this.srcLineNum > 0) || (this.basicLineNum >= 0) ) {
+      if( this.srcName != null ) {
+	if( !this.srcName.isEmpty() ) {
+	   buf.append( this.srcName );
 	   buf.append( ": " );
 	}
       }
@@ -45,13 +48,13 @@ public class BasicSourcePos
         buf.append( msgType );
         buf.append( " in " );
       }
-      if( srcLineNum > 0 ) {
+      if( this.srcLineNum > 0 ) {
 	buf.append( "Zeile " );
-	buf.append( srcLineNum );
+	buf.append( this.srcLineNum );
 	if( this.basicLineNum >= 0 ) {
 	  buf.append( " (BASIC-Zeilennummer " );
 	  buf.append( this.basicLineNum );
-	  buf.append( (char) ')' );
+	  buf.append( ')' );
 	}
       } else if( this.basicLineNum >= 0 ) {
         buf.append( " BASIC-Zeile " );
@@ -61,17 +64,4 @@ public class BasicSourcePos
     }
     return appended;
   }
-
-
-  public long getBasicLineNum()
-  {
-    return this.basicLineNum;
-  }
-
-
-  public PrgSource getSource()
-  {
-    return this.source;
-  }
 }
-

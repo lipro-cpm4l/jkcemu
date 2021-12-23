@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,8 @@
 
 package jkcemu.tools.debugger;
 
-import java.lang.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import javax.swing.table.AbstractTableModel;
 import z80emu.Z80MemView;
 
@@ -85,6 +85,13 @@ public class VarTableModel extends AbstractTableModel
       this.rows.remove( row );
       fireTableRowsDeleted( row, row );
     }
+  }
+
+
+  public void removeAll( Collection<VarData> varsToRemove )
+  {
+    if( varsToRemove != null )
+      this.rows.removeAll( varsToRemove );
   }
 
 

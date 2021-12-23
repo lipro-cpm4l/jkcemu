@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2016 Jens Mueller
+ * (c) 2014-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,12 +9,11 @@
 package jkcemu.emusys.zxspectrum;
 
 import java.io.IOException;
-import java.lang.*;
 import java.util.NoSuchElementException;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.base.ByteIterator;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileInfo;
+import jkcemu.file.FileInfo;
 
 
 public class ZXSpectrumAudioCreator extends BitSampleBuffer
@@ -251,7 +250,7 @@ public class ZXSpectrumAudioCreator extends BitSampleBuffer
     int nBytes           = this.iter.nextInt3LE();
     if( nBytes > 0 ) {
       int samples = Math.round( (float) tStatesPerSample
-					/ (float) T_STATES_PER_SAMPLE );
+					/ T_STATES_PER_SAMPLE );
       do {
 	int nBits = (nBytes > 1 ? 8 : Math.max( nBitsOfLastByte, 8 ));
 	int b     = this.iter.nextByte();

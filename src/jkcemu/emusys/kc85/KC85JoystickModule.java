@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.joystick.JoystickThread;
 import z80emu.Z80InterruptSource;
@@ -21,20 +20,14 @@ public abstract class KC85JoystickModule
 {
   protected Z80PIO  pio;
   private   boolean lastBI;
-  private   String  title;
 
 
   protected KC85JoystickModule( int slot )
   {
-    super( slot );
-    setStatus( 0x01 );		// immer aktiv
+    super( slot, false );
     this.lastBI = false;
     this.pio    = new Z80PIO( "PIO (Joystick)" );
     this.pio.putInValuePortA( 0xFF, false );
-    this.title  = String.format(
-			"%s im Schacht %02X",
-			getModuleName(),
-			slot );
   }
 
 
@@ -86,7 +79,7 @@ public abstract class KC85JoystickModule
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    buf.append( "<h2>PIO (E/A-Adressen 90-93)</h2>\n" );
+    buf.append( "<h2>PIO (E/A-Adressen 90h-93h)</h2>\n" );
     this.pio.appendInterruptStatusHTMLTo( buf );
   }
 
@@ -99,11 +92,9 @@ public abstract class KC85JoystickModule
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
-    if( this.pio.isInterruptAccepted() ) {
-      this.pio.interruptFinish();
-    }
+    return this.pio.interruptFinish( addr );
   }
 
 
@@ -121,21 +112,7 @@ public abstract class KC85JoystickModule
   }
 
 
-  @Override
-  public void reset( boolean powerOn )
-  {
-    this.pio.reset( powerOn );
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public int getTypeByte()
-  {
-    return 0xFF;		// kein Strukturbyte
-  }
-
 
   @Override
   public int readIOByte( int port, int tStates )
@@ -152,14 +129,6 @@ public abstract class KC85JoystickModule
 	  rv = this.pio.readDataB();
 	  break;
 
-	case 0x92:
-	  rv = this.pio.readControlA();
-	  break;
-
-	case 0x93:
-	  rv = this.pio.readControlB();
-	  break;
-
 	default:
 	  rv = 0xFF;
       }
@@ -169,16 +138,9 @@ public abstract class KC85JoystickModule
 
 
   @Override
-  public void setStatus( int value )
+  public void reset( boolean powerOn )
   {
-    super.setStatus( 0x01 );		// immer aktiv
-  }
-
-
-  @Override
-  public String toString()
-  {
-    return this.title;
+    this.pio.reset( powerOn );
   }
 
 

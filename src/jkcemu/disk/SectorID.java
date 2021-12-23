@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,8 +7,6 @@
  */
 
 package jkcemu.disk;
-
-import java.lang.*;
 
 
 public class SectorID

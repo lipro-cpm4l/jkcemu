@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,9 +19,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
+import jkcemu.text.CharConverter;
 
 
 public class PrintData implements Printable
@@ -29,6 +29,7 @@ public class PrintData implements Printable
   private int                   entryNum;
   private ByteArrayOutputStream byteStream;
   private byte[]                byteArray;
+  private CharConverter         charConverter;
 
 
   public PrintData( int entryNum )
@@ -80,8 +81,14 @@ public class PrintData implements Printable
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
+  }
+
+
+  public void setCharConverter( CharConverter charConverter )
+  {
+    this.charConverter = charConverter;
   }
 
 
@@ -104,7 +111,9 @@ public class PrintData implements Printable
       return pageNum == 0 ? PAGE_EXISTS : NO_SUCH_PAGE;
     }
 
-    PrintDataScanner scanner = new PrintDataScanner( dataBytes );
+    PrintDataScanner scanner = new PrintDataScanner(
+						dataBytes,
+						this.charConverter );
 
     // Anzahl Zeilen pro Seite
     int fontSize     = Main.getPrintFontSize();
@@ -135,7 +144,7 @@ public class PrintData implements Printable
     }
 
     // Seite drucken
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
 
     int x = (int) pf.getImageableX();

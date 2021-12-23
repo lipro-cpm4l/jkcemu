@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -24,14 +23,19 @@ import javax.swing.JPanel;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class PrintOptionsDlg extends BaseDlg
 {
+  private static final String[] fontSizes = {
+			"6", "7", "8", "9", "10", "11", "12", "13",
+			"14", "16", "18", "20", "22", "24" };
+
   private boolean           applied;
   private JComboBox<String> comboFontSize;
-  private JCheckBox         btnFileName;
-  private JCheckBox         btnPageNum;
+  private JCheckBox         cbFileName;
+  private JCheckBox         cbPageNum;
   private JButton           btnOK;
   private JButton           btnCancel;
 
@@ -46,13 +50,7 @@ public class PrintOptionsDlg extends BaseDlg
 					askFontSize,
 					askFileNamePrinted );
     dlg.setVisible( true );
-    return dlg.optionsApplied();
-  }
-
-
-  public boolean optionsApplied()
-  {
-    return this.applied;
+    return dlg.applied;
   }
 
 
@@ -76,7 +74,19 @@ public class PrintOptionsDlg extends BaseDlg
       }
     }
     catch( Exception ex ) {
-      EmuUtil.exitSysError( this, null, ex );
+      EmuUtil.checkAndShowError( this, null, ex );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
     }
     return rv;
   }
@@ -107,7 +117,7 @@ public class PrintOptionsDlg extends BaseDlg
 
 
     // Bereich Optionen
-    JPanel panelOpt = new JPanel( new GridBagLayout() );
+    JPanel panelOpt = GUIFactory.createPanel( new GridBagLayout() );
     panelOpt.setBorder( BorderFactory.createEmptyBorder() );
 
     GridBagConstraints gbcOpt = new GridBagConstraints(
@@ -122,22 +132,11 @@ public class PrintOptionsDlg extends BaseDlg
     // Schriftgroesse
     this.comboFontSize = null;
     if( askFontSize ) {
-      panelOpt.add( new JLabel( "Schriftgr\u00F6\u00DFe:" ), gbcOpt );
-      this.comboFontSize = new JComboBox<>();
+      panelOpt.add(
+		GUIFactory.createLabel( "Schriftgr\u00F6\u00DFe:" ),
+		gbcOpt );
+      this.comboFontSize = GUIFactory.createComboBox( fontSizes );
       this.comboFontSize.setEditable( false );
-      this.comboFontSize.addItem( "6" );
-      this.comboFontSize.addItem( "7" );
-      this.comboFontSize.addItem( "8" );
-      this.comboFontSize.addItem( "9" );
-      this.comboFontSize.addItem( "10" );
-      this.comboFontSize.addItem( "11" );
-      this.comboFontSize.addItem( "12" );
-      this.comboFontSize.addItem( "14" );
-      this.comboFontSize.addItem( "16" );
-      this.comboFontSize.addItem( "18" );
-      this.comboFontSize.addItem( "20" );
-      this.comboFontSize.addItem( "22" );
-      this.comboFontSize.addItem( "24" );
       gbcOpt.gridx++;
       panelOpt.add( this.comboFontSize, gbcOpt );
       gbcOpt.insets.top = 0;
@@ -149,37 +148,35 @@ public class PrintOptionsDlg extends BaseDlg
     }
 
     // Dateiname
-    this.btnFileName = null;
+    this.cbFileName = null;
     if( askPrintFileName ) {
-      this.btnFileName = new JCheckBox(
+      this.cbFileName = GUIFactory.createCheckBox(
 				"Dateiname drucken",
 				Main.getPrintFileName() );
-      panelOpt.add( this.btnFileName, gbcOpt );
+      panelOpt.add( this.cbFileName, gbcOpt );
       gbcOpt.insets.top = 0;
       gbcOpt.gridwidth  = 2;
       gbcOpt.gridy++;
     }
 
     // Seitennummer
-    this.btnPageNum = new JCheckBox(
+    this.cbPageNum = GUIFactory.createCheckBox(
 				"Seitennummer drucken",
 				Main.getPrintPageNum() );
     gbcOpt.insets.bottom = 5;
-    panelOpt.add( this.btnPageNum, gbcOpt );
+    panelOpt.add( this.cbPageNum, gbcOpt );
 
     gbc.gridy++;
     add( panelOpt, gbc );
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
     gbc.anchor = GridBagConstraints.CENTER;
@@ -193,6 +190,11 @@ public class PrintOptionsDlg extends BaseDlg
     pack();
     setParentCentered();
     setResizable( false );
+
+
+    // Listener
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
   }
 
 
@@ -213,10 +215,10 @@ public class PrintOptionsDlg extends BaseDlg
 	}
       }
     }
-    if( this.btnFileName != null ) {
-      Main.setPrintFileName( this.btnFileName.isSelected() );
+    if( this.cbFileName != null ) {
+      Main.setPrintFileName( this.cbFileName.isSelected() );
     }
-    Main.setPrintPageNum( this.btnPageNum.isSelected() );
+    Main.setPrintPageNum( this.cbPageNum.isSelected() );
 
     this.applied = true;
     doClose();

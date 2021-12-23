@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.ImageDisk;
+import jkcemu.file.FileUtil;
 
 
 public class ImageDiskFileTarget extends AbstractConvertTarget
@@ -42,14 +41,14 @@ public class ImageDiskFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getImageDiskFileFilter();
+    return FileUtil.getImageDiskFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".imd" );
+    return FileUtil.replaceExtension( srcFile, ".imd" );
   }
 
 

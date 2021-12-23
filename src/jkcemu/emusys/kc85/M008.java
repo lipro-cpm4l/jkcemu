@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,8 +7,6 @@
  */
 
 package jkcemu.emusys.kc85;
-
-import java.lang.*;
 
 
 public class M008 extends KC85JoystickModule

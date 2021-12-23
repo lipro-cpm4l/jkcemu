@@ -15,7 +15,8 @@
    <li>
     <a href="hgmc.htm#1">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="hgmc.htm#1.1">1.1. Drucker</a></li>
+     <li><a href="hgmc.htm#memory">1.1. Speicherkonfiguration</a></li>
+     <li><a href="hgmc.htm#printer">1.2. Drucker</a></li>
     </ul>
    </li>
    <li><a href="hgmc.htm#2">2. Im ROM enthaltene Software</a></li>
@@ -57,7 +58,30 @@
   an der PIO angeschlossene Hardware werden nicht emuliert.
  <br/><br/>
 
- <h3><a name="1.1">1.1. Drucker</a></h3>
+ <h3><a name="memory">1.1. Speicherkonfiguration</a></h3>
+  Durch Ausgabebefehle kann die Speicherkonfiguration ge&auml;ndert werden:
+ <br/>
+  <table border="1">
+   <tr><th>Ausgabeadresse</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">00h-03h</td>
+    <td>ROM aus- und volle 64&nbsp;KByte RAM einschalten</td>
+   </tr>
+   <tr>
+    <td valign="top">04h-07h</td>
+    <td>ROM ein- und untere 32&nbsp;KByte RAM ausschalten</td>
+   </tr>
+   <tr>
+    <td valign="top">10h-13h</td>
+    <td>
+     Anfangsadresse des Bildwiederholspeichers festlegen,<br/>
+     Bits&nbsp;5 bis 7 des ausgegebenen Wertes
+     legen die Bits&nbsp;13 bis 15 der Anfangsadresse fest.</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="printer">1.2. Drucker</a></h3>
   Es wird ein Drucker emuliert,
   indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
   abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.disk;
 
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import jkcemu.base.EmuThread;
@@ -143,6 +142,8 @@ public class FDC8272 implements
   private volatile boolean    interruptReq;
   private volatile boolean    dmaReq;
   private boolean             dmaMode;
+  private boolean             hdMode;
+  private boolean             hdPossible;
   private boolean             seekMode;
   private boolean             eotReached;
   private volatile int[]      args;
@@ -187,6 +188,8 @@ public class FDC8272 implements
     this.curCmd             = Command.INVALID;
     this.executingDrive     = null;
     this.dmaMode            = false;	// wird von RESET nicht beeinflusst
+    this.hdMode             = false;
+    this.hdPossible         = false;
     this.stepRateMillis     = 16;	// wird von RESET nicht beeinflusst
     this.tStatesPerMilli    = 0;
     this.tStatesPerRotation = 0;
@@ -381,6 +384,8 @@ public class FDC8272 implements
       this.stepRateMillis = 16;
     }
     this.executingDrive        = null;
+    this.hdPossible            = false;
+    this.hdMode                = false;
     this.seekMode              = false;
     this.ioTaskNoWait          = false;
     this.tcEnabled             = false;
@@ -409,6 +414,12 @@ public class FDC8272 implements
     Arrays.fill( this.results, 0 );
     Arrays.fill( this.remainSeekSteps, 0 );
     setIdle();
+  }
+
+
+  public void setHDMode( boolean state )
+  {
+    this.hdMode = (state && this.hdPossible);
   }
 
 
@@ -509,7 +520,12 @@ public class FDC8272 implements
   @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    setTStatesPerMilli( cpu.getMaxSpeedKHz() );
+    int maxSpeedKHz = cpu.getMaxSpeedKHz();
+    this.hdPossible = (maxSpeedKHz > 5000);
+    if( !this.hdPossible ) {
+      this.hdMode = false;
+    }
+    setTStatesPerMilli( maxSpeedKHz );
   }
 
 
@@ -661,32 +677,37 @@ public class FDC8272 implements
     int             srcIdx = 0;
     FloppyDiskDrive drive  = getExecutingDrive();
     if( drive != null ) {
-      if( this.dataBuf != null ) {
-	int nSectors = this.dataPos / 4;
-	if( (nSectors > 0) && ((nSectors * 4) <= this.dataBuf.length) ) {
-	  int n          = this.args[ 2 ] & 0x0F;
-	  int sectorSize = 128;
-	  if( n > 0 ) {
-	    sectorSize = (128 << n);
-	  }
-	  byte[] contentBuf = new byte[ sectorSize ];
-	  Arrays.fill( contentBuf, (byte) this.args[ 5 ] );
+      AbstractFloppyDisk disk = drive.getDisk();
+      if( disk != null ) {
+	if( (disk.isHD() == this.hdMode)
+	    && (this.dataBuf != null) )
+	{
+	  int nSectors = this.dataPos / 4;
+	  if( (nSectors > 0) && ((nSectors * 4) <= this.dataBuf.length) ) {
+	    int n          = this.args[ 2 ] & 0x0F;
+	    int sectorSize = 128;
+	    if( n > 0 ) {
+	      sectorSize = (128 << n);
+	    }
+	    byte[] contentBuf = new byte[ sectorSize ];
+	    Arrays.fill( contentBuf, (byte) this.args[ 5 ] );
 
-	  SectorID[] sectors = new SectorID[ nSectors ];
-	  int        dstIdx  = 0;
-	  while( ((srcIdx + 3) < this.dataBuf.length)
-		 && (dstIdx < sectors.length) )
-	  {
-	    int cyl             = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
-	    int head            = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
-	    int rec             = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
-	    int sizeCode        = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
-	    sectors[ dstIdx++ ] = new SectorID( cyl, head, rec, sizeCode );
-	  }
-	  done = drive.formatTrack(
+	    SectorID[] sectors = new SectorID[ nSectors ];
+	    int        dstIdx  = 0;
+	    while( ((srcIdx + 3) < this.dataBuf.length)
+		   && (dstIdx < sectors.length) )
+	    {
+	      int cyl             = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
+	      int head            = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
+	      int rec             = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
+	      int sizeCode        = (int) this.dataBuf[ srcIdx++ ] & 0xFF;
+	      sectors[ dstIdx++ ] = new SectorID( cyl, head, rec, sizeCode );
+	    }
+	    done = drive.formatTrack(
 			  (this.args[ 1 ] >> 2) & 0x01,
 			  sectors,
 			  contentBuf );
+	  }
 	}
       }
     }
@@ -722,71 +743,78 @@ public class FDC8272 implements
 
   private void execIOReadSectorByID()
   {
-    boolean         cmAbort = false;
-    SectorData      sector  = null;
-    FloppyDiskDrive drive   = this.getExecutingDrive();
+    boolean         cmAbort     = false;
+    boolean         cylReadable = false;
+    SectorData      sector      = null;
+    FloppyDiskDrive drive       = getExecutingDrive();
     if( drive != null ) {
       AbstractFloppyDisk disk = drive.getDisk();
       if( disk != null ) {
 	int head = getArgHead();
-	if( disk.supportsDeletedSectors() ) {
-	  int startIdx = getSectorIndexByCurHeadPos( drive );
-	  if( startIdx >= 0 ) {
-	    boolean loop   = true;
-	    int     endIdx = -1;
-	    int     curIdx = startIdx;
-	    while( loop && ((curIdx < endIdx) || (endIdx < 0)) ) {
-	      sector = drive.readSectorByIndex( head, curIdx );
-	      if( (sector == null) && (startIdx > 0) ) {
-		// zum Spuranfang springen
-		endIdx   = startIdx;
-		startIdx = 0;
-		curIdx   = 0;
-	      } else {
-		loop = false;
-		if( sector != null ) {
-		  if( this.curCmd == Command.READ_DELETED_DATA ) {
-		    if( !sector.isDeleted() ) {
-		      this.statusReg2 |= ST2_CONTROL_MARK;
-		      if( (this.args[ 0 ] & ARG0_SK_MASK) != 0 ) {
-			curIdx++;
-			loop = true;
-		      } else {
-			cmAbort = true;
+	if( (disk.isHD() == this.hdMode)
+	    && (disk.getSectorsOfTrack( drive.getCylinder(), head ) > 0) )
+	{
+	  cylReadable = true;
+	  if( disk.supportsDeletedDataSectors() ) {
+	    int startIdx = getSectorIndexByCurHeadPos( drive );
+	    if( startIdx >= 0 ) {
+	      boolean loop   = true;
+	      int     endIdx = -1;
+	      int     curIdx = startIdx;
+	      while( loop && ((curIdx < endIdx) || (endIdx < 0)) ) {
+		sector = drive.readSectorByIndex( head, curIdx );
+		if( (sector == null) && (startIdx > 0) ) {
+		  // zum Spuranfang springen
+		  endIdx   = startIdx;
+		  startIdx = 0;
+		  curIdx   = 0;
+		} else {
+		  loop = false;
+		  if( sector != null ) {
+		    if( this.curCmd == Command.READ_DELETED_DATA ) {
+		      if( !sector.getDataDeleted() ) {
+			this.statusReg2 |= ST2_CONTROL_MARK;
+			if( (this.args[ 0 ] & ARG0_SK_MASK) != 0 ) {
+			  curIdx++;
+			  loop = true;
+			} else {
+			  cmAbort = true;
+			}
+		      }
+		    } else {
+		      if( sector.getDataDeleted() ) {
+			this.statusReg2 |= ST2_CONTROL_MARK;
+			if( (this.args[ 0 ] & ARG0_SK_MASK) != 0 ) {
+			  curIdx++;
+			  loop = true;
+			} else {
+			  cmAbort = true;
+			}
 		      }
 		    }
-		  } else {
-		    if( sector.isDeleted() ) {
-		      this.statusReg2 |= ST2_CONTROL_MARK;
-		      if( (this.args[ 0 ] & ARG0_SK_MASK) != 0 ) {
-			curIdx++;
-			loop = true;
-		      } else {
-			cmAbort = true;
-		      }
+		    if( !loop
+			&& ((sector.getCylinder() != this.sectorIdCyl)
+			    || (sector.getHead() != this.sectorIdHead)
+			    || (sector.getSectorNum() != this.sectorIdRec)
+			    || (sector.getSizeCode()
+					!= this.sectorIdSizeCode)) )
+		    {
+		      curIdx++;
+		      loop = true;
 		    }
-		  }
-		  if( !loop
-		      && ((sector.getCylinder() != this.sectorIdCyl)
-			  || (sector.getHead() != this.sectorIdHead)
-			  || (sector.getSectorNum() != this.sectorIdRec)
-			  || (sector.getSizeCode() != this.sectorIdSizeCode)) )
-		  {
-		    curIdx++;
-		    loop = true;
 		  }
 		}
 	      }
 	    }
-	  }
-	} else {
-	  sector = drive.readSectorByID( 
+	  } else {
+	    sector = drive.readSectorByID( 
 				head,
 				0,
 				this.sectorIdCyl,
 				this.sectorIdHead,
 				this.sectorIdRec,
 				this.sectorIdSizeCode );
+	  }
 	}
       }
     }
@@ -805,14 +833,17 @@ public class FDC8272 implements
       } else {
 	this.statusReg0 |= ST0_ABNORMAL_TERMINATION;
 	if( !cmAbort ) {
-	  if( (this.sectorIdCyl == this.args[ 2 ])
-	      && (this.sectorIdHead == this.args[ 3 ])
-	      && (this.sectorIdRec == this.args[ 4 ]) )
-	  {
-	    this.statusReg1 |= ST1_NO_DATA;
-	    this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
+	  if( cylReadable ) {
+	    if( (this.sectorIdCyl == this.args[ 2 ])
+		&& (this.sectorIdHead == this.args[ 3 ])
+		&& (this.sectorIdRec == this.args[ 4 ]) )
+	    {
+	      this.statusReg1 |= ST1_NO_DATA;
+	    } else {
+	      this.statusReg1 |= ST1_END_OF_CYLINDER;
+	    }
 	  } else {
-	    this.statusReg1 |= ST1_END_OF_CYLINDER;
+	    this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
 	  }
 	}
 	stopExecution();
@@ -823,10 +854,20 @@ public class FDC8272 implements
 
   private void execIOReadSectorByIndex()
   {
-    SectorData      sector = null;
-    FloppyDiskDrive drive  = this.executingDrive;
+    boolean         cylReadable = false;
+    SectorData      sector      = null;
+    FloppyDiskDrive drive       = this.executingDrive;
     if( drive != null ) {
-      sector = drive.readSectorByIndex( getArgHead(), this.sectorIdRec - 1 );
+      AbstractFloppyDisk disk = drive.getDisk();
+      if( disk != null ) {
+	int head = getArgHead();
+	if( (disk.isHD() == this.hdMode)
+	    && (disk.getSectorsOfTrack( drive.getCylinder(), head ) > 0) )
+	{
+	  cylReadable = true;
+	  sector      = drive.readSectorByIndex( head, this.sectorIdRec - 1 );
+	}
+      }
     }
     drive = getExecutingDrive();
     if( drive != null ) {
@@ -841,19 +882,18 @@ public class FDC8272 implements
 	  this.sectorIdHead     = sector.getHead();
 	  this.sectorIdRec      = sector.getSectorNum();
 	  this.sectorIdSizeCode = sector.getSizeCode();
-	  if( sector.isEmpty() ) {
-	    this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
-	    this.statusReg2 |= ST2_MISSING_DATA_ADDRESS_MARK;
-	  }
 	  stopExecution();
 	}
       } else {
 	this.statusReg0 |= ST0_ABNORMAL_TERMINATION;
-	if( this.sectorIdRec == 1 ) {
-	  this.statusReg1 |= ST1_NO_DATA;
-	  this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
+	if( cylReadable ) {
+	  if( this.sectorIdRec == 1 ) {
+	    this.statusReg1 |= ST1_NO_DATA;
+	  } else {
+	    this.statusReg1 |= ST1_END_OF_CYLINDER;
+	  }
 	} else {
-	  this.statusReg1 |= ST1_END_OF_CYLINDER;
+	  this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
 	}
 	stopExecution();
       }
@@ -863,18 +903,25 @@ public class FDC8272 implements
 
   private void execIOReadSectorForWrite()
   {
-    SectorData      sector = null;
-    FloppyDiskDrive drive  = this.executingDrive;
+    boolean         cylReadable = false;
+    SectorData      sector      = null;
+    FloppyDiskDrive drive       = this.executingDrive;
     if( drive != null ) {
       AbstractFloppyDisk disk = drive.getDisk();
       if( disk != null ) {
-	sector = drive.readSectorByID( 
-				getArgHead(),
+	int head = getArgHead();
+	if( (disk.isHD() == this.hdMode)
+	    && (disk.getSectorsOfTrack( drive.getCylinder(), head ) > 0) )
+	{
+	  cylReadable = true;
+	  sector      = drive.readSectorByID( 
+				head,
 				0,
 				this.sectorIdCyl,
 				this.sectorIdHead,
 				this.sectorIdRec,
 				this.sectorIdSizeCode );
+	}
       }
     }
     drive = getExecutingDrive();
@@ -885,8 +932,11 @@ public class FDC8272 implements
 	setByteWritable( true );
       } else {
 	this.statusReg0 |= ST0_ABNORMAL_TERMINATION;
-	this.statusReg1 |= ST1_NO_DATA;
-	this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
+	if( cylReadable ) {
+	  this.statusReg1 |= ST1_NO_DATA;
+	} else {
+	  this.statusReg1 |= ST1_MISSING_ADDRESS_MARK;
+	}
 	stopExecution();
       }
     }
@@ -899,50 +949,54 @@ public class FDC8272 implements
     boolean         done   = false;
     SectorData      sector = this.curSector;
     if( drive != null ) {
-      if( (sector != null)
-	  && (this.dataBuf != null)
-	  && (this.dataPos >= 0) )
-      {
-	this.curSector = null;
-	while( (this.dataPos < this.dataLen)
-	       && (this.dataPos < this.dataBuf.length) )
+      AbstractFloppyDisk disk = drive.getDisk();
+      if( disk != null ) {
+	if( (disk.isHD() == this.hdMode)
+	    && (sector != null)
+	    && (this.dataBuf != null)
+	    && (this.dataPos >= 0) )
 	{
-	  this.dataBuf[ this.dataPos++ ] = (byte) 0;
-	}
-	done = drive.writeSector(
+	  this.curSector = null;
+	  while( (this.dataPos < this.dataLen)
+		 && (this.dataPos < this.dataBuf.length) )
+	  {
+	    this.dataBuf[ this.dataPos++ ] = (byte) 0;
+	  }
+	  done = drive.writeSector(
 			getArgHead(),
 			sector,
 			this.dataBuf,
 			this.dataLen,
 			this.curCmd == Command.WRITE_DELETED_DATA );
-	this.dataPos = -1;
-	drive        = this.executingDrive;
-	if( drive != null ) {
-	  if( done ) {
-	    incSectorNum();
-	    synchronized( this.ioTaskThread ) {
-	      if( this.tcFired ) {
-		stopExecution();
-	      } else {
-		startIOTask(
+	  this.dataPos = -1;
+	  drive        = this.executingDrive;
+	  if( drive != null ) {
+	    if( done ) {
+	      incSectorNum();
+	      synchronized( this.ioTaskThread ) {
+		if( this.tcFired ) {
+		  stopExecution();
+		} else {
+		  startIOTask(
 			IOTaskCmd.READ_SECTOR_FOR_WRITE,
 			this.tStatesPerRotation );
+		}
 	      }
-	    }
-	  } else {
-	    this.statusReg0 |= ST0_ABNORMAL_TERMINATION;
-	    if( drive.isReadOnly() ) {
-	      this.statusReg1 |= ST1_NOT_WRITABLE;
 	    } else {
-	      this.statusReg1 |= ST1_DATA_ERROR;
-	      this.statusReg2 |= ST2_DATA_ERROR_IN_DATA_FIELD;
+	      this.statusReg0 |= ST0_ABNORMAL_TERMINATION;
+	      if( drive.isReadOnly() ) {
+		this.statusReg1 |= ST1_NOT_WRITABLE;
+	      } else {
+		this.statusReg1 |= ST1_DATA_ERROR;
+		this.statusReg2 |= ST2_DATA_ERROR_IN_DATA_FIELD;
+	      }
+	      stopExecution();
 	    }
+	  }
+	} else {
+	  if( this.tcFired ) {
 	    stopExecution();
 	  }
-	}
-      } else {
-	if( this.tcFired ) {
-	  stopExecution();
 	}
       }
     }
@@ -1054,7 +1108,7 @@ public class FDC8272 implements
       if( disk != null ) {
 	int head = getArgHead();
 	int cyl  = drive.getCylinder();
-	int spc  = disk.getSectorsOfCylinder( cyl, head );
+	int spc  = disk.getSectorsOfTrack( cyl, head );
 	int tpr  = this.tStatesPerRotation;
 	if( (spc > 0) && (tpr > 0)
 	    && (head < disk.getSides())

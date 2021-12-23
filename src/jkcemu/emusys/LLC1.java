@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,45 +11,55 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
 import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.AbstractScreenFrm;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuMemView;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.SaveDlg;
 import jkcemu.base.SourceUtil;
 import jkcemu.emusys.llc1.LLC1AlphaScreenDevice;
 import jkcemu.emusys.llc1.LLC1KeyboardFld;
+import jkcemu.file.SaveDlg;
+import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 
 
-public class LLC1 extends EmuSys
+public class LLC1 extends EmuSys implements
+					Z80MaxSpeedListener,
+					Z80PIOPortListener
 {
-  public static final String SYSNAME     = "LLC1";
-  public static final String PROP_PREFIX = "jkcemu.llc1.";
+  public static final String SYSNAME         = "LLC1";
+  public static final String PROP_PREFIX     = "jkcemu.llc1.";
+  public static final String PROP_ROM_PREFIX = "rom.";
+  public static final String PROP_ROM_FILE   = PROP_ROM_PREFIX + PROP_FILE;
 
   public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 500;
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
 
-  private static final int DISPLAY_DISTANCE     = 30;
   private static final int PASTE_READS_PER_CHAR = 10;
 
-  private static byte[] rom0000 = null;
-  private static byte[] rom0800 = null;
-  private static byte[] romFont = null;
+  private static AutoInputCharSet autoInputCharSet = null;
 
+  private static byte[] llc1Font = null;
+  private static byte[] llc1Rom  = null;
+
+  private byte[]                fontBytes;
+  private byte[]                romBytes;
   private byte[]                ramStatic;
   private byte[]                ramVideo;
+  private String                fontFile;
+  private String                romFile;
   private LLC1AlphaScreenDevice alphaScreenDevice;
   private LLC1KeyboardFld       keyboardFld;
   private int[]                 keyboardMatrix;
@@ -60,7 +70,6 @@ public class LLC1 extends EmuSys
   private volatile int          pasteReadCharCounter;
   private volatile int          pasteReadPauseCounter;
   private int                   alphaScreenEnableTStates;
-  private boolean               alphaScreenFired;
   private boolean               pio1B7Value;
   private long                  curDisplayTStates;
   private long                  displayCheckTStates;
@@ -72,21 +81,15 @@ public class LLC1 extends EmuSys
   public LLC1( EmuThread emuThread, Properties props )
   {
     super( emuThread, props, PROP_PREFIX );
-    if( rom0000 == null ) {
-      rom0000 = readResource( "/rom/llc1/llc1mon.bin" );
-    }
-    if( rom0800 == null ) {
-      rom0800 = readResource( "/rom/llc1/tinybasic.bin" );
-    }
-    if( romFont == null ) {
-      romFont = readResource( "/rom/llc1/llc1font.bin" );
-    }
+    this.fontBytes                = null;
+    this.fontFile                 = null;
+    this.romBytes                 = null;
+    this.romFile                  = null;
     this.ramStatic                = new byte[ 0x0800 ];
     this.ramVideo                 = new byte[ 0x0400 ];
     this.pasteReadCharCounter     = 0;
     this.pasteReadPauseCounter    = 0;
     this.alphaScreenEnableTStates = 0;
-    this.alphaScreenFired         = false;
     this.alphaScreenDevice        = null;
     this.keyboardFld              = null;
     this.keyboardMatrix           = new int[ 4 ];
@@ -95,6 +98,8 @@ public class LLC1 extends EmuSys
     this.digitIdx                 = 0;
     this.displayCheckTStates      = 0;
     this.curDisplayTStates        = 0;
+    this.keyChar                  = 0;
+    this.pio1B7Value              = false;
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( "CTC" );
@@ -103,20 +108,33 @@ public class LLC1 extends EmuSys
     cpu.setInterruptSources( this.ctc, this.pio2 );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
+    this.pio1.addPIOPortListener( this, Z80PIO.PortInfo.B );
 
     z80MaxSpeedChanged( cpu );
+  }
+
+
+  public static AutoInputCharSet getAutoInputCharSet()
+  {
+    if( autoInputCharSet == null ) {
+      autoInputCharSet = new AutoInputCharSet();
+      autoInputCharSet.addHexChars();
+// TODO: Steuertasten
+    }
+    return autoInputCharSet;
   }
 
 
   public void cancelPastingAlphaText()
   {
     this.pasteIter = null;
+    informPastingAlphaTextStatusChanged( false );
   }
 
 
   public byte[] getAlphaScreenFontBytes()
   {
-    return romFont;
+    return this.fontBytes;
   }
 
 
@@ -148,6 +166,7 @@ public class LLC1 extends EmuSys
 	this.pasteIter             = new StringCharacterIterator( text );
 	this.pasteReadCharCounter  = 0;
 	this.pasteReadPauseCounter = PASTE_READS_PER_CHAR;
+	informPastingAlphaTextStatusChanged( true );
       }
     }
   }
@@ -177,19 +196,85 @@ public class LLC1 extends EmuSys
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
+    this.displayCheckTStates = maxSpeedKHz * 50;
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio1)
+	&& (port == Z80PIO.PortInfo.B)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      if( status == Z80PIO.Status.OUTPUT_AVAILABLE ) {
+	this.digitIdx = (this.digitIdx + 1) & 0x07;
+      }
+      int     bValue  = this.pio1.fetchOutValuePortB( 0xFF, true );
+      boolean b7Value = ((bValue & 0x80) != 0);
+      if( b7Value != this.pio1B7Value ) {
+	if( b7Value ) {
+	  this.digitIdx = 0;
+	}
+	this.pio1B7Value = b7Value;
+      }
+      bValue &= 0x7F;
+      if( bValue != 0 ) {
+	synchronized( this.digitValues ) {
+	  if( bValue != this.digitValues[ this.digitIdx ] ) {
+	    this.digitValues[ this.digitIdx ] = bValue;
+	    this.screenFrm.setScreenDirty( true );
+	  }
+	  this.digitStatus[ this.digitIdx ] = 2;
+	}
+      }
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean canApplySettings( Properties props )
+  public void applySettings( Properties props )
   {
-    return EmuUtil.getProperty(
-			props,
-			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
+    super.applySettings( props );
+    if( this.alphaScreenDevice != null ) {
+      this.alphaScreenDevice.applySettings( props );
+    }
   }
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public boolean canApplySettings( Properties props )
+  {
+    boolean rv = EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.romFile,
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_FILE ) );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public LLC1KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new LLC1KeyboardFld( this );
     return this.keyboardFld;
@@ -203,6 +288,9 @@ public class LLC1 extends EmuSys
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    this.pio1.removePIOPortListener( this, Z80PIO.PortInfo.B );
+
+    super.die();
   }
 
 
@@ -216,7 +304,7 @@ public class LLC1 extends EmuSys
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
         color = this.colorWhite;
@@ -275,15 +363,9 @@ public class LLC1 extends EmuSys
     addr &= 0xFFFF;
 
     int rv = 0xFF;
-    if( (addr < 0x0800) && (rom0000 != null) ) {
-      if( addr < rom0000.length ) {
-	rv = (int) rom0000[ addr ] & 0xFF;
-      }
-    }
-    else if( (addr >= 0x0800) && (addr < 0x1400) && (rom0800 != null) ) {
-      int idx = addr - 0x0800;
-      if( idx < rom0800.length ) {
-	rv = (int) rom0800[ idx ] & 0xFF;
+    if( (addr < 0x1400) && (this.romBytes != null) ) {
+      if( addr < this.romBytes.length ) {
+	rv = (int) this.romBytes[ addr ] & 0xFF;
       }
     }
     else if( (addr >= 0x1400) && (addr < 0x1C00) ) {
@@ -303,9 +385,9 @@ public class LLC1 extends EmuSys
 
 
   @Override
-  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
+  public int getResetStartAddress( boolean powerOn )
   {
-    return 0;
+    return 0x0000;
   }
 
 
@@ -485,6 +567,27 @@ public class LLC1 extends EmuSys
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.romFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_ROM_FILE );
+    this.romBytes = readROMFile(
+			this.romFile,
+			0x1400,
+			"Monitorprogramm / BASIC-Interpreter" );
+    if( this.romBytes == null ) {
+      if( llc1Rom == null ) {
+	llc1Rom = readResource( "/rom/llc1/llc1rom.bin" );
+      }
+      this.romBytes = llc1Rom;
+    }
+
+    loadFont( props );
+  }
+
+
+  @Override
   public void openBasicProgram()
   {
     String text = getBasicProgram( this.emuThread );
@@ -535,14 +638,6 @@ public class LLC1 extends EmuSys
 	case 1:
 	  rv &= this.pio1.readDataB();
 	  break;
-
-	case 2:
-	  rv &= this.pio1.readControlA();
-	  break;
-
-	case 3:
-	  rv &= this.pio1.readControlB();
-	  break;
       }
     }
     else if( (port & 0x10) == 0 ) {
@@ -568,14 +663,8 @@ public class LLC1 extends EmuSys
 		    this.pasteIter             = null;
 		    this.pasteReadCharCounter  = 0;
 		    this.pasteReadPauseCounter = 0;
-		    if( this.alphaScreenDevice != null ) {
-		      AbstractScreenFrm screenFrm
-				  = this.alphaScreenDevice.getScreenFrm();
-		      if( screenFrm != null ) {
-			screenFrm.firePastingTextFinished();
-		      }
-		    }
-		    ch = 0;
+		    ch                         = 0;
+		    informPastingAlphaTextStatusChanged( false );
 		  } else {
 		    if( this.pasteReadCharCounter > 0 ) {
 		      --this.pasteReadCharCounter;
@@ -593,14 +682,6 @@ public class LLC1 extends EmuSys
 	    rv &= this.pio2.readDataB();
 	  }
 	  break;
-
-	case 2:
-	  rv &= this.pio2.readControlA();
-	  break;
-
-	case 3:
-	  rv &= this.pio2.readControlB();
-	  break;
       }
     }
     return rv;
@@ -608,24 +689,16 @@ public class LLC1 extends EmuSys
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
     }
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
-      this.ctc.reset( true );
-      this.pio1.reset( true );
-      this.pio2.reset( true );
-    } else {
-      this.ctc.reset( false );
-      this.pio1.reset( false );
-      this.pio2.reset( false );
-    }
+    this.ctc.reset( powerOn );
+    this.pio1.reset( powerOn );
+    this.pio2.reset( powerOn );
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
@@ -664,19 +737,8 @@ public class LLC1 extends EmuSys
   {
     addr &= 0xFFFF;
 
-    boolean rv   = false;
-    if( (addr < 0x0800) && (rom0000 != null) ) {
-      if( addr < rom0000.length ) {
-	rv = true;
-      }
-    }
-    else if( (addr >= 0x0800) && (addr < 0x1400) && (rom0800 != null) ) {
-      int idx = addr - 0x0800;
-      if( idx < rom0800.length ) {
-	rv = true;
-      }
-    }
-    else if( (addr >= 0x1400) && (addr < 0x1C00) ) {
+    boolean rv = false;
+    if( (addr >= 0x1400) && (addr < 0x1C00) ) {
       int idx = addr - 0x1400;
       if( idx < this.ramStatic.length ) {
 	this.ramStatic[ idx ] = (byte) value;
@@ -731,29 +793,7 @@ public class LLC1 extends EmuSys
 	  break;
 
 	case 1:
-	  boolean oldReady = this.pio1.isReadyPortB();
 	  this.pio1.writeDataB( value );
-	  if( !oldReady && this.pio1.isReadyPortB() ) {
-	    this.digitIdx = (this.digitIdx + 1) & 0x07;
-	  }
-	  int     bValue  = this.pio1.fetchOutValuePortB( true );
-	  boolean b7Value = ((bValue & 0x80) != 0);
-	  if( b7Value != this.pio1B7Value ) {
-	    if( b7Value ) {
-	      this.digitIdx = 0;
-	    }
-	    this.pio1B7Value = b7Value;
-	  }
-	  bValue &= 0x7F;
-	  if( bValue != 0 ) {
-	    synchronized( this.digitValues ) {
-	      if( bValue != this.digitValues[ this.digitIdx ] ) {
-		this.digitValues[ this.digitIdx ] = bValue;
-		this.screenFrm.setScreenDirty( true );
-	      }
-	      this.digitStatus[ this.digitIdx ] = 2;
-	    }
-	  }
 	  break;
 
 	case 2:
@@ -792,25 +832,13 @@ public class LLC1 extends EmuSys
   {
     addr &= 0xFFFF;
     setMemByte( addr, value );
-    if( !this.alphaScreenFired
-	&& (this.alphaScreenEnableTStates <= 0)
+    if( (this.alphaScreenEnableTStates <= 0)
 	&& (addr >= 0x1C00) && (addr < 0x2000)
 	&& (value != 0x00) && (value != 0x20)
 	&& (value != 0x40) && (value != 0xFF) )
     {
-      this.screenFrm.fireOpenSecondScreen();
-      this.alphaScreenFired = true;
+      checkAndFireOpenSecondScreen();
     }
-  }
-
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-
-    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
-    this.displayCheckTStates = maxSpeedKHz * 50;
   }
 
 
@@ -852,7 +880,7 @@ public class LLC1 extends EmuSys
   private int getHexKeyMatrixValue()
   {
     int rv = 0;
-    int a  = (~this.pio1.fetchOutValuePortA( false ) >> 4) & 0x07;
+    int a  = (~this.pio1.fetchOutValuePortA( 0xFF ) >> 4) & 0x07;
     int m  = 0x01;
     for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
       if( (this.keyboardMatrix[ i ] & a) != 0 ) {
@@ -861,6 +889,31 @@ public class LLC1 extends EmuSys
       m <<= 1;
     }
     return rv;
+  }
+
+
+  private void informPastingAlphaTextStatusChanged( boolean pasting )
+  {
+    if( this.alphaScreenDevice != null ) {
+      AbstractScreenFrm screenFrm = this.alphaScreenDevice.getScreenFrm();
+      if( screenFrm != null ) {
+	screenFrm.pastingTextStatusChanged( pasting );
+      }
+    }
+  }
+
+
+  private void loadFont( Properties props )
+  {
+    this.fontBytes = readFontByProperty(
+				props,
+				this.propPrefix + PROP_FONT_FILE, 0x0800 );
+    if( this.fontBytes == null ) {
+      if( llc1Font == null ) {
+	llc1Font = readResource( "/rom/llc1/llc1font.bin" );
+      }
+      this.fontBytes = llc1Font;
+    }
   }
 
 

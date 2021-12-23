@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -23,27 +22,26 @@ import jkcemu.emusys.BCS3;
 
 public class BCS3KeyboardFld extends AbstractKeyboardFld<BCS3>
 {
-  private static final int MARGIN    = 20;
-  private static final int FONT_SIZE = 12;
-  private static final int KEY_SIZE  = 40;
+  private static final int MARGIN   = 20;
+  private static final int KEY_SIZE = 50;
 
-  private Image   imgLeft;
-  private Font    fontText;
-  private int[]   kbMatrix;
-  private int     curIdx;
-  private int     curX;
-  private int     curY;
+  private Image imgLeft;
+  private Font  font;
+  private int[] kbMatrix;
+  private int   curIdx;
+  private int   curX;
+  private int   curY;
 
 
   public BCS3KeyboardFld( BCS3 bcs3 )
   {
     super( bcs3, 40, true );
-    this.imgLeft    = getImage( "/images/keyboard/left.png" );
-    this.fontText   = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
-    this.kbMatrix   = new int[ 10 ];
-    this.curIdx     = 0;
-    this.curX       = MARGIN;
-    this.curY       = MARGIN;
+    this.font     = new Font( Font.SANS_SERIF, Font.PLAIN, 12 );
+    this.imgLeft  = getImage( "/images/keyboard/left.png" );
+    this.kbMatrix = new int[ 10 ];
+    this.curIdx   = 0;
+    this.curX     = MARGIN;
+    this.curY     = MARGIN;
     addKey( "1", "!",  1, 0x08 );
     addKey( "2", "\"", 2, 0x08 );
     addKey( "3", "#",  3, 0x08 );
@@ -65,7 +63,7 @@ public class BCS3KeyboardFld extends AbstractKeyboardFld<BCS3>
     addKey( "T",      9, 0x02 );
     addKey( "Z",      5, 0x01 );
     addKey( "U",      0, 0x01 );
-    addKey( "I",      8, 0x04 );
+    addKey( "I", ".", 8, 0x04 );
     addKey( "O", ">", 4, 0x02 );
     addKey( "P", "?", 5, 0x02 );
 
@@ -187,15 +185,16 @@ public class BCS3KeyboardFld extends AbstractKeyboardFld<BCS3>
   protected void paintComponent( Graphics g )
   {
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
+    g.setFont( this.font );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
       if( key.image != null ) {
 	g.drawImage(
@@ -204,7 +203,7 @@ public class BCS3KeyboardFld extends AbstractKeyboardFld<BCS3>
 		key.y + ((key.h - key.image.getHeight( this )) / 4 * 3) + 1,
 		this );
       }
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       if( key.text1 != null ) {
 	drawCentered( g, key.text1, key.x, key.y, key.w );
       }

@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,13 +13,11 @@
 
 package jkcemu.image;
 
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Transparency;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.Set;
 import java.util.TreeSet;
 import jkcemu.Main;
@@ -31,7 +29,6 @@ public class GrayScaler
 {
   private BufferedImage         srcImg;
   private BufferedImage         retImg;
-  private Integer               grayRGBForTransp;
   private int                   wImg;
   private int                   hImg;
   private volatile int          progressValue;
@@ -66,14 +63,14 @@ public class GrayScaler
       int          h      = srcImg.getHeight();
       Set<Integer> colors = getIndexedColors( srcImg );
       if( !colors.isEmpty() && (colors.size() <= 256) ) {
-	retImg = ImgUtil.createIndexedColorsImage( w, h, colors );
+	retImg = ImageUtil.createIndexedColorsImage( w, h, colors );
       }
       if( retImg == null ) {
 	retImg = new BufferedImage(
 			w,
 			h,
 			BufferedImage.TYPE_BYTE_INDEXED,
-			ImgUtil.getColorModelSortedGray() );
+			ImageUtil.getColorModelSortedGray() );
       }
       Graphics g = retImg.createGraphics();
       g.drawImage( srcImg, 0, 0, owner );
@@ -121,7 +118,7 @@ public class GrayScaler
       BufferedImage retImg = null;
       Set<Integer>  colors = getIndexedColors( this.srcImg );
       if( !colors.isEmpty() && (colors.size() <= 256) ) {
-	retImg = ImgUtil.createIndexedColorsImage(
+	retImg = ImageUtil.createIndexedColorsImage(
 						this.wImg,
 						this.hImg,
 						colors );
@@ -169,7 +166,7 @@ public class GrayScaler
   private static Set<Integer> getIndexedColors( BufferedImage image )
   {
     Set<Integer>    colors = new TreeSet<>();
-    IndexColorModel icm    = ImgUtil.getIndexColorModel( image );
+    IndexColorModel icm    = ImageUtil.getIndexColorModel( image );
     if( icm != null ) {
       int n = icm.getMapSize();
       for( int i = 0; i < n; i++ ) {

@@ -1,14 +1,13 @@
 /*
- * (c) 2012-2014 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- *  * Struktureintrag fuer eine Prozedur
+ * Struktureintrag fuer eine Prozedur
  */
 
 package jkcemu.programming.basic;
 
-import java.lang.*;
 import jkcemu.programming.PrgSource;
 
 

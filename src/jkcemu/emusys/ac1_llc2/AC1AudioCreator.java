@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@
 package jkcemu.emusys.ac1_llc2;
 
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.base.ByteIterator;
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Frame;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.ArrayList;
@@ -25,8 +24,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileTimesView;
-import jkcemu.base.FileTimesViewFactory;
+import jkcemu.file.FileTimesData;
+import jkcemu.file.FileUtil;
 
 
 public class DirectoryFloppyDisk extends AbstractFloppyDisk
@@ -70,11 +69,6 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       }
       return rv;
     }
-
-    public boolean equals( Object o )
-    {
-      return o == this;
-    }
   };
 
   private static EntryNameComparator entryNameComparator = null;
@@ -103,54 +97,51 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   private byte[]                dsBytes;
   private int                   dsFirstSector;
   private int                   dsSectors;
-  private FileTimesViewFactory  ftvFactory;
   private String                remark;
   private volatile boolean      refreshFired;
 
 
   public DirectoryFloppyDisk(
-			Frame                 owner,
-			int                   sides,
-			int                   cyls,
-			int                   sectorsPerCyl,
-			int                   sectorSize,
-			int                   sysTracks,
-			int                   dirBlocks,
-			int                   blockSize,
-			boolean               blockNum16Bit,
-			boolean               dateStamperEnabled,
-			FileTimesViewFactory  ftvFactory,
-			File                  dirFile,
-			boolean               autoRefresh,
-			boolean               readOnly,
-			boolean               forceLowerCase )
+			Frame   owner,
+			int     cyls,
+			int     sides,
+			int     sectorsPerTrack,
+			int     sectorSize,
+			int     sysTracks,
+			int     dirBlocks,
+			int     blockSize,
+			boolean blockNum16Bit,
+			boolean dateStamperEnabled,
+			File    dirFile,
+			boolean autoRefresh,
+			boolean readOnly,
+			boolean forceLowerCase )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
-    this.dirFile            = dirFile;
-    this.sysFile            = new File( this.dirFile, SYS_FILE_NAME );
-    this.sysTracks          = sysTracks;
-    this.sysSectors         = sysTracks * sides * sectorsPerCyl;
-    this.blockSize          = blockSize;
-    this.blockNum16Bit      = blockNum16Bit;
-    this.sectorsPerBlock    = blockSize / sectorSize;
-    this.dirBlocks          = dirBlocks;
-    this.dirSectors         = dirBlocks * this.sectorsPerBlock;
-    this.sectorSizeCode     = SectorData.getSizeCode( sectorSize );
-    this.autoRefresh        = autoRefresh;
-    this.readOnly           = readOnly;
-    this.forceLowerCase     = forceLowerCase;
-    this.lastBuildMillis    = -1L;
-    this.fileMap            = new HashMap<>();
-    this.errorMap           = null;;
-    this.dirBytes           = null;
-    this.dsEnabled          = dateStamperEnabled;
-    this.dsBytes            = null;
-    this.dsFirstSector      = -1;
-    this.dsSectors          = 0;
-    this.ftvFactory         = ftvFactory;
-    this.maxDirEntries      = 0;
-    this.sectors            = new SectorData[ sides * cyls * sectorsPerCyl ];
-    this.refreshFired       = false;
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize );
+    this.dirFile         = dirFile;
+    this.sysFile         = new File( this.dirFile, SYS_FILE_NAME );
+    this.sysTracks       = sysTracks;
+    this.sysSectors      = sysTracks * sides * sectorsPerTrack;
+    this.blockSize       = blockSize;
+    this.blockNum16Bit   = blockNum16Bit;
+    this.sectorsPerBlock = blockSize / sectorSize;
+    this.dirBlocks       = dirBlocks;
+    this.dirSectors      = dirBlocks * this.sectorsPerBlock;
+    this.sectorSizeCode  = SectorData.getSizeCodeBySize( sectorSize );
+    this.autoRefresh     = autoRefresh;
+    this.readOnly        = readOnly;
+    this.forceLowerCase  = forceLowerCase;
+    this.lastBuildMillis = -1L;
+    this.fileMap         = new HashMap<>();
+    this.errorMap        = null;;
+    this.dirBytes        = null;
+    this.dsEnabled       = dateStamperEnabled;
+    this.dsBytes         = null;
+    this.dsFirstSector   = -1;
+    this.dsSectors       = 0;
+    this.maxDirEntries   = 0;
+    this.sectors         = new SectorData[ cyls * sides * sectorsPerTrack ];
+    this.refreshFired    = false;
     this.extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
 							blockSize,
 							blockNum16Bit );
@@ -237,11 +228,11 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	}
       }
     }
-    int sectPerCyl = getSectorsPerCylinder();
+    int sectPerTrack = getSectorsPerTrack();
     int sectorSize = getSectorSize();
     if( (physCyl >= 0)
-	&& (sectPerCyl > 0)
-	&& (sectorIdx >= 0) && (sectorIdx < sectPerCyl) )
+	&& (sectPerTrack > 0)
+	&& (sectorIdx >= 0) && (sectorIdx < sectPerTrack) )
     {
       int absSectIdx = computeAbsSectorIdx( physCyl, physHead, sectorIdx );
       if( (absSectIdx >= 0) && (absSectIdx < this.sectors.length) ) {
@@ -274,7 +265,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	    int blockNum     = (relSectorIdx * sectorSize) / this.blockSize;
 	    if( blockNum > 0 ) {
 
-	      // betreffene Datei ermitteln, lesen und den Sektoren zuordnen
+	      // betroffene Datei ermitteln, lesen und den Sektoren zuordnen
 	      String entryName = findEntryNameByDataBlock( blockNum );
 	      if( entryName != null ) {
 		File file = this.fileMap.get( entryName );
@@ -474,7 +465,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  rv = false;
 	}
 	finally {
-	  EmuUtil.closeSilent( raf );
+	  EmuUtil.closeSilently( raf );
 	}
 	rv = true;
       }
@@ -490,15 +481,15 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 				int physHead,
 				int sectorIdx )
   {
-    int absSectIdx = -1;
-    int sectPerCyl = getSectorsPerCylinder();
+    int absSectIdx   = -1;
+    int sectPerTrack = getSectorsPerTrack();
     if( (physCyl >= 0)
-	&& (sectPerCyl > 0)
-	&& (sectorIdx >= 0) && (sectorIdx < sectPerCyl) )
+	&& (sectPerTrack > 0)
+	&& (sectorIdx >= 0) && (sectorIdx < sectPerTrack) )
     {
-      absSectIdx = physCyl * getSides() * sectPerCyl;
+      absSectIdx = physCyl * getSides() * sectPerTrack;
       if( (physHead & 0x01) != 0 ) {
-	absSectIdx += sectPerCyl;
+	absSectIdx += sectPerTrack;
       }
       absSectIdx += sectorIdx;
     }
@@ -741,7 +732,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   {
     byte[] fileBytes = null;
     try {
-      fileBytes = EmuUtil.readFile( file, false, getDiskSize() );
+      fileBytes = FileUtil.readFile( file, false, getDiskSize() );
     }
     catch( IOException ex ) {
       String fileName = file.getPath();
@@ -770,272 +761,269 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     }
     Arrays.fill( this.dirBytes, (byte) 0xE5 );
     Arrays.fill( this.sectors, null );
-    this.sysSectors = getSides() * this.sysTracks * getSectorsPerCylinder();
+    this.sysSectors = getSides() * this.sysTracks * getSectorsPerTrack();
     this.fileMap.clear();
     if( this.errorMap != null ) {
       this.errorMap.clear();
     }
     this.lastBuildMillis = System.currentTimeMillis();
-    try {
-      int extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
+
+    int extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
 							blockSize,
 							blockNum16Bit );
 
-      // Dateien ermitteln, die in der emulierten Disketten enthalten sind
-      Map<String,File> fileMap     = new HashMap<>();
-      DateStamper      dateStamper = null;
-      boolean          dirFull     = false;
-      if( this.dsEnabled ) {
-	fileMap.put( "0" + DateStamper.ENTRYNAME, null );
-	dateStamper = new DateStamper(
-				this.ftvFactory,
+    // Dateien ermitteln, die in der emulierten Disketten enthalten sind
+    Map<String,File> fileMap     = new HashMap<>();
+    DateStamper      dateStamper = null;
+    boolean          dirFull     = false;
+    if( this.dsEnabled ) {
+      fileMap.put( "0" + DateStamper.ENTRYNAME, null );
+      dateStamper = new DateStamper(
 				this.dirBlocks * this.blockSize / 32,
 				this.dsBytes );
+    }
+    for( int userNum = 0; !dirFull && (userNum < 16); userNum++ ) {
+      File dirFile = this.dirFile;
+      if( userNum > 0 ) {
+	dirFile = new File( dirFile, Integer.toString( userNum ) );
       }
-      for( int userNum = 0; !dirFull && (userNum < 16); userNum++ ) {
-	File dirFile = this.dirFile;
-	if( userNum > 0 ) {
-	  dirFile = new File( dirFile, Integer.toString( userNum ) );
-	}
-	File[] files = dirFile.listFiles();
-	if( files != null ) {
-	  for( int i = 0; i < files.length; i++ ) {
-	    File file = files[ i ];
-	    if( file != null ) {
-	      if( file.isFile() && file.canRead()
-		  && !file.equals( this.sysFile ) )
-	      {
-		String fName = files[ i ].getName();
-		if( fName != null ) {
-		  String fName2 = fName.trim().toUpperCase();
-		  if( fName2 != null ) {
-		    int len = fName2.length();
-		    if( (!this.dsEnabled
+      File[] files = dirFile.listFiles();
+      if( files != null ) {
+	for( int i = 0; i < files.length; i++ ) {
+	  File file = files[ i ];
+	  if( file != null ) {
+	    if( file.isFile() && file.canRead()
+		&& !file.equals( this.sysFile ) )
+	    {
+	      String fName = files[ i ].getName();
+	      if( fName != null ) {
+		String fName2 = fName.trim().toUpperCase();
+		if( fName2 != null ) {
+		  int len = fName2.length();
+		  if( (!this.dsEnabled
 				|| !fName.equals( DateStamper.FILENAME ))
-			&&(len > 0) && (len < 13)
-			&& (len == fName.length()) )
-		    {
-		      StringBuilder buf = new StringBuilder( 12 );
-		      buf.append( (char) (userNum + '0') );
-		      int     nChars = 1;
-		      boolean ignore = false;
-		      boolean point  = false;
-		      for( int k = 0; k < len; k++ ) {
-			char ch = fName2.charAt( k );
-			if( DiskUtil.isValidCPMFileNameChar( ch ) ) {
-			  int n = buf.length();
-			  if( (!point && (nChars < 9))
-			      || (point && (nChars < 12)) )
-			  {
-			    buf.append( ch );
-			    nChars++;
-			  } else {
-			    ignore = true;
-			    break;
-			  }
-			} else if( ch == '.' ) {
-			  if( nChars > 0 ) {
-			    while( nChars < 9 ) {
-			      buf.append( (char) '\u0020' );
-			      nChars++;
-			    }
-			    point = true;
-			  } else {
-			    ignore = true;
-			    break;
-			  }
+		      &&(len > 0) && (len < 13)
+		      && (len == fName.length()) )
+		  {
+		    StringBuilder buf = new StringBuilder( 12 );
+		    buf.append( (char) (userNum + '0') );
+		    int     nChars = 1;
+		    boolean ignore = false;
+		    boolean point  = false;
+		    for( int k = 0; k < len; k++ ) {
+		      char ch = fName2.charAt( k );
+		      if( DiskUtil.isValidCPMFileNameChar( ch ) ) {
+			int n = buf.length();
+			if( (!point && (nChars < 9))
+			    || (point && (nChars < 12)) )
+			{
+			  buf.append( ch );
+			  nChars++;
 			} else {
 			  ignore = true;
 			  break;
 			}
-		      }
-		      if( !ignore && (nChars > 1) ) {
-			while( nChars < 12 ) {
-			  buf.append( (char) '\u0020' );
-			  nChars++;
-			}
-			String entryName = buf.toString();
-			if( fileMap.containsKey( entryName ) ) {
-			  /*
-			   * Falls mehrere Dateien existieren und deren
-			   * grossgeschriebene Namen sich nicht unterscheiden,
-			   * werden diese Dateien ignoriert.
-			   */
-			  fileMap.put( entryName, null );
-			} else {
-			  fileMap.put( entryName, file );
-			  if( fileMap.size() >= this.maxDirEntries ) {
-			    dirFull = true;
+		      } else if( ch == '.' ) {
+			if( nChars > 0 ) {
+			  while( nChars < 9 ) {
+			    buf.append( '\u0020' );
+			    nChars++;
 			  }
+			  point = true;
+			} else {
+			  ignore = true;
+			  break;
+			}
+		      } else {
+			ignore = true;
+			break;
+		      }
+		    }
+		    if( !ignore && (nChars > 1) ) {
+		      while( nChars < 12 ) {
+			buf.append( '\u0020' );
+			nChars++;
+		      }
+		      String entryName = buf.toString();
+		      if( fileMap.containsKey( entryName ) ) {
+			/*
+			 * Falls mehrere Dateien existieren und deren
+			 * grossgeschriebene Namen sich nicht unterscheiden,
+			 * werden diese Dateien ignoriert.
+			 */
+			fileMap.put( entryName, null );
+		      } else {
+			fileMap.put( entryName, file );
+			if( fileMap.size() >= this.maxDirEntries ) {
+			  dirFull = true;
 			}
 		      }
 		    }
 		  }
 		}
 	      }
-	    }
-	  }
-	}
-      }
-      String[]           entryNames = null;
-      Collection<String> tmpNames   = fileMap.keySet();
-      if( tmpNames != null ) {
-	int n = tmpNames.size();
-	if( n > 0 ) {
-	  entryNames = tmpNames.toArray( new String[ n ] );
-	}
-      }
-      if( entryNames != null ) {
-	if( entryNameComparator == null ) {
-	  entryNameComparator = new EntryNameComparator();
-	}
-	try {
-	  Arrays.sort( entryNames, entryNameComparator );
-	}
-	catch( ClassCastException ex ) {}
-	int firstDsBlkIdx  = -1;
-	int dirIdx         = 0;
-	int blkIdx         = this.dirBlocks;
-	int nRemainBlocks  = (getDiskSize() / this.blockSize) - blkIdx;
-	int maxFileEntries = Math.max( 32 / extentsPerDirEntry, 1 );
-	int maxEntrySize   = (this.blockNum16Bit ? 8 : 16) * this.blockSize;
-	int maxEntrySegs   = maxEntrySize / 128;
-	for( int i = 0; i < entryNames.length; i++ ) {
-	  String entryName = entryNames[ i ];
-	  if( entryName != null ) {
-	    File    file     = null;
-	    long    fSize    = -1;
-	    boolean writable = false;
-	    if( this.dsEnabled
-		&& entryName.equals( "0" + DateStamper.ENTRYNAME ) )
-	    {
-	      fSize         = maxDirEntries * 16;
-	      writable      = true;
-	      firstDsBlkIdx = blkIdx;
-	    } else {
-	      file = fileMap.get( entryName );
-	      if( file != null ) {
-		fSize    = file.length();
-		writable = file.canWrite();
-	      }
-	    }
-	    if( fSize >= 0 ) {
-	      long nEntries = (fSize + maxEntrySize - 1) / maxEntrySize;
-	      if( nEntries < 1 ) {
-		nEntries = 1;
-	      }
-	      if( ((dirIdx + (nEntries * 32)) <= this.dirBytes.length)
-		  && (nEntries <= maxFileEntries) )
-	      {
-		long nBlocks = (fSize + this.blockSize - 1) / this.blockSize;
-		if( nBlocks <= nRemainBlocks ) {
-		  int baseExtentNum = 0;
-		  for( int k = 0; k < nEntries; k++ ) {
-		    int roAttrPos = dirIdx + 9;
-		    int len       = entryName.length();
-		    if( len > 0 ) {
-		      this.dirBytes[ dirIdx++ ] =
-				(byte) (entryName.charAt( 0 ) - '0');
-		    } else {
-		      this.dirBytes[ dirIdx++ ] = (byte) 0;
-		    }
-		    for( int p = 1; p < 12; p++ ) {
-		      char ch = '\u0020';
-		      if( p < len ) {
-			ch = entryName.charAt( p );
-		      }
-		      this.dirBytes[ dirIdx++ ] = (byte) (ch & 0x7F);
-		    }
-		    if( !writable ) {
-		      this.dirBytes[ roAttrPos ] |= 0x80;
-		    }
-		    int nEntrySegs = 0;
-		    if( fSize > 0 ) {
-		      nEntrySegs = Math.min(
-					(int) ((fSize + 127) / 128),
-					maxEntrySegs );
-		    }
-		    int nExtentSegs = nEntrySegs % 128;
-		    if( (nEntrySegs > 0) && (nExtentSegs == 0) ) {
-		      nExtentSegs = 128;
-		    }
-		    int nEntryExtents = (nEntrySegs + 127) / 128;
-		    int tmpExtentNum  = baseExtentNum;
-		    if( (nEntryExtents > 1)
-			&& (nEntryExtents <= extentsPerDirEntry) )
-		    {
-		      tmpExtentNum = baseExtentNum + nEntryExtents - 1;
-		    }
-		    this.dirBytes[ dirIdx++ ] = (byte) tmpExtentNum;
-		    this.dirBytes[ dirIdx++ ] = (byte) 0;
-		    this.dirBytes[ dirIdx++ ] = (byte) 0;
-		    nEntrySegs %= 128;
-		    if( (fSize > 0) && (nEntrySegs == 0) ) {
-		      nEntrySegs = 128;
-		    }
-		    this.dirBytes[ dirIdx++ ] = (byte) nEntrySegs;
-		    if( this.blockNum16Bit ) {
-		      for( int m = 0; m < 8; m++ ) {
-			if( nBlocks > 0 ) {
-			  this.dirBytes[ dirIdx++ ] = (byte) blkIdx;
-			  this.dirBytes[ dirIdx++ ] = (byte) (blkIdx >> 8);
-			  blkIdx++;
-			  --nBlocks;
-			  --nRemainBlocks;
-			  fSize -= this.blockSize;
-			} else {
-			  this.dirBytes[ dirIdx++ ] = (byte) 0;
-			  this.dirBytes[ dirIdx++ ] = (byte) 0;
-			}
-		      }
-		    } else {
-		      for( int m = 0; m < 16; m++ ) {
-			if( nBlocks > 0 ) {
-			  this.dirBytes[ dirIdx++ ] = (byte) blkIdx++;
-			  --nBlocks;
-			  --nRemainBlocks;
-			  fSize -= this.blockSize;
-			} else {
-			  this.dirBytes[ dirIdx++ ] = (byte) 0;
-			}
-		      }
-		    }
-		    if( dateStamper != null ) {
-		      dateStamper.addFileTimes( file );
-		    }
-		    baseExtentNum += extentsPerDirEntry;
-		  }
-		}
-	      }
-	      this.fileMap.put( entryName, file );
-	    }
-	  }
-	}
-
-	// DateStamper-Sektoren eintragen
-	if( (dateStamper != null) && (firstDsBlkIdx >= 0) ) {
-	  this.dsBytes   = dateStamper.getDateTimeByteBuffer();
-	  int sectorSize = getSectorSize();
-	  if( (this.dsBytes != null) && (sectorSize > 0) ) {
-	    int srcPos     = 0;
-	    int absSectIdx = this.sysSectors
-				+ (firstDsBlkIdx * this.sectorsPerBlock);
-	    this.dsFirstSector = absSectIdx;
-	    this.dsSectors     = dsBytes.length / sectorSize;
-	    while( srcPos < this.dsBytes.length ) {
-	      setSectorData(
-			absSectIdx++,
-			this.dsBytes,
-			srcPos,
-			sectorSize,
-			false );
-	      srcPos += sectorSize;
 	    }
 	  }
 	}
       }
     }
-    catch( Exception ex ) {}
+    String[]           entryNames = null;
+    Collection<String> tmpNames   = fileMap.keySet();
+    if( tmpNames != null ) {
+      int n = tmpNames.size();
+      if( n > 0 ) {
+	entryNames = tmpNames.toArray( new String[ n ] );
+      }
+    }
+    if( entryNames != null ) {
+      if( entryNameComparator == null ) {
+	entryNameComparator = new EntryNameComparator();
+      }
+      try {
+	Arrays.sort( entryNames, entryNameComparator );
+      }
+      catch( ClassCastException ex ) {}
+      int firstDsBlkIdx  = -1;
+      int dirIdx         = 0;
+      int blkIdx         = this.dirBlocks;
+      int nRemainBlocks  = (getDiskSize() / this.blockSize) - blkIdx;
+      int maxFileEntries = Math.max( 32 / extentsPerDirEntry, 1 );
+      int maxEntrySize   = (this.blockNum16Bit ? 8 : 16) * this.blockSize;
+      int maxEntrySegs   = maxEntrySize / 128;
+      for( int i = 0; i < entryNames.length; i++ ) {
+	String entryName = entryNames[ i ];
+	if( entryName != null ) {
+	  File    file     = null;
+	  long    fSize    = -1;
+	  boolean writable = false;
+	  if( this.dsEnabled
+	      && entryName.equals( "0" + DateStamper.ENTRYNAME ) )
+	  {
+	    fSize         = maxDirEntries * 16;
+	    writable      = true;
+	    firstDsBlkIdx = blkIdx;
+	  } else {
+	    file = fileMap.get( entryName );
+	    if( file != null ) {
+	      fSize    = file.length();
+	      writable = file.canWrite();
+	    }
+	  }
+	  if( fSize >= 0 ) {
+	    long nEntries = (fSize + maxEntrySize - 1) / maxEntrySize;
+	    if( nEntries < 1 ) {
+	      nEntries = 1;
+	    }
+	    if( ((dirIdx + (nEntries * 32)) <= this.dirBytes.length)
+		&& (nEntries <= maxFileEntries) )
+	    {
+	      long nBlocks = (fSize + this.blockSize - 1) / this.blockSize;
+	      if( nBlocks <= nRemainBlocks ) {
+		int baseExtentNum = 0;
+		for( int k = 0; k < nEntries; k++ ) {
+		  int roAttrPos = dirIdx + 9;
+		  int len       = entryName.length();
+		  if( len > 0 ) {
+		    this.dirBytes[ dirIdx++ ] =
+			      (byte) (entryName.charAt( 0 ) - '0');
+		  } else {
+		    this.dirBytes[ dirIdx++ ] = (byte) 0;
+		  }
+		  for( int p = 1; p < 12; p++ ) {
+		    char ch = '\u0020';
+		    if( p < len ) {
+		      ch = entryName.charAt( p );
+		    }
+		    this.dirBytes[ dirIdx++ ] = (byte) (ch & 0x7F);
+		  }
+		  if( !writable ) {
+		    this.dirBytes[ roAttrPos ] |= 0x80;
+		  }
+		  int nEntrySegs = 0;
+		  if( fSize > 0 ) {
+		    nEntrySegs = Math.min(
+					(int) ((fSize + 127) / 128),
+					maxEntrySegs );
+		  }
+		  int nExtentSegs = nEntrySegs % 128;
+		  if( (nEntrySegs > 0) && (nExtentSegs == 0) ) {
+		    nExtentSegs = 128;
+		  }
+		  int nEntryExtents = (nEntrySegs + 127) / 128;
+		  int tmpExtentNum  = baseExtentNum;
+		  if( (nEntryExtents > 1)
+		      && (nEntryExtents <= extentsPerDirEntry) )
+		  {
+		    tmpExtentNum = baseExtentNum + nEntryExtents - 1;
+		  }
+		  this.dirBytes[ dirIdx++ ] = (byte) tmpExtentNum;
+		  this.dirBytes[ dirIdx++ ] = (byte) 0;
+		  this.dirBytes[ dirIdx++ ] = (byte) 0;
+		  nEntrySegs %= 128;
+		  if( (fSize > 0) && (nEntrySegs == 0) ) {
+		    nEntrySegs = 128;
+		  }
+		  this.dirBytes[ dirIdx++ ] = (byte) nEntrySegs;
+		  if( this.blockNum16Bit ) {
+		    for( int m = 0; m < 8; m++ ) {
+		      if( nBlocks > 0 ) {
+			this.dirBytes[ dirIdx++ ] = (byte) blkIdx;
+			this.dirBytes[ dirIdx++ ] = (byte) (blkIdx >> 8);
+			blkIdx++;
+			--nBlocks;
+			--nRemainBlocks;
+			fSize -= this.blockSize;
+		      } else {
+			this.dirBytes[ dirIdx++ ] = (byte) 0;
+			this.dirBytes[ dirIdx++ ] = (byte) 0;
+		      }
+		    }
+		  } else {
+		    for( int m = 0; m < 16; m++ ) {
+		      if( nBlocks > 0 ) {
+			this.dirBytes[ dirIdx++ ] = (byte) blkIdx++;
+			--nBlocks;
+			--nRemainBlocks;
+			fSize -= this.blockSize;
+		      } else {
+			this.dirBytes[ dirIdx++ ] = (byte) 0;
+		      }
+		    }
+		  }
+		  if( dateStamper != null ) {
+		    dateStamper.addFileTimes( file );
+		  }
+		  baseExtentNum += extentsPerDirEntry;
+		}
+	      }
+	    }
+	    this.fileMap.put( entryName, file );
+	  }
+	}
+      }
+
+      // DateStamper-Sektoren eintragen
+      if( (dateStamper != null) && (firstDsBlkIdx >= 0) ) {
+	this.dsBytes   = dateStamper.getDateTimeByteBuffer();
+	int sectorSize = getSectorSize();
+	if( (this.dsBytes != null) && (sectorSize > 0) ) {
+	  int srcPos     = 0;
+	  int absSectIdx = this.sysSectors
+			      + (firstDsBlkIdx * this.sectorsPerBlock);
+	  this.dsFirstSector = absSectIdx;
+	  this.dsSectors     = dsBytes.length / sectorSize;
+	  while( srcPos < this.dsBytes.length ) {
+	    setSectorData(
+			absSectIdx++,
+			this.dsBytes,
+			srcPos,
+			sectorSize,
+			false );
+	    srcPos += sectorSize;
+	  }
+	}
+      }
+    }
 
     // Directory-Sektoren eintragen
     int sectorSize = getSectorSize();
@@ -1056,25 +1044,25 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 
 
   private void setSectorData(
-			int    absSectIdx,
+			int     absSectIdx,
 			byte[]  dataBuf,
 			int     dataOffs,
 			int     sectorSize,
 			boolean err )
   {
     if( (absSectIdx >= 0) && (absSectIdx < this.sectors.length) ) {
-      int sides      = getSides();
-      int sectPerCyl = getSectorsPerCylinder();
-      if( (sides > 0) && (sectPerCyl > 0) && (sectorSize > 0) ) {
-	int cyl = absSectIdx / (sides * sectPerCyl);
+      int sides        = getSides();
+      int sectPerTrack = getSectorsPerTrack();
+      if( (sides > 0) && (sectPerTrack > 0) && (sectorSize > 0) ) {
+	int cyl = absSectIdx / (sides * sectPerTrack);
 	if( (cyl >= 0) && (cyl < getCylinders()) ) {
 	  int head = 0;
-	  int idx  = absSectIdx - (cyl * sides * sectPerCyl);
-	  if( idx >= sectPerCyl ) {
+	  int idx  = absSectIdx - (cyl * sides * sectPerTrack);
+	  if( idx >= sectPerTrack ) {
 	    head++;
-	    idx -= sectPerCyl;
+	    idx -= sectPerTrack;
 	  }
-	  if( (head < sides) && (idx >= 0) && (idx < sectPerCyl) ) {
+	  if( (head < sides) && (idx >= 0) && (idx < sectPerTrack) ) {
 	    this.sectors[ absSectIdx ] = new SectorData(
 						idx,
 						cyl,
@@ -1136,7 +1124,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	     * Eine Datei kann nur dann geloscht werden,
 	     * wenn es den Eintrag fuer Extent 0 nicht mehr gibt.
 	     * Des Weiteren auch die alte Datei laden,
-	     * damit ein evtl. umbenennen funktioniert.
+	     * damit ein evtl. Umbenennen funktioniert.
 	     */
 	    if( (this.dirBytes[ 12 ] == 0)
 		&& (this.dirBytes[ 14 ] == 0) )
@@ -1159,7 +1147,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		// nur das ReadOnly-Bit ist unterschiedlich
 		File file = this.fileMap.get( entryName );
 		if( file != null ) {
-		  EmuUtil.setFileWritable( file, ((int) b & 0x80) == 0 );
+		  FileUtil.setFileWritable( file, ((int) b & 0x80) == 0 );
 		}
 	      }
 	    }
@@ -1169,7 +1157,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	}
 
 	/*
-	 * sicherstellen, dass die betreffenden Dateien vollstaendig
+	 * sicherstellen, dass die betroffenen Dateien vollstaendig
 	 * geladen wurden
 	 */
 	if( newEntryNames != null ) {
@@ -1189,7 +1177,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		dirPos,
 		Math.min( this.dirBytes.length - dirPos, dataLen ) );
 
-	// betreffende Dateien schreiben
+	// betroffene Dateien schreiben
 	if( newEntryNames != null ) {
 	  for( String entryName : newEntryNames ) {
 	    writeFileByEntryName(
@@ -1206,7 +1194,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	      if( findEntryBegPosByNameAndExtent( entryName, 0 ) < 0 ) {
 		if( file.exists() ) {
 		  /*
-		   * Sicherstellen, dass die Datei vollstaendig geladen
+		   * aicherstellen, dass die Datei vollstaendig geladen
 		   * wurde, damit ggf. ein anschliessendes "undelete"
 		   * funktionieren kann
 		   */
@@ -1279,44 +1267,41 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		if( entryName != null ) {
 		  File file = this.fileMap.get( entryName );
 		  if( file != null ) {
-		    FileTimesView ftv = this.ftvFactory.getFileTimesView(
-								file );
-		    if( ftv != null ) {
-		      /*
-		       * Wenn ein zu setzender Zeitstempel
-		       * der ja nur minutengenau ist,
-		       * in der gleichen Minute liegt wie der bereits
-		       * vorhandene Dateizeitstempel,
-		       * dann soll der Zeitstempel nicht gesetzt werden,
-		       * um die Sekunden nicht zu loeschen.
-		       */
-		      if( isInSameMinute(
+		    /*
+		     * Wenn ein zu setzender Zeitstempel
+		     * der ja nur minutengenau ist,
+		     * in der gleichen Minute liegt wie der bereits
+		     * vorhandene Dateizeitstempel,
+		     * dann soll der Zeitstempel nicht gesetzt werden,
+		     * um die Sekunden nicht zu loeschen.
+		     */
+		    FileTimesData ftd = FileTimesData.createOf( file );
+		    if( isInSameMinute(
 				creationMillis,
-				ftv.getCreationMillis() ) )
-		      {
-			creationMillis = null;
-		      }
-		      if( isInSameMinute(
+				ftd.getCreationMillis() ) )
+		    {
+		      creationMillis = null;
+		    }
+		    if( isInSameMinute(
 				lastAccessMillis,
-				ftv.getLastAccessMillis() ) )
-		      {
-			lastAccessMillis = null;
-		      }
-		      if( isInSameMinute(
+				ftd.getLastAccessMillis() ) )
+		    {
+		      lastAccessMillis = null;
+		    }
+		    if( isInSameMinute(
 				lastModifiedMillis,
-				ftv.getLastModifiedMillis() ) )
-		      {
-			lastModifiedMillis = null;
-		      }
-		      if( (creationMillis != null)
-			  || (lastAccessMillis != null)
-			  || (lastModifiedMillis != null) )
-		      {
-			ftv.setTimesInMillis(
+				ftd.getLastModifiedMillis() ) )
+		    {
+		      lastModifiedMillis = null;
+		    }
+		    if( (creationMillis != null)
+			|| (lastAccessMillis != null)
+			|| (lastModifiedMillis != null) )
+		    {
+		      ftd.setTimesInMillis(
 					creationMillis,
 					lastAccessMillis,
 					lastModifiedMillis );
-		      }
 		    }
 		  }
 		}
@@ -1450,7 +1435,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  raf = null;
 	}
 	finally {
-	  EmuUtil.closeSilent( raf );
+	  EmuUtil.closeSilently( raf );
 	}
       }
     }

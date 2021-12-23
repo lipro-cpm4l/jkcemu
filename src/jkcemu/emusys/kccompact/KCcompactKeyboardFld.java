@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -66,9 +65,18 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
     this.imgUp        = getImage( "/images/keyboard/up.png" );
     this.imgDown      = getImage( "/images/keyboard/down.png" );
     this.imgPoint     = getImage( "/images/keyboard/point.png" );
-    this.fontText     = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );
-    this.fontLetter   = new Font( "SansSerif", Font.PLAIN, LETTER_FONT_SIZE );
-    this.fontDigit    = new Font( "SansSerif", Font.PLAIN, DIGIT_FONT_SIZE );
+    this.fontText     = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				TEXT_FONT_SIZE );
+    this.fontLetter   = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				LETTER_FONT_SIZE );
+    this.fontDigit    = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				DIGIT_FONT_SIZE );
     this.kbMatrix     = new int[ 10 ];
     this.curIdx       = 0;
     this.curX         = MARGIN;
@@ -278,11 +286,11 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
   protected void paintComponent( Graphics g )
   {
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       if( isKeySelected( key ) ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x, key.y, key.w, key.h );
       }
       switch( key.w ) {
@@ -314,7 +322,7 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
 		key.y + (key.h - key.image.getHeight( this )) / 2,
 		this );
       } else {
-	g.setColor( Color.black );
+	g.setColor( Color.BLACK );
 	if( key.text1 != null ) {
 	  if( key.text2 != null ) {
 	    g.setFont( this.fontDigit );
@@ -352,7 +360,7 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
     }
 
     // linker LED-Block (nur Attrappe)
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.drawLine(
         this.xRow1Left,
         MARGIN + KEY_SIZE,
@@ -360,16 +368,16 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
         MARGIN + (3 * KEY_SIZE ) );
     int x = this.xRow1Left + (KEY_HALF_SIZE - LED_SIZE) / 2;
     int y = MARGIN + KEY_SIZE + ((KEY_SIZE - LED_SIZE) / 2);
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.fillOval( x, y, LED_SIZE, LED_SIZE );
     g.fillOval( x, y + KEY_SIZE, LED_SIZE, LED_SIZE );
 
     // rechter LED-Block (nur Attrappe)
     y = MARGIN + (2 * KEY_SIZE );
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.drawLine( this.xRow1Right, MARGIN + KEY_SIZE, this.xRow1Right, y );
     g.drawLine( this.xRow1Right, y, this.xRow3Right, y );
-    g.setColor( Color.red );
+    g.setColor( Color.RED );
     x = this.xRow1Right - KEY_HALF_SIZE + ((KEY_HALF_SIZE - LED_SIZE) / 2);
     y = MARGIN + KEY_SIZE + ((KEY_SIZE - LED_SIZE) / 2);
     g.fillOval( x, y, LED_SIZE, LED_SIZE );

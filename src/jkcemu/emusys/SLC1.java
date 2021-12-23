@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,37 +12,41 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.SLC1KeyboardFld;
+import jkcemu.etc.CPUSynchronSoundDevice;
 import z80emu.Z80CPU;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PCListener;
 
 
-public class SLC1 extends EmuSys implements Z80PCListener
+public class SLC1 extends EmuSys implements
+					Z80MaxSpeedListener,
+					Z80PCListener
 {
   public static final String SYSNAME     = "SLC1";
   public static final String PROP_PREFIX = "jkcemu.slc1.";
 
   private static byte[] rom = null;
 
-  private SLC1KeyboardFld keyboardFld;
-  private int[]           keyboardMatrix;
-  private int[]           digitStatus;
-  private int[]           digitValues;
-  private byte[]          ram;
-  private int             displayTStates;
-  private int             curKeyCol;
-  private int             curSegValue;
-  private long            curDisplayTStates;
-  private int             ledStatus;
-  private boolean         ledValue;
-  private boolean         chessMode;
+  private SLC1KeyboardFld        keyboardFld;
+  private int[]                  keyboardMatrix;
+  private int[]                  digitStatus;
+  private int[]                  digitValues;
+  private byte[]                 ram;
+  private int                    displayTStates;
+  private int                    curKeyCol;
+  private int                    curSegValue;
+  private long                   curDisplayTStates;
+  private int                    ledStatus;
+  private boolean                ledValue;
+  private boolean                chessMode;
+  private CPUSynchronSoundDevice loudspeaker;
 
 
   public SLC1( EmuThread emuThread, Properties props )
@@ -59,6 +63,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
     this.ledStatus      = 0;
     this.ledValue       = false;
     this.chessMode      = true;
+    this.loudspeaker    = new CPUSynchronSoundDevice( "Lautsprecher" );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.addMaxSpeedListener( this );
@@ -98,6 +103,16 @@ public class SLC1 extends EmuSys implements Z80PCListener
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.loudspeaker.z80MaxSpeedChanged( cpu );
+    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
 	/* --- Z80PCListener --- */
 
   @Override
@@ -127,7 +142,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public SLC1KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new SLC1KeyboardFld( this );
     return this.keyboardFld;
@@ -141,6 +156,8 @@ public class SLC1 extends EmuSys implements Z80PCListener
     cpu.removeTStatesListener( this );
     cpu.removePCListener( this );
     cpu.removeMaxSpeedListener( this );
+
+    this.loudspeaker.fireStop();
     super.die();
   }
 
@@ -209,7 +226,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorGreenDark;
@@ -267,6 +284,13 @@ public class SLC1 extends EmuSys implements Z80PCListener
   public int getScreenWidth()
   {
     return 70 + (this.digitValues.length * 50);
+  }
+
+
+  @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return new AbstractSoundDevice[] { this.loudspeaker };
   }
 
 
@@ -480,7 +504,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
     synchronized( this.digitStatus ) {
 
       // LED Busy
-      g.setFont( new Font( "SansSerif", Font.BOLD, 18 * screenScale ) );
+      g.setFont( new Font( Font.SANS_SERIF, Font.BOLD, 18 * screenScale ) );
       g.setColor( this.ledValue || (this.ledStatus > 0) ?
 					this.colorGreenLight
 					: this.colorGreenDark );
@@ -519,10 +543,10 @@ public class SLC1 extends EmuSys implements Z80PCListener
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
     }
     synchronized( this.keyboardMatrix ) {
@@ -537,6 +561,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
     }
     this.curSegValue       = 0;
     this.curDisplayTStates = 0;
+    this.loudspeaker.reset();
     setChessMode( true );
   }
 
@@ -574,13 +599,6 @@ public class SLC1 extends EmuSys implements Z80PCListener
 
 
   @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
     // Tastaturspalten
@@ -590,7 +608,7 @@ public class SLC1 extends EmuSys implements Z80PCListener
     }
 
     // Tonausgabe
-    this.soundOutPhase = (col == 9);
+    this.loudspeaker.setCurPhase( col == 9 );
 
     // Anzeige
     boolean dirty   = false;
@@ -641,17 +659,10 @@ public class SLC1 extends EmuSys implements Z80PCListener
 
 
   @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
+    this.loudspeaker.z80TStatesProcessed( cpu, tStates );
 
     // Anzeige
     if( this.displayTStates > 0 ) {

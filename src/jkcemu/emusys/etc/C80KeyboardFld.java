@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -42,7 +41,7 @@ public class C80KeyboardFld extends AbstractKeyboardFld<C80>
   public C80KeyboardFld( C80 c80 )
   {
     super( c80, 24, true );
-    this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
+    this.fontBtn  = new Font( Font.SANS_SERIF, Font.PLAIN, FONT_SIZE );
     this.kbMatrix = new int[ 8 ];
     this.curIdx   = 0;
     this.curX     = MARGIN;
@@ -124,7 +123,7 @@ public class C80KeyboardFld extends AbstractKeyboardFld<C80>
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	fireWarmResetAfterDelay();
+	fireResetAfterDelay();
       } else if( hits( this.nmiKey, e ) ) {
 	fireNMIAfterDelay();
       }
@@ -137,21 +136,21 @@ public class C80KeyboardFld extends AbstractKeyboardFld<C80>
   protected void paintComponent( Graphics g )
   {
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     g.setFont( this.fontBtn );
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
       if( key.text1 != null ) {
 	FontMetrics fm = g.getFontMetrics();
 	if( fm != null ) {
-	  g.setColor( Color.black );
+	  g.setColor( Color.BLACK );
 	  g.drawString(
 		key.text1,
 		key.x + ((key.w - fm.stringWidth( key.text1 )) / 2) + 1,

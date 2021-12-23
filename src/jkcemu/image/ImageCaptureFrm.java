@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,6 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -37,6 +36,7 @@ import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.BaseFrm;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.ScreenFrm;
 
 
@@ -50,9 +50,9 @@ public class ImageCaptureFrm extends BaseFrm
   private int               waitForWindowMillis;
   private Robot             robot;
   private javax.swing.Timer statusTimer;
-  private JRadioButton      btnCaptureEmuSysScreen;
-  private JRadioButton      btnCaptureScreenFrm;
-  private JRadioButton      btnCaptureOtherWindow;
+  private JRadioButton      rbCaptureEmuSysScreen;
+  private JRadioButton      rbCaptureScreenFrm;
+  private JRadioButton      rbCaptureOtherWindow;
   private JLabel            labelWinSelectTime;
   private JLabel            labelWinSelectUnit;
   private JSpinner          spinnerWinSelectSec;
@@ -80,24 +80,22 @@ public class ImageCaptureFrm extends BaseFrm
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnCaptureEmuSysScreen)
-	  || (src == this.btnCaptureScreenFrm)
-	  || (src == this.btnCaptureOtherWindow) )
-      {
-	rv = true;
-	updFieldsEnabled();
-      }
-      else if( src == this.btnTakePhoto ) {
-	rv = true;
-	doTakePhoto();
-      }
-      else if( src == this.btnClose ) {
-	rv = true;
-	doClose();
-      }
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( (src == this.rbCaptureEmuSysScreen)
+	|| (src == this.rbCaptureScreenFrm)
+	|| (src == this.rbCaptureOtherWindow) )
+    {
+      rv = true;
+      updFieldsEnabled();
+    }
+    else if( src == this.btnTakePhoto ) {
+      rv = true;
+      doTakePhoto();
+    }
+    else if( src == this.btnClose ) {
+      rv = true;
+      doClose();
     }
     return rv;
   }
@@ -118,13 +116,6 @@ public class ImageCaptureFrm extends BaseFrm
   }
 
 
-  @Override
-  public void lookAndFeelChanged()
-  {
-    pack();
-  }
-
-
 	/* --- Konstruktor --- */
 
   private ImageCaptureFrm( ScreenFrm screenFrm )
@@ -133,7 +124,6 @@ public class ImageCaptureFrm extends BaseFrm
     this.waitForWindowMillis = 0;
     this.robot               = null;
     setTitle( "JKCEMU Bildschirmfoto" );
-    Main.updIcon( this );
 
     this.statusTimer = new javax.swing.Timer(
 			500,
@@ -180,38 +170,34 @@ public class ImageCaptureFrm extends BaseFrm
     // aufzunehmender Bereich
     ButtonGroup grpCaptureArea = new ButtonGroup();
 
-    this.btnCaptureEmuSysScreen = new JRadioButton(
+    this.rbCaptureEmuSysScreen = GUIFactory.createRadioButton(
 		"Bildschirmausgabe des emulierten Systems ohne Fenster",
 		true );
-    grpCaptureArea.add( this.btnCaptureEmuSysScreen );
-    this.btnCaptureEmuSysScreen.addActionListener( this );
-    add( this.btnCaptureEmuSysScreen, gbc );
+    grpCaptureArea.add( this.rbCaptureEmuSysScreen );
+    add( this.rbCaptureEmuSysScreen, gbc );
 
-    this.btnCaptureScreenFrm = new JRadioButton(
-		"Bildschirmausgabe des emulierten Systems mit Fenster",
-		false );
-    grpCaptureArea.add( this.btnCaptureScreenFrm );
-    this.btnCaptureScreenFrm.addActionListener( this );
+    this.rbCaptureScreenFrm = GUIFactory.createRadioButton(
+		"Bildschirmausgabe des emulierten Systems mit Fenster" );
+    grpCaptureArea.add( this.rbCaptureScreenFrm );
     gbc.insets.top = 0;
     gbc.gridy++;
-    add( this.btnCaptureScreenFrm, gbc );
+    add( this.rbCaptureScreenFrm, gbc );
 
-    this.btnCaptureOtherWindow = new JRadioButton(
-					"Beliebiges JKCEMU-Fenster",
-					false );
-    grpCaptureArea.add( this.btnCaptureOtherWindow );
-    this.btnCaptureOtherWindow.addActionListener( this );
+    this.rbCaptureOtherWindow = GUIFactory.createRadioButton(
+					"Beliebiges JKCEMU-Fenster" );
+    grpCaptureArea.add( this.rbCaptureOtherWindow );
     gbc.gridy++;
-    add( this.btnCaptureOtherWindow, gbc );
+    add( this.rbCaptureOtherWindow, gbc );
 
-    this.labelWinSelectTime = new JLabel( "Zeit f\u00FCr Fensterauswahl:" );
+    this.labelWinSelectTime = GUIFactory.createLabel(
+					"Zeit f\u00FCr Fensterauswahl:" );
     gbc.insets.left   = 50;
     gbc.insets.bottom = 5;
     gbc.gridwidth     = 1;
     gbc.gridy++;
     add( this.labelWinSelectTime, gbc );
 
-    this.spinnerWinSelectSec = new JSpinner(
+    this.spinnerWinSelectSec = GUIFactory.createSpinner(
 				new SpinnerNumberModel( 3, 1, 9, 1 ) );
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -219,7 +205,7 @@ public class ImageCaptureFrm extends BaseFrm
     gbc.gridx++;
     add( this.spinnerWinSelectSec, gbc );
 
-    this.labelWinSelectUnit = new JLabel( "Sekunden" );
+    this.labelWinSelectUnit = GUIFactory.createLabel( "Sekunden" );
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;
@@ -234,9 +220,9 @@ public class ImageCaptureFrm extends BaseFrm
     gbc.gridwidth    = GridBagConstraints.REMAINDER;
     gbc.gridx        = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
-    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
+    this.labelStatus = GUIFactory.createLabel( DEFAULT_STATUS_TEXT );
     gbc.anchor       = GridBagConstraints.WEST;
     gbc.fill         = GridBagConstraints.NONE;
     gbc.weightx      = 0.0;
@@ -248,7 +234,7 @@ public class ImageCaptureFrm extends BaseFrm
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 2, 1, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 2, 1, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.NORTHEAST;
     gbc.insets.top  = 5;
     gbc.gridwidth   = 1;
@@ -257,22 +243,28 @@ public class ImageCaptureFrm extends BaseFrm
     gbc.gridx       = 3;
     add( panelBtn, gbc );
 
-    this.btnTakePhoto = new JButton( "Aufnehmen" );
-    this.btnTakePhoto.addActionListener( this );
+    this.btnTakePhoto = GUIFactory.createButton( EmuUtil.TEXT_RECORD );
     panelBtn.add( btnTakePhoto );
 
-    this.btnClose = new JButton( "Schlie\u00DFen" );
-    this.btnClose.addActionListener( this );
+    this.btnClose = GUIFactory.createButtonClose();
     panelBtn.add( btnClose );
+
+
+    // Listener
+    this.rbCaptureEmuSysScreen.addActionListener( this );
+    this.rbCaptureScreenFrm.addActionListener( this );
+    this.rbCaptureOtherWindow.addActionListener( this );
+    this.btnTakePhoto.addActionListener( this );
+    this.btnClose.addActionListener( this );
 
 
     // sonstiges
     updFieldsEnabled();
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
   }
 
 
@@ -281,13 +273,13 @@ public class ImageCaptureFrm extends BaseFrm
   private void doTakePhoto()
   {
     this.waitForWindowMillis = 0;
-    if( this.btnCaptureEmuSysScreen.isSelected() ) {
+    if( this.rbCaptureEmuSysScreen.isSelected() ) {
       fireTakePhoto( null );
     }
-    if( this.btnCaptureScreenFrm.isSelected() ) {
+    if( this.rbCaptureScreenFrm.isSelected() ) {
       fireTakePhoto( this.screenFrm );
     }
-    else if( this.btnCaptureOtherWindow.isSelected() ) {
+    else if( this.rbCaptureOtherWindow.isSelected() ) {
       this.waitForWindowMillis = 5000;
       if( this.spinnerWinSelectSec != null ) {
 	Object o = this.spinnerWinSelectSec.getValue();
@@ -356,14 +348,17 @@ public class ImageCaptureFrm extends BaseFrm
       image = this.screenFrm.createSnapshot();
     }
     if( image != null ) {
-      ImageFrm.open( image, "Bildschirmfoto" );
+      ImageFrm.open(
+		image,
+		ImageUtil.createScreenshotExifData(),
+		"Bildschirmfoto" );
     }
   }
 
 
   private void updFieldsEnabled()
   {
-    boolean state = this.btnCaptureOtherWindow.isSelected();
+    boolean state = this.rbCaptureOtherWindow.isSelected();
     this.labelWinSelectTime.setEnabled( state );
     this.labelWinSelectUnit.setEnabled( state );
     this.spinnerWinSelectSec.setEnabled( state );
@@ -394,6 +389,7 @@ public class ImageCaptureFrm extends BaseFrm
 	  for( Window window : windows ) {
 	    if( window.isFocused() ) {
 	      captureWindow = window;
+	      break;
 	    }
 	  }
 	}
@@ -413,4 +409,3 @@ public class ImageCaptureFrm extends BaseFrm
     }
   }
 }
-

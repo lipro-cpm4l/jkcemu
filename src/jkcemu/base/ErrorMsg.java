@@ -1,36 +1,60 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Klasse zur Anzeige einer Fehlermeldung aus einem Nicht-Swing-Thread
+ *
+ * Die Klasse verhindert die gleichzeitige Anzeige
+ * gleichlautender Fehlermeldungen
  */
 
 package jkcemu.base;
 
 import java.awt.Component;
-import java.lang.*;
+import java.awt.EventQueue;
+import java.util.Set;
+import java.util.TreeSet;
 
 
 public class ErrorMsg implements Runnable
 {
-  private Component parent;
-  private Exception ex;
+  private static Set<String> pendingMessages = new TreeSet<>();
+
+  private Component owner;
+  private String    msg;
 
 
-  public ErrorMsg( Component parent, Exception ex )
+  public static void showLater( Component owner, Exception ex )
   {
-    this.parent = parent;
-    this.ex     = ex;
+    showLater( owner, null, ex );
   }
 
 
-	/* --- Methoden fuer Runnable --- */
+  public static void showLater( Component owner, String msg, Exception ex )
+  {
+    msg = EmuUtil.createErrorMsg( msg, ex );
+    if( !pendingMessages.contains( msg ) ) {
+      EventQueue.invokeLater( new ErrorMsg( owner, msg ) );
+    }
+  }
+
+
+	/* --- Runnable --- */
 
   @Override
   public void run()
   {
-    EmuUtil.exitSysError( this.parent, null, this.ex );
+    BaseDlg.showErrorDlg( this.owner, this.msg );
+    pendingMessages.remove( msg );
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private ErrorMsg( Component owner, String msg )
+  {
+    this.owner = owner;
+    this.msg   = msg;
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2017 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,8 +29,6 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.lang.*;
-import java.util.Arrays;
 import jkcemu.base.*;
 import jkcemu.emusys.KC85;
 
@@ -103,12 +101,21 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
     this.imgDown      = getImage( "/images/keyboard/down.png" );
     this.imgPoint     = getImage( "/images/keyboard/point.png" );
 
-    this.colorLEDRedOn  = Color.red;
+    this.colorLEDRedOn  = Color.RED;
     this.colorLEDRedOff = new Color( 120, 60, 60 );
 
-    this.fontText     = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );
-    this.fontLetter   = new Font( "SansSerif", Font.PLAIN, LETTER_FONT_SIZE );
-    this.fontDigit    = new Font( "SansSerif", Font.PLAIN, DIGIT_FONT_SIZE );
+    this.fontText       = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				TEXT_FONT_SIZE );
+    this.fontLetter     = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				LETTER_FONT_SIZE );
+    this.fontDigit      = new Font(
+				Font.SANS_SERIF,
+				Font.PLAIN,
+				DIGIT_FONT_SIZE );
     this.kbMatrix     = new int[ 10 ];
     this.capsLockMode = false;
     this.pcMode       = false;
@@ -418,7 +425,7 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 	keyNum = -1;
       }
     }
-    ((KC85) this.emuSys ).setKeyNumPressed( keyNum );
+    this.emuSys.setKeyNumPressed( keyNum );
   }
 
 
@@ -426,11 +433,11 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
   protected void paintComponent( Graphics g )
   {
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       if( isKeySelected( key ) ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x, key.y, key.w, key.h );
       }
       switch( key.w ) {
@@ -458,7 +465,7 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
       if( key.image != null ) {
 	g.drawImage( key.image, key.x + 8, key.y + 10, this );
       } else {
-	g.setColor( Color.black );
+	g.setColor( Color.BLACK );
 	if( key.text1 != null ) {
 	  if( key.text2 != null ) {
 	    g.setFont( this.fontDigit );
@@ -518,7 +525,7 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
     }
 
     // linker LED-Block (nur Attrappe)
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.drawLine(
         this.xRow1Left,
         MARGIN + KEY_SIZE,
@@ -526,13 +533,13 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
         MARGIN + (3 * KEY_SIZE ) );
     int x = this.xRow1Left + (KEY_HALF_SIZE - LED_SIZE) / 2;
     int y = MARGIN + KEY_SIZE + ((KEY_SIZE - LED_SIZE) / 2);
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.fillOval( x, y, LED_SIZE, LED_SIZE );
     g.fillOval( x, y + KEY_SIZE, LED_SIZE, LED_SIZE );
 
     // rechter LED-Block (nur Attrappe)
     y = MARGIN + (2 * KEY_SIZE );
-    g.setColor( Color.gray );
+    g.setColor( Color.GRAY );
     g.drawLine( this.xRow1Right, MARGIN + KEY_SIZE, this.xRow1Right, y );
     g.drawLine( this.xRow1Right, y, this.xRow3Right, y );
     g.setColor( this.pcMode ? this.colorLEDRedOn : this.colorLEDRedOff );

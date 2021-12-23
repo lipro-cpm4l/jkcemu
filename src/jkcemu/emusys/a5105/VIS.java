@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.EmuThread;
 import jkcemu.base.ScreenFrm;
@@ -68,9 +67,9 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
     this.colorModel  = null;
     this.colors      = new Color[ COLOR_COUNT ];
     this.colorRGBs   = new int[ COLOR_COUNT ];
-    Arrays.fill( this.colors, Color.black );
+    Arrays.fill( this.colors, Color.BLACK );
     Arrays.fill( this.colorRGBs, 0 );
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( true );
   }
 
 
@@ -158,7 +157,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   {
     return (idx >= 0) && (idx < this.colors.length) ?
 					this.colors[ idx ]
-					: Color.black;
+					: Color.BLACK;
   }
 
 
@@ -399,7 +398,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( boolean powerOn )
   {
     this.fontGenVisAccess = false;
     this.fontGenEnabled   = false;
@@ -411,7 +410,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
     this.colorReg0        = 0;
     this.fontBaseAddr     = 0;
     this.fontRowAddr      = 0;
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    if( powerOn ) {
       Arrays.fill( this.fontBytes, (byte) 0 );
       Arrays.fill( this.vram, (short) 0 );
     }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -11,9 +11,9 @@
 
 package z80emu;
 
-import java.lang.*;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -40,10 +40,6 @@ public class Z80CPU implements Runnable
       this.pc       = pc;
     }
   };
-
-
-  // Nach wieviel Taktzyklen die Zaehlung bei Null beginnen soll
-  private static final long tStatesWrap = Long.MAX_VALUE - 1000000L;
 
 
   // Masken fuer die einzelnen Bits
@@ -86,7 +82,7 @@ public class Z80CPU implements Runnable
   private volatile int                      interruptMode;
   private int                               interruptReg;
   private boolean                           haltState;
-  private Integer                           haltPC;
+  private Integer                           afterHaltPC;
   private int                               instBegPC;
   private int                               preCode;
   private int                               regPC;
@@ -142,14 +138,13 @@ public class Z80CPU implements Runnable
     this.pcListener            = null;
     this.addrListener          = null;
     this.tStatesListeners      = null;
-    this.interruptSources      = null;
+    this.interruptSources      = new Z80InterruptSource[ 0 ];
     this.haltStateListeners    = new ArrayList<>();
     this.maxSpeedListeners     = new ArrayList<>();
     this.statusListeners       = new ArrayList<>();
     this.instTStatesMngr       = null;
     this.breakpoints           = null;
     this.debugTracer           = null;
-    this.haltPC                = null;
     this.maxSpeedKHz           = -1;
     this.brakeEnabled          = true;
     this.active                = false;
@@ -172,32 +167,13 @@ public class Z80CPU implements Runnable
       }
       this.parity[ i ] = v;
     }
-    resetCPU( true );
+    reset( true );
   }
 
 
   public void addWaitStates( int tStates )
   {
     this.waitStates.addAndGet( tStates );
-  }
-
-
-  /*
-   * Die CPU-Emulation zaehlt die orginalen Taktzyklen mit.
-   * Damit der Zaehler nicht ueberlaeuft,
-   * wird dieser an einer bestimmten Stelle zurueckgesetzt.
-   * Diese Methode berechnet die Differenz zwischen zwei dieser
-   * Taktzyklenwerte, die mit der Methode "getProcessedTStates()"
-   * ermittelt werden.
-   * Dabei wird auch dann die richtige Differenz zurueckgegeben,
-   * wenn zwischen den beiden Aufrufen von "getProcessedTStates()"
-   * der Zaehler einmal zurueckgesetzt wurde.
-   */
-  public static long calcTStatesDiff( long tStates1, long tStates2 )
-  {
-    return tStates2 < tStates1 ?
-		(tStatesWrap - tStates1 + tStates2)
-		: (tStates2 - tStates1);
   }
 
 
@@ -395,47 +371,8 @@ public class Z80CPU implements Runnable
   }
 
 
-  /*
-   * Die beiden Methoden implementieren den Mechanismus des Wartens.
-   * Als Monitor-Objekt wird ein (beliebiges) Objekt verwendet,
-   * auf das im Swing-Thread nicht zugegriffen werden muss.
-   * Die waitFor-Methode haelt den atuellen Thread an und
-   * darf nur im Emulations-Threads aufgerufen werden.
-   */
-  public void waitFor()
+  public void reset( boolean powerOn )
   {
-    synchronized( this.waitMonitor ) {
-      this.speedNanosEnd = System.nanoTime();
-      try {
-	this.waitMonitor.wait();
-      }
-      catch( InterruptedException ex ) {}
-      if( this.speedNanosEnd > 0L ) {
-        this.speedNanosBeg += (System.nanoTime() - this.speedNanosEnd);
-      }
-      this.speedNanosEnd = -1L;
-    }
-  }
-
-
-  public void wakeUp()
-  {
-    synchronized( this.waitMonitor ) {
-      try {
-	this.waitMonitor.notifyAll();
-      }
-      catch( IllegalMonitorStateException ex ) {}
-    }
-  }
-
-
-  public void resetCPU( boolean powerOn )
-  {
-    Z80InterruptSource[] iSources = this.interruptSources;
-    if( iSources != null ) {
-      for( int i = 0; i < iSources.length; i++ )
-	iSources[ i ].reset( powerOn );
-    }
     this.nmiFired          = false;
     this.iff1              = false;
     this.iff2              = false;
@@ -453,7 +390,7 @@ public class Z80CPU implements Runnable
     this.pause             = false;
     this.waitMode          = false;
     this.action            = this.debugEnabled ? Action.DEBUG_RUN : Action.RUN;
-    this.haltPC            = null;
+    this.afterHaltPC       = null;
     this.instBegPC         = 0;
     this.preCode           = -1;
     this.regPC             = 0;
@@ -483,6 +420,13 @@ public class Z80CPU implements Runnable
   }
 
 
+  public void resetProcessTStates()
+  {
+    this.processedTStates = 0L;
+    resetSpeed();
+  }
+
+
   public void resetSpeed()
   {
     this.speedNanosBeg      = System.nanoTime();
@@ -490,7 +434,6 @@ public class Z80CPU implements Runnable
     this.speedUnlimitedTill = 0L;
     this.speedBrakeTStates  = 0;
     this.speedTStates       = 0L;
-    this.processedTStates   = 0L;
   }
 
 
@@ -577,8 +520,16 @@ public class Z80CPU implements Runnable
 
   public void fireExit()
   {
-    this.active = false;
-    wakeUp();
+    synchronized( this.waitMonitor ) {
+      this.active = false;
+      if( this.thread != null ) {
+	this.thread.interrupt();
+      }
+      try {
+	this.waitMonitor.notifyAll();
+      }
+      catch( IllegalMonitorStateException ex ) {}
+    }
     updStatusListeners( null, null );
   }
 
@@ -641,7 +592,7 @@ public class Z80CPU implements Runnable
 	  w -= 3;
 	}
 	while( w > 0 ) {
-	  writer.print( (char) '\u0020' );
+	  writer.print( '\u0020' );
 	  --w;
 	}
 
@@ -655,14 +606,14 @@ public class Z80CPU implements Runnable
 	  s = instr.getArg1();
 	  if( s != null ) {
 	    while( w > 0 ) {
-	      writer.print( (char) '\u0020' );
+	      writer.print( '\u0020' );
 	      --w;
 	    }
 	    writer.print( s );
 
 	    s = instr.getArg2();
 	    if( s != null ) {
-	      writer.print( (char) ',' );
+	      writer.print( ',' );
 	      writer.print( s );
 	    }
 	  }
@@ -705,7 +656,12 @@ public class Z80CPU implements Runnable
 				|| (this.action == Action.DEBUG_STEP_TO_RET));
 
     if( (this.action != Action.PAUSE) && (this.action != Action.DEBUG_STOP) ) {
-      wakeUp();
+      synchronized( this.waitMonitor ) {
+	try {
+	  this.waitMonitor.notifyAll();
+	}
+	catch( IllegalMonitorStateException ex ) {}
+      }
       updStatusListeners( null, null );
     }
   }
@@ -1168,11 +1124,13 @@ public class Z80CPU implements Runnable
   @Override
   public void run()
   {
+    synchronized( this.waitMonitor ) {
+      this.active = true;
+      this.thread = Thread.currentThread();
+    }
+
     int opCode = 0;
     resetSpeed();
-
-    this.active = true;
-    this.thread = Thread.currentThread();
     updStatusListeners( null, null );
 
     try {
@@ -1195,32 +1153,10 @@ public class Z80CPU implements Runnable
 	    }
 	  }
 
-	  // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
-	  if( this.processedTStates >= tStatesWrap ) {
-	    this.processedTStates -= tStatesWrap;
-	  }
-
 	  /*
 	   * Geschwindigkeitsverwaltung
 	   */
-	  if( this.speedTStates >= tStatesWrap ) {
-
-	    // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
-	    this.speedUnlimitedTill = 0L;
-	    this.speedNanosBeg      = System.nanoTime();
-	    this.speedNanosEnd      = -1L;
-	    this.speedTStates -= tStatesWrap;
-
-	  } else {
-
-	    /*
-	     * Geschwindigkeit begrenzen
-	     * Die Geschwindigkeitsbremse nicht nach jedem Befehl aktivieren,
-	     * da sonst zuviel Rechenzeit fuer die Bremse selbst
-	     * benoetigt wird.
-	     */
-	    checkSpeedBrake();
-	  }
+	  checkSpeedBrake();
 
 
 	  /*
@@ -1236,9 +1172,9 @@ public class Z80CPU implements Runnable
 	    this.nmiFired = false;
 	    this.iff2     = this.iff1;
 	    this.iff1     = false;
+	    setHaltState( false );
 	    incRegR();
 	    doPush( this.regPC );
-	    this.haltPC = null;
 	    this.regPC  = 0x0066;
 	    nmiAccepted = true;
 	    this.processedTStates += 11;
@@ -1248,63 +1184,49 @@ public class Z80CPU implements Runnable
 	      this.lastInstWasEIorDI = false;
 	    } else {
 	      if( this.iff1 ) {
-		Z80InterruptSource[] iSources = this.interruptSources;
-		if( iSources != null ) {
-		  for( int i = 0; i < iSources.length; i++ ) {
-		    Z80InterruptSource iSource = iSources[ i ];
-		    if( iSource.isInterruptAccepted() ) {
-		      break;
-		    }
-		    if( iSource.isInterruptRequested() ) {
-		      this.haltPC = null;
-		      this.iff1   = false;
-		      this.iff2   = false;
-		      int iVector = iSource.interruptAccept() & 0xFF;
-		      incRegR();
+		for( Z80InterruptSource iSource : this.interruptSources ) {
+		  if( iSource.isInterruptAccepted() ) {
+		    break;
+		  }
+		  if( iSource.isInterruptRequested() ) {
+		    this.iff1   = false;
+		    this.iff2   = false;
+		    int iVector = iSource.interruptAccept() & 0xFF;
+		    setHaltState( false );
+		    incRegR();
 
-		      switch( this.interruptMode ) {
-			case 1:
+		    switch( this.interruptMode ) {
+		      case 1:
+			doPush( this.regPC );
+			this.regPC = 0x0038;
+			this.instTStates += 13;
+			break;
+
+		      case 2:
+			{
+			  int m = (this.interruptReg << 8) | iVector;
 			  doPush( this.regPC );
-			  this.regPC = 0x0038;
-			  this.instTStates += 13;
-			  break;
+			  this.regPC = readMemWord( m );
+			  this.instTStates += 19;
+			}
+			break;
 
-			case 2:
-			  {
-			    int m = (this.interruptReg << 8) | iVector;
-			    doPush( this.regPC );
-			    this.regPC = readMemWord( m );
-			    this.instTStates += 19;
-			  }
-			  break;
-
-			default:			// IM 0
-			  this.instBegPC = this.regPC;
-			  this.preCode   = -1;
-			  execInst( iVector );
-			  // insgesamt 13 bei RST-Befehl
-			  this.instTStates += 2;
-		      }
-		      this.processedTStates += this.instTStates;
-		      this.speedTStates     += this.instTStates;
-		      this.instTStates  = 0;
-		      interruptSource   = iSource;
+		      default:			// IM 0
+			this.instBegPC = this.regPC;
+			this.preCode   = -1;
+			execInst( iVector );
+			// insgesamt 13 bei RST-Befehl
+			this.instTStates += 2;
 		    }
+		    this.processedTStates += this.instTStates;
+		    this.speedTStates     += this.instTStates;
+		    this.instTStates = 0;
+		    interruptSource  = iSource;
 		  }
 		}
 	      }
 	    }
 	  }
-	  if( !nmiAccepted
-	      && (interruptSource == null)
-	      && (this.haltPC != null) )
-	  {
-	    this.regPC  = this.haltPC.intValue();
-	    this.haltPC = null;
-	  } else {
-	    setHaltState( false );
-	  }
-
 
 	  /*
 	   * Debugger- und Pausesteuerung
@@ -1351,31 +1273,52 @@ public class Z80CPU implements Runnable
 	      this.stepOverSP        = -1;
 	      this.walkBreakAddr     = -1;
 	      updStatusListeners( breakpoint, interruptSource );
-	      waitFor();
-	      this.pause = false;
+	      synchronized( this.waitMonitor ) {
+		this.speedNanosEnd = System.nanoTime();
+		try {
+		  this.waitMonitor.wait();
+		}
+		catch( IllegalMonitorStateException ex ) {}
+		finally {
+		  if( this.speedNanosEnd > 0L ) {
+		    this.speedNanosBeg += (System.nanoTime()
+						- this.speedNanosEnd);
+		  }
+		  this.speedNanosEnd = -1L;
+		  this.pause = false;
+		}
+	      }
 	      updStatusListeners( null, null );
-
-	      if( !this.active )
+	      if( !this.active ) {
 		break;
+	      }
 	    }
 	  }
 	  this.lastInstWasRET = false;
 
 	  // ggf. in PCListener springen
-	  PCListenerItem pcListener = this.pcListener;
-	  if( pcListener != null ) {
-	    for( int i = 0; i < pcListener.pc.length; i++ ) {
-	      if( pcListener.pc[ i ] == this.regPC ) {
-		pcListener.listener.z80PCChanged( this, this.regPC );
+	  if( !this.haltState ) {
+	    PCListenerItem pcListener = this.pcListener;
+	    if( pcListener != null ) {
+	      for( int i = 0; i < pcListener.pc.length; i++ ) {
+		if( pcListener.pc[ i ] == this.regPC ) {
+		  pcListener.listener.z80PCChanged( this, this.regPC );
+		}
 	      }
 	    }
 	  }
 	}
 
-	// BefehlsOpCode lesen und PC weitersetzen
-	opCode     = readMemByteM1( this.regPC );
-	this.regPC = (this.regPC + 1) & 0xFFFF;
-	execInst( opCode );
+	if( this.haltState ) {
+	  // bei HALT NOP-Befehle ausfuehren
+	  incRegR();
+	  this.instTStates += 4;
+	} else {
+	  // BefehlsOpCode lesen und PC weitersetzen
+	  opCode     = readMemByteM1( this.regPC );
+	  this.regPC = (this.regPC + 1) & 0xFFFF;
+	  execInst( opCode );
+	}
 
 	Z80InstrTStatesMngr tStatesMngr = this.instTStatesMngr;
 	if( tStatesMngr != null ) {
@@ -1400,20 +1343,32 @@ public class Z80CPU implements Runnable
 	}
       }
     }
+    catch( InterruptedException ex ) {}
     finally {
       this.active = false;
       updStatusListeners( null, null );
+    }
+    synchronized( this.waitMonitor ) {
+      if( this.thread != null ) {
+	this.thread.interrupted();  // Thread Interrupt Status zuruecksetzen
+	this.thread = null;
+      }
     }
   }
 
 
 	/* --- private Methoden --- */
 
-  private void checkSpeedBrake()
+  private void checkSpeedBrake() throws InterruptedException
   {
     if( this.brakeEnabled
 	&& (this.speedUnlimitedTill < this.speedTStates) )
     {
+      /*
+       * Geschwindigkeitsbremse nicht nach jedem Befehl aktivieren,
+       * da sonst zuviel Rechenzeit fuer die Bremse selbst
+       * benoetigt wird
+       */
       if( this.speedBrakeTStates < 200 ) {
 	this.speedBrakeTStates++;
       } else {
@@ -1428,13 +1383,10 @@ public class Z80CPU implements Runnable
 			: (System.nanoTime() - this.speedNanosBeg);
 
 	  if( nanosToUse > usedNanos ) {
-	    long diffNanos  = nanosToUse - usedNanos;
-	    long millis = diffNanos / 1000000L;
-	    int  nanos  = (int) (diffNanos % 1000000L);
-	    try {
-	      Thread.sleep( millis, nanos );
-	    }
-	    catch( InterruptedException ex ) {}
+	    long diffNanos = nanosToUse - usedNanos;
+	    Thread.sleep(
+			diffNanos / 1000000L,
+			(int) (diffNanos % 1000000L) );
 	  }
 	}
       }
@@ -1530,10 +1482,10 @@ public class Z80CPU implements Runnable
 	break;
       case 0x07:				// RLCA
 	if( (this.regA & BIT7) != 0 ) {
-	  this.regA = ((this.regA << 1) | BIT0) & 0xFF;
+	  this.regA      = ((this.regA << 1) | BIT0) & 0xFF;
 	  this.flagCarry = true;
 	} else {
-	  this.regA = (this.regA << 1) & 0xFF;
+	  this.regA      = (this.regA << 1) & 0xFF;
 	  this.flagCarry = false;
 	}
 	this.flagHalf = false;
@@ -2015,7 +1967,6 @@ public class Z80CPU implements Runnable
     if( opCode == 0x76 ) {			// HALT
 
       // NOP-Befehl mit Ruecksetzen des PCs
-      this.haltPC = this.instBegPC;
       this.instTStates += 4;
       setHaltState( true );
 
@@ -2629,8 +2580,8 @@ public class Z80CPU implements Runnable
 	}
 	break;
       case 0xF3:				// DI
-	this.iff1 = false;
-	this.iff2 = false;
+	this.iff1              = false;
+	this.iff2              = false;
 	this.lastInstWasEIorDI = true;
 	this.instTStates += 4;
 	break;
@@ -2693,8 +2644,8 @@ public class Z80CPU implements Runnable
 	}
 	break;
       case 0xFB:				// EI
-	this.iff1 = true;
-	this.iff2 = true;
+	this.iff1              = true;
+	this.iff2              = true;
 	this.lastInstWasEIorDI = true;
 	this.instTStates += 4;
 	break;
@@ -3253,13 +3204,9 @@ public class Z80CPU implements Runnable
 	break;
       case 0x4D:				// RETI
 	doInstRETN();
-	Z80InterruptSource[] iSources = this.interruptSources;
-	if( iSources != null ) {
-	  for( int i = 0; i < iSources.length; i++ ) {
-	    if( iSources[ i ].isInterruptAccepted() ) {
-	      iSources[ i ].interruptFinish();
-	      break;
-	    }
+	for( Z80InterruptSource iSource : this.interruptSources ) {
+	  if( iSource.interruptFinish( this.instBegPC ) ) {
+	    break;
 	  }
 	}
 	this.instTStates += 14;
@@ -3838,37 +3785,29 @@ public class Z80CPU implements Runnable
 
   private int doInstINC8( int value )
   {
-    // Half-Carry-Flag ermitteln
-    int result    = (value & 0x0F) + 1;
-    this.flagHalf = ((result & 0xFFFFFFF0) != 0);
-
-    // eigentliche Berechnung
-    result        = ((int) ((byte) value)) + 1;
+    int result    = (value + 1) & 0xFF;
+    this.flagHalf = ((result & 0x0F) == 0x00);
     this.flagSign = ((result & BIT7) != 0);
     this.flagZero = (result == 0);
-    this.flagPV   = (result != (int) ((byte) result));
+    this.flagPV   = (result == 0x80);
     this.flagN    = false;
     this.flag5    = ((result & BIT5) != 0);
     this.flag3    = ((result & BIT3) != 0);
-    return result & 0xFF;
+    return result;
   }
 
 
   private int doInstDEC8( int value )
   {
-    // Half-Carry-Flag ermitteln
-    int result    = (value & 0x0F) - 1;
-    this.flagHalf = ((result & 0xFFFFFFF0) != 0);
-
-    // eigentliche Berechnung
-    result        = ((int) ((byte) value)) - 1;
+    int result    = (value - 1) & 0xFF;
+    this.flagHalf = ((result & 0x0F) == 0x0F);
     this.flagSign = ((result & BIT7) != 0);
     this.flagZero = (result == 0);
-    this.flagPV   = (result != (int) ((byte) result));
+    this.flagPV   = (result == 0x7F);
     this.flagN    = true;
     this.flag5    = ((result & BIT5) != 0);
     this.flag3    = ((result & BIT3) != 0);
-    return result & 0xFF;
+    return result;
   }
 
 
@@ -4117,41 +4056,29 @@ public class Z80CPU implements Runnable
 
   private int doInstADD16( int op1, int op2 )
   {
-    // Carry-Flag ermitteln
     int result     = (op1 & 0xFFFF) + (op2 & 0xFFFF);
-    this.flagCarry = ((result & 0xFFFF0000) != 0);
-
-    // Half-Carry-Flag ermitteln
-    result        = (op1 & 0x0FFF) + (op2 & 0x0FFF);
-    this.flagHalf = ((result & 0xFFFFF000) != 0);
-
-    // eigentliche Berechnung
-    result     = (int) ((short) op1) + (int) ((short) op2);
-    this.flagN = false;
-    this.flag5 = ((result & 0x2000) != 0);
-    this.flag3 = ((result & 0x0800) != 0);
+    this.flagCarry = ((result & 0x10000) != 0);
+    this.flagHalf  = ((((op1 & 0x0FFF) + (op2 & 0x0FFF)) & 0x1000) != 0);
+    this.flagN     = false;
+    this.flag5     = ((result & 0x2000) != 0);
+    this.flag3     = ((result & 0x0800) != 0);
     return result & 0xFFFF;
   }
 
 
   private void doInstADC16( int op2 )
   {
-    int op3   = this.flagCarry ? 1 : 0;
-    int regHL = getRegHL();
-
-    // Carry-Flag ermitteln
+    int op3        = this.flagCarry ? 1 : 0;
+    int regHL      = getRegHL();
     int result     = (regHL & 0xFFFF) + (op2 & 0xFFFF) + op3;
-    this.flagCarry = ((result & 0xFFFF0000) != 0);
-
-    // Half-Carry-Flag ermitteln
-    result        = (regHL & 0x0FFF) + (op2 & 0x0FFF) + op3;
-    this.flagHalf = ((result & 0xFFFFF000) != 0);
-
-    // eigentliche Berechnung
-    result        = (int) ((short) regHL) + (int) ((short) op2) + op3;
+    int m          = regHL ^ op2 ^ result;
+    this.flagCarry = ((result & 0x10000) != 0);
+    this.flagHalf  = ((((regHL & 0x0FFF) + (op2 & 0x0FFF) + op3) & 0x1000)
+								!= 0);
+    result &= 0xFFFF;
     this.flagSign = ((result & 0x8000) != 0);
     this.flagZero = (result == 0);
-    this.flagPV   = (result != (int) ((short) result));
+    this.flagPV   = ((((m >> 1) ^ m) & 0x8000) != 0);
     this.flagN    = false;
     this.flag5    = ((result & 0x2000) != 0);
     this.flag3    = ((result & 0x0800) != 0);
@@ -4161,22 +4088,17 @@ public class Z80CPU implements Runnable
 
   private void doInstSBC16( int op2 )
   {
-    int op3   = this.flagCarry ? 1 : 0;
-    int regHL = getRegHL();
-
-    // Carry-Flag ermitteln
+    int op3        = this.flagCarry ? 1 : 0;
+    int regHL      = getRegHL();
     int result     = (regHL & 0xFFFF) - (op2 & 0xFFFF) - op3;
-    this.flagCarry = ((result & 0xFFFF0000) != 0);
-
-    // Half-Carry-Flag ermitteln
-    result        = (regHL & 0x0FFF) - (op2 & 0x0FFF) - op3;
-    this.flagHalf = ((result & 0xFFFFF000) != 0);
-
-    // eigentliche Berechnung
-    result        = (int) ((short) regHL) - (int) ((short) op2) - op3;
+    int m          = regHL ^ op2 ^ result;
+    this.flagCarry = ((result & 0x10000) != 0);
+    this.flagHalf  = ((((regHL & 0x0FFF) - (op2 & 0x0FFF) - op3) & 0x1000)
+								!= 0);
+    result &= 0xFFFF;
     this.flagSign = ((result & 0x8000) != 0);
     this.flagZero = (result == 0);
-    this.flagPV   = (result != (int) ((short) result));
+    this.flagPV   = ((((m >> 1) ^ m) & 0x8000) != 0);
     this.flagN    = true;
     this.flag5    = ((result & 0x2000) != 0);
     this.flag3    = ((result & 0x0800) != 0);
@@ -4306,7 +4228,8 @@ public class Z80CPU implements Runnable
   {
     int value = 0xFF;
     if( this.ioSys != null ) {
-      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC, 12 ) & 0xFF;
+      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC, 12 )
+								& 0xFF;
     }
     this.flagSign = ((value & BIT7) != 0);
     this.flagZero = (value == 0);
@@ -4550,6 +4473,15 @@ public class Z80CPU implements Runnable
   {
     if( state != this.haltState ) {
       this.haltState = state;
+      if( state ) {
+	this.afterHaltPC = Integer.valueOf( this.regPC );
+	this.regPC       = this.instBegPC;
+      } else {
+	if( this.afterHaltPC != null ) {
+	  this.regPC       = this.afterHaltPC.intValue();
+	  this.afterHaltPC = null;
+	}
+      }
       synchronized( this.haltStateListeners ) {
 	for( Z80HaltStateListener listener : this.haltStateListeners ) {
 	  listener.z80HaltStateChanged( this, state );
@@ -4610,9 +4542,9 @@ public class Z80CPU implements Runnable
 			Z80InterruptSource iSource )
   {
     synchronized( this.statusListeners ) {
-      for( Z80StatusListener listener : this.statusListeners )
+      for( Z80StatusListener listener : this.statusListeners ) {
 	listener.z80StatusChanged( breakpoint, iSource );
+      }
     }
   }
 }
-

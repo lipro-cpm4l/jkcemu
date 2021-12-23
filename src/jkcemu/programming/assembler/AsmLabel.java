@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,29 +8,45 @@
 
 package jkcemu.programming.assembler;
 
-import java.lang.*;
-
 
 public class AsmLabel implements jkcemu.tools.Label
 {
-  private String labelName;
-  private Object labelValue;
-  private String hex16String;
-  private int    varSize;
+  private String  labelName;
+  private Object  labelValue;
+  private boolean isAddr;
+  private int     varSize;
 
 
-  public AsmLabel( String labelName, int labelValue )
+  public AsmLabel( String labelName, int labelValue, boolean isAddr )
   {
-    this.labelName   = labelName;
-    this.labelValue  = labelValue;
-    this.hex16String = null;
-    this.varSize     = -1;
+    this.labelName  = labelName;
+    this.labelValue = Integer.valueOf( labelValue );
+    this.isAddr     = isAddr;
+    this.varSize    = -1;
   }
 
 
   public Object getLabelValue()
   {
     return this.labelValue;
+  }
+
+
+  public boolean hasIntValue()
+  {
+    boolean rv = false;
+    if( this.labelValue != null ) {
+      if( this.labelValue instanceof Number ) {
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
+  public boolean isAddress()
+  {
+    return this.isAddr;
   }
 
 
@@ -51,9 +67,10 @@ public class AsmLabel implements jkcemu.tools.Label
   }
 
 
-  public void setLabelValue( Object value )
+  public void setLabelValue( Object value, boolean isAddr )
   {
     this.labelValue = value;
+    this.isAddr     = isAddr;
   }
 
 

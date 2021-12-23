@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Zeichenkettenverarbeitung</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -13,17 +14,27 @@
  <br/>
   <ul>
    <li>
-    <a href="strings.htm#limit">L&auml;ngenbegrenzung einer Zeichenkette</a>
+    <a href="strings.htm#limit">1. L&auml;ngenbegrenzung einer Zeichenkette</a>
    </li>
-   <li><a href="strings.htm#literal">String-Literale</a></li>
-   <li><a href="strings.htm#var">String-Variablen</a></li>
-   <li><a href="strings.htm#func">String-Funktionen</a></li>
-   <li><a href="strings.htm#expr">String-Ausdr&uuml;cke</a></li>
-   <li><a href="strings.htm#perf">Performance</a></li>
+   <li><a href="strings.htm#literal">2. String-Literale</a></li>
+   <li><a href="strings.htm#var">3. String-Variablen</a></li>
+   <li><a href="strings.htm#func">4. String-Funktionen</a></li>
+   <li><a href="strings.htm#expr">5. String-Ausdr&uuml;cke</a></li>
+   <li>
+    <a href="strings.htm#optimize">6. Optimierungen</a>
+    <ul>
+     <li>
+      <a href="strings.htm#assign">6.1. Vermeidung von unn&ouml;tigen Zuweisungen</a>
+     </li>
+     <li>
+      <a href="strings.htm#substr">6.2. Zugriff auf Teile einer Zeichenkette</a>
+     </li>
+    </ul>
+   </li>
   </ul>
  <br/>
 
- <h3><a name="limit">L&auml;ngenbegrenzung einer Zeichenkette</a></h3>
+ <h3><a name="limit">1. L&auml;ngenbegrenzung einer Zeichenkette</a></h3>
   Die interne String-Verarbeitung kann Zeichenketten bis zu einer
   L&auml;nge von 255&nbsp;Zeichen verarbeiten.
   L&auml;ngere Zeichenketten werden abgeschnitten.
@@ -36,7 +47,7 @@
   von Zeichenketten.
  <br/><br/>
 
- <h3><a name="literal">String-Literale</a></h3>
+ <h3><a name="literal">2. String-Literale</a></h3>
   Ein String-Literal ist eine Zeichenkettenkonstante,
   d.h., die Zeichenkette wird schon im BASIC-Quelltext geschrieben.
   Ein String-Literal ist eine Folge von Zeichen,
@@ -52,7 +63,7 @@
   </table>
  <br/>
 
- <h3><a name="var">String-Variablen</a></h3>
+ <h3><a name="var">3. String-Variablen</a></h3>
   String-Variablen dienen zur Speicherung von Zeichenketten,
   wobei auch hier die Beschr&auml;nkung auf maximal 255&nbsp;Zeichen gilt.
   Sowohl einfache als auch Feldvariablen k&ouml;nnen zur Speicherung
@@ -61,7 +72,7 @@
   Der Name einer String-Variable muss mit einem $-Zeichen enden.
  <br/><br/>
 
- <h3><a name="func">String-Funktionen</a></h3>
+ <h3><a name="func">4. String-Funktionen</a></h3>
   Der Begriff String-Funktion hat eine Doppelbedeutung.
   In semantischer Hinsicht ist damit eine Funktion gemeint,
   bei der Zeichenketten eine Rolle spielen, d.h.,
@@ -137,7 +148,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="expr">String-Ausdr&uuml;cke</a></h3>
+ <h3><a name="expr">5. String-Ausdr&uuml;cke</a></h3>
   Der BASIC-Compiler unterscheidet zwischen einfachen und
   komplexen String-Ausdr&uuml;cken.
   Ein komplexer String-Ausdruck besteht aus mit dem Plus-Operator
@@ -162,7 +173,11 @@
   verwendet werden.
  <br/><br/>
 
- <h3><a name="perf">Performance</a></h3>
+ <h3><a name="optimize">6. Optimierungen</a></h3>
+
+ <h3>
+  <a name="assign">6.1. Vermeidung von unn&ouml;tigen Zuweisungen</a>
+ </h3>
   Die Zeichenkettenverarbeitung ben&ouml;tigt deutlich mehr Rechenzeit
   als die Verarbeitung von Integer-Werten.
   Insbesondere die Speicherung von Zeichenketten in String-Variablen
@@ -205,6 +220,51 @@
     </td>
    </tr>
   </table>
+ <br/>
+  <b>Achtung!</b> Sobald man im BASIC-Programm nur eine einzige
+  String-Variable und damit nur eine einzige Zuweisung
+  einer String-Variable verwendet,
+  wird das compilierte BASIC-Programm auch den gesamten Programmcode
+  f&uuml;r die interne dynamische Speicherverwaltung enthalten.
+  Wenn Sie also im Programm keine Zeichenkettenverarbeitung ben&ouml;tigen
+  und nur wegen Funktionen wie z.B. <a href="functions.htm#inkey$">INKEY$</a>
+  eine String-Variable verwenden w&uuml;rden,
+  dann sollten Sie die o.g. Optimierung nicht nur aus Gr&uuml;nden
+  einer besseren Performance, sondern auch wegen einem deutlich
+  kleineren Bin&auml;rprogramm vornehmen.
+ <br/><br/>
+
+ <h3>
+  <a name="substr">6.2. Zugriff auf Teile einer Zeichenkette</a>
+ </h3>
+  F&uuml;r die Extraktion eines Teils einer Zeichenkette gibt es
+  die Funktion <a href="functions.htm#mid$">MID$</a>.
+  Dabei wird intern die extrahierte Teilzeichenkette
+  als neue Zeichenkette in einem anderen Speicherbereich bereitgestellt.
+  M&ouml;chte man nur auf einzelne Zeichen einer Speicherkette zugreifen,
+  kann man das auch unter Umgehung der String-Verarbeitung
+  und damit performanter mit den Funktionen
+  <a href="functions.htm#strptr">STRPTR</a> und
+  <a href="functions.htm#peek">PEEK</a> tun.
+  Man muss allerdings selbst darauf achten,
+  nicht das Ende der Zeichenkette zu &uuml;berschreiten.
+  Dieses wird mit einem Nullbyte markiert.
+  Das Beispiel zeigt, wie man in einer Zeichenkette die Anzahl
+  der Gro&szlig;buchstaben z&auml;hlen kann:
+ <br/>
+  <tt>
+   &#10;<br/>
+   T$=...&#10;<br/>
+   A=STRPTR(T$)&#10;<br/>
+   N=0&#10;<br/>
+   DO&#10;<br/>
+   &nbsp;&nbsp;B=PEEK(A)&#10;<br/>
+   &nbsp;&nbsp;A=A ADD 1&#10;<br/>
+   &nbsp;&nbsp;IF B=0 THEN EXIT&#10;<br/>
+   &nbsp;&nbsp;IF B&gt;=65 AND B&lt;=90 THEN N=N+1&#10;<br/>
+   LOOP&#10;<br/>
+   PRINT N;"Groessbuchstaben enthalten"
+  </tt>
  <br/>
 </body>
 </html>

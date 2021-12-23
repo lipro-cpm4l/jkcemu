@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -36,7 +35,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld<LLC1>
   public LLC1KeyboardFld( LLC1 llc1 )
   {
     super( llc1, 22, true );
-    this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
+    this.fontBtn  = new Font( Font.SANS_SERIF, Font.PLAIN, FONT_SIZE );
     this.kbMatrix = new int[ 4 ];
     this.curIdx   = 0;
     this.curX     = MARGIN;
@@ -76,7 +75,6 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld<LLC1>
     addKey( "DL", 1, 0x84, "G oder J" );
     addKey( "ST", 2, 0x82, "X oder Enter" );
 
-    int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize(
 	new Dimension(
 		(2 * MARGIN) + (6 * KEY_SIZE) + (KEY_SIZE / 2),
@@ -120,20 +118,20 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld<LLC1>
   {
     g.setFont( this.fontBtn );;
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
       if( key.text1 != null ) {
 	FontMetrics fm = g.getFontMetrics();
 	if( fm != null ) {
-	  g.setColor( Color.black );
+	  g.setColor( Color.BLACK );
 	  g.drawString(
 		key.text1,
 		key.x + ((key.w - fm.stringWidth( key.text1 )) / 2) + 1,

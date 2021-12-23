@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@
 
 package jkcemu.base;
 
-import java.lang.*;
 import java.util.NoSuchElementException;
 
 

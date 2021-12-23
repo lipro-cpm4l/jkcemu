@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,12 +10,12 @@ package jkcemu.emusys;
 
 import java.awt.Color;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
@@ -25,12 +25,15 @@ import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.FloppyDiskFormat;
 import jkcemu.disk.FloppyDiskInfo;
 import jkcemu.disk.GIDE;
-import jkcemu.etc.VDIP;
+import jkcemu.etc.GraphicPoppe;
+import jkcemu.etc.K1520Sound;
 import jkcemu.net.KCNet;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80CTCListener;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80InterruptSource;
 import z80emu.Z80PIO;
 import z80emu.Z80PIOPortListener;
@@ -41,6 +44,7 @@ import z80emu.Z80SIOChannelListener;
 public class NANOS extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80CTCListener,
+					Z80MaxSpeedListener,
 					Z80PIOPortListener,
 					Z80SIOChannelListener
 {
@@ -71,7 +75,7 @@ public class NANOS extends EmuSys implements
 			Video2_64x32,
 			Video3_80x24,
 			Video3_80x25,
-			Poppe_64x32_80x24 };
+			Poppe };
   private enum KeyboardHW { PIO00A_HS, PIO00A_BIT7, SIO84A };
 
   private static FloppyDiskInfo epos20Disk64x32 =
@@ -96,11 +100,8 @@ public class NANOS extends EmuSys implements
   private static byte[] romNanos  = null;
   private static byte[] fontNanos = null;
 
-  private byte[]            fontBytes8x6;
-  private byte[]            fontBytes8x8;
+  private byte[]            fontBytes;
   private byte[]            ram1000;
-  private byte[]            ramVideoText;
-  private byte[]            ramVideoColor;
   private byte[]            romBytes;
   private String            romProp;
   private byte[]            ram256k;
@@ -109,17 +110,13 @@ public class NANOS extends EmuSys implements
   private Z80SIO            sio84;
   private Z80PIO            pio88;
   private Z80CTC            ctc8C;
+  private K1520Sound        k1520Sound;
   private KCNet             kcNet;
   private VDIP              vdip;
   private GIDE              gide;
   private FDC8272           fdc;
   private FloppyDiskDrive[] fdDrives;
   private boolean           fdcTC;
-  private boolean           tapeInPhase;
-  private boolean           altFontSelected;
-  private boolean           colorRamSelected;
-  private boolean           mode64x32;
-  private boolean           fillPixLines8And9;
   private boolean           bootMemEnabled;
   private boolean           swapKeyCharCase;
   private boolean           ram256kEnabled;
@@ -127,7 +124,7 @@ public class NANOS extends EmuSys implements
   private int               ram256kMemBaseAddr;
   private int               ram256kRFBaseAddr;
   private long              pasteTStates;
-  private Color[]           colors;
+  private GraphicPoppe      graphicPoppe;
   private GraphicHW         graphicHW;
   private KeyboardHW        keyboardHW;
 
@@ -136,29 +133,16 @@ public class NANOS extends EmuSys implements
   {
     super( emuThread, props, PROP_PREFIX );
     this.graphicHW = getGraphicHW( props );
-    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-      this.ramVideoText  = new byte[ 0x0800 ];
-      this.ramVideoColor = new byte[ 0x0800 ];
-      this.colors        = new Color[ 16 ];
-      float f = getBrightness( props );
-      if( (this.colors != null) && (f >= 0F) && (f <= 1F) ) {
-	for( int i = 0; i < this.colors.length; i++ ) {
-	  int v = Math.round( ((i & 0x08) != 0 ? 0xFF : 0xBF) * f );
-	  this.colors[ i ] = new Color(
-		(i & 0x01) != 0 ? v : 0,
-		(i & 0x02) != 0 ? v : 0,
-		(i & 0x04) != 0 ? v : 0 );
-	}
-      }
+    if( this.graphicHW == GraphicHW.Poppe ) {
+      this.graphicPoppe = new GraphicPoppe( this, false, props );
+      this.graphicPoppe.setScreenFrm( emuThread.getScreenFrm() );
+      this.graphicPoppe.setFixedScreenSize( isFixedScreenSize( props ) );
     } else {
-      this.ramVideoText  = null;
-      this.ramVideoColor = null;
-      this.colors        = null;
+      this.graphicPoppe = null;
     }
     this.keyboardHW      = getKeyboardHW( props );
     this.swapKeyCharCase = false;
-    this.fontBytes8x6    = null;
-    this.fontBytes8x8    = null;
+    this.fontBytes       = null;
     this.romBytes        = null;
     this.romProp         = null;
     this.ram1000         = new byte[ 0x0400 ];
@@ -168,35 +152,45 @@ public class NANOS extends EmuSys implements
     Arrays.fill( this.fdDrives, null );
     setFDCSpeed( false );
 
+    if( emulatesK1520Sound( props ) ) {
+      this.k1520Sound = new K1520Sound( this, 0xE0 );
+    } else {
+      this.k1520Sound = null;
+    }
+
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
       this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen 80h-83h)" );
     }
 
     this.vdip = null;
-    if( emulatesUSB( props ) ) {
+    if( emulatesVDIP( props ) ) {
       this.vdip = new VDIP(
-			this.emuThread.getFileTimesViewFactory(),
+			0,
+			this.emuThread.getZ80CPU(),
 			"USB-PIO (E/A-Adressen 88h-8Bh)" );
       this.vdip.applySettings( props );
     }
 
     this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
 
-    this.pio00 = new Z80PIO( "ZRE-PIO (00-03)" );
+    this.pio00 = new Z80PIO( "ZRE-PIO (E/A-Adressen 00h-03h)" );
     this.pio80 = null;
     if( this.kcNet == null ) {
-      this.pio80 = new Z80PIO( "PIO (80-83)" );
+      this.pio80 = new Z80PIO( "PIO (E/A-Adressen 80h-83h)" );
     }
-    this.sio84 = new Z80SIO( "SIO (84-87)" );
+    this.sio84 = new Z80SIO( "SIO (E/A-Adressen 84h-87h)" );
     this.pio88 = null;
     if( this.vdip == null ) {
-      this.pio88 = new Z80PIO( "PIO (88-8B)" );
+      this.pio88 = new Z80PIO( "PIO (E/A-Adressen 88h-8Bh)" );
     }
-    this.ctc8C = new Z80CTC( "CTC (8C-8F)" );
+    this.ctc8C = new Z80CTC( "CTC (E/A-Adressen 8Ch-8Fh)" );
 
     java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
     iSources.add( this.pio00 );
+    if( this.k1520Sound != null ) {
+      iSources.add( this.k1520Sound );
+    }
     if( this.kcNet != null ) {
       iSources.add( this.kcNet );
     } else if( this.pio80 != null ) {
@@ -219,13 +213,11 @@ public class NANOS extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.pio00.addPIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pio00.addPIOPortListener( this, Z80PIO.PortInfo.B );
     this.sio84.addChannelListener( this, 1 );
     this.ctc8C.addCTCListener( this );
 
     applyKeyboardSettings( props );
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
     z80MaxSpeedChanged( cpu );
   }
 
@@ -277,6 +269,20 @@ public class NANOS extends EmuSys implements
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80MaxSpeedChanged( cpu );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
 	/* --- Z80PIOPortListener --- */
 
   @Override
@@ -285,13 +291,22 @@ public class NANOS extends EmuSys implements
 				Z80PIO.PortInfo port,
 				Z80PIO.Status   status )
   {
-    if( (pio == this.pio00)
-	&& (port == Z80PIO.PortInfo.A)
-	&& (status == Z80PIO.Status.READY_FOR_INPUT)
-	&& (this.keyboardHW == KeyboardHW.PIO00A_HS)
-	&& (this.pasteIter != null) )
-    {
-      this.pasteTStates = 50000;
+    if( pio == this.pio00 ) {
+      if( (port == Z80PIO.PortInfo.A)
+	  && (status == Z80PIO.Status.READY_FOR_INPUT)
+	  && (this.keyboardHW == KeyboardHW.PIO00A_HS)
+	  && (this.pasteIter != null) )
+      {
+	this.pasteTStates = 50000;
+      }
+      else if( (port == Z80PIO.PortInfo.B)
+	       && ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+		   || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+      {
+	int outValue = this.pio00.fetchOutValuePortB( 0xFF );
+	this.bootMemEnabled = ((outValue & 0x80) != 0);
+	this.tapeOutPhase   = ((outValue & 0x40) != 0);
+      }
     }
   }
 
@@ -334,27 +349,8 @@ public class NANOS extends EmuSys implements
 	+ "<tr><td>RAM-Floppy Sektor-Adresse:</td><td>" );
     buf.append( String.format( "%05Xh", this.ram256kRFBaseAddr ) );
     buf.append( "</td></tr>\n" );
-    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-      buf.append( "<tr><td>Bildschirmformat:</td><td>" );
-      buf.append( this.mode64x32 ? "64x32" : "80x24" );
-      buf.append( "</td></tr>\n" );
-      if( this.mode64x32 ) {
-	buf.append( "<tr><td>Zeichensatz:</td><td>" );
-	buf.append( this.altFontSelected ? "2" : "1 (Standard)" );
-	buf.append( "</td></tr>\n" );
-      } else {
-	buf.append( "<tr><td>Zeilenzwischenraum:</td><td>" );
-	buf.append(
-		this.fillPixLines8And9 ? "Blockgrafik" : "Hintergrundfarbe" );
-	buf.append( "</td></tr>\n" );
-      }
-      buf.append( "<tr><td>F800h-FFFFh:</td><td>" );
-      if( this.colorRamSelected ) {
-	buf.append( "Farb" );
-      } else {
-	buf.append( "Text" );
-      }
-      buf.append( "-RAM</td></tr>\n" );
+    if( this.graphicPoppe != null ) {
+      this.graphicPoppe.appendStatusHTMLTo( buf );
     }
     buf.append( "</table>\n" );
   }
@@ -365,6 +361,9 @@ public class NANOS extends EmuSys implements
   {
     super.applySettings( props );
     applyKeyboardSettings( props );
+    if( this.graphicPoppe != null ) {
+      this.graphicPoppe.setFixedScreenSize( isFixedScreenSize( props ) );
+    }
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
@@ -389,10 +388,13 @@ public class NANOS extends EmuSys implements
     if( rv && (this.keyboardHW != getKeyboardHW( props )) ) {
       rv = false;
     }
+    if( rv && (emulatesK1520Sound( props ) != (this.k1520Sound != null)) ) {
+      rv = false;
+    }
     if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
       rv = false;
     }
-    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+    if( rv && (emulatesVDIP( props ) != (this.vdip != null)) ) {
       rv = false;
     }
     if( rv ) {
@@ -408,7 +410,7 @@ public class NANOS extends EmuSys implements
     if( this.keyboardHW == KeyboardHW.PIO00A_HS ) {
       if( this.pasteIter != null ) {
 	this.pasteIter = null;
-	this.screenFrm.firePastingTextFinished();
+	informPastingTextStatusChanged( false );
       }
     } else {
       super.cancelPastingText();
@@ -427,6 +429,7 @@ public class NANOS extends EmuSys implements
   public void die()
   {
     this.pio00.removePIOPortListener( this, Z80PIO.PortInfo.A );
+    this.pio00.removePIOPortListener( this, Z80PIO.PortInfo.B );
     this.ctc8C.removeCTCListener( this );
     this.sio84.removeChannelListener( this, 0 );
 
@@ -435,15 +438,19 @@ public class NANOS extends EmuSys implements
     cpu.removeMaxSpeedListener( this );
     cpu.removeTStatesListener( this );
     this.fdc.die();
+    if( this.gide != null ) {
+      this.gide.die();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.die();
+    }
     if( this.kcNet != null ) {
       this.kcNet.die();
     }
     if( this.vdip != null ) {
       this.vdip.die();
     }
-    if( this.gide != null ) {
-      this.gide.die();
-    }
+    super.die();
   }
 
 
@@ -457,14 +464,12 @@ public class NANOS extends EmuSys implements
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
-    if( (this.ramVideoColor != null) && (this.colors != null) ) {
-      if( (colorIdx >= 0) && (colorIdx < this.colors.length) ) {
-	color = this.colors[ colorIdx ];
-      }
+    Color color = Color.BLACK;
+    if( this.graphicPoppe != null ) {
+      color = this.graphicPoppe.getColor( colorIdx );
     } else {
       if( colorIdx > 0 ) {
-	color = Color.white;
+	color = this.colorWhite;
       }
     }
     return color;
@@ -474,7 +479,9 @@ public class NANOS extends EmuSys implements
   @Override
   public int getColorCount()
   {
-    return this.ramVideoColor != null ? 16 : 2;
+    return this.graphicPoppe != null ?
+			this.graphicPoppe.getColorCount()
+			: 2;
   }
 
 
@@ -482,66 +489,10 @@ public class NANOS extends EmuSys implements
   public int getColorIndex( int x, int y )
   {
     int rv = BLACK;
-    if( (this.graphicHW == GraphicHW.Poppe_64x32_80x24)
-	&& (this.ramVideoText != null) && (this.ramVideoColor != null) )
-    {
-      byte[] fontBytes     = this.fontBytes8x8;
-      int    fontOffs      = 0;
-      int    pixPerCol     = 8;
-      int    pixPerRow     = 10;
-      int    colsPerRow    = 80;
-      int    charsOnScreen = 1920;		// 80x24
-      if( this.mode64x32 ) {
-	fontBytes     = this.fontBytes8x6;
-	pixPerCol     = 6;
-	pixPerRow     = 8;
-	colsPerRow    = 64;
-	charsOnScreen = 2048;
-	if( this.altFontSelected && (fontBytes != null) ) {
-	  if( fontBytes.length > 0x0800 ) {
-	    fontOffs = 0x0800;
-	  }
-	}
-      } else {
-	y -= 8;
-      }
-      if( (y >= 0) && (fontBytes != null) ) {
-	int rPix = y % pixPerRow;
-	int row  = y / pixPerRow;
-	int col  = x / pixPerCol;
-	if( (rPix >= 8) && this.fillPixLines8And9 ) {
-	  rPix -= 8;
-	  fontOffs = 0x0800;
-	}
-	int mIdx = (row * colsPerRow) + col;
-	if( (mIdx >= 0) && (mIdx < charsOnScreen) ) {
-	  if( mIdx < this.ramVideoText.length ) {
-	    rv = (int) this.ramVideoColor[ mIdx ] & 0xFF;
-	  }
-	  if( rPix < 8 ) {
-	    int ch = 0;
-	    if( mIdx < this.ramVideoText.length ) {
-	      ch = (int) this.ramVideoText[ mIdx ] & 0xFF;
-	    }
-	    int fIdx = (ch * 8) + rPix;
-	    if( (fIdx >= 0) && (fIdx < fontBytes.length ) ) {
-	      int m = 0x80;
-	      int n = x % pixPerCol;
-	      if( n > 0 ) {
-		m >>= n;
-	      }
-	      if( (fontBytes[ fIdx ] & m) == 0 ) {
-		rv >>= 4;
-	      }
-	    }
-	  } else {
-	    rv >>= 4;
-	  }
-	  rv &= 0x0F;
-	}
-      }
+    if( this.graphicPoppe != null ) {
+      rv = this.graphicPoppe.getColorIndex( x, y );
     } else {
-      if( this.fontBytes8x8 != null ) {
+      if( this.fontBytes != null ) {
 	int pixPerRow     = 10;
 	int colsPerRow    = 80;
 	int charsOnScreen = 1920;		// 80x24
@@ -563,13 +514,13 @@ public class NANOS extends EmuSys implements
 	  if( (mIdx >= 0) && (mIdx < charsOnScreen) ) {
 	    int ch   = this.emuThread.getRAMByte( mIdx + 0xF800 );
 	    int fIdx = (ch * 8) + rPix;
-	    if( (fIdx >= 0) && (fIdx < this.fontBytes8x8.length ) ) {
+	    if( (fIdx >= 0) && (fIdx < this.fontBytes.length ) ) {
 	      int m = 0x80;
 	      int n = x % 8;
 	      if( n > 0 ) {
 		m >>= n;
 	      }
-	      if( (this.fontBytes8x8[ fIdx ] & m) != 0 ) {
+	      if( (this.fontBytes[ fIdx ] & m) != 0 ) {
 		rv = WHITE;
 	      }
 	    }
@@ -587,20 +538,21 @@ public class NANOS extends EmuSys implements
     CharRaster rv = null;
     switch( this.graphicHW ) {
       case Video2_64x32:
-	rv = new CharRaster( 64, 32, 8, 8, 8, 0 );
+	rv = new CharRaster( 64, 32, 8, 8, 8 );
 	break;
       case Video3_80x24:
-	rv = new CharRaster( 80, 24, 10, 8, 8, 0 );
+	rv = new CharRaster( 80, 24, 10, 8, 8 );
 	break;
-      case Poppe_64x32_80x24:
-	if( this.mode64x32 ) {
-	  rv = new CharRaster( 64, 32, 8, 8, 6, 0 );
-	} else {
-	  rv = new CharRaster( 80, 24, 10, 8, 8, 8 );
+      case Video3_80x25:
+	rv = new CharRaster( 80, 25, 10, 8, 8 );
+	break;
+      case Poppe:
+	if( this.graphicPoppe != null ) {
+	  rv = this.graphicPoppe.getCurScreenCharRaster();
 	}
 	break;
     }
-    return rv != null ? rv : new CharRaster( 80, 25, 10, 8, 8, 0 );
+    return rv;
   }
 
 
@@ -664,21 +616,8 @@ public class NANOS extends EmuSys implements
 	  rv = (int) this.ram1000[ idx ] & 0xFF;
 	}
       }
-    }
-    else if( (addr >= 0xF800)
-	     && (this.ramVideoText != null)
-	     && (this.ramVideoColor != null) )
-    {
-      int idx = addr - 0xF800;
-      if( this.colorRamSelected ) {
-	if( idx < this.ramVideoColor.length ) {
-	  rv = (int) this.ramVideoColor[ idx ] & 0xFF;
-	}
-      } else {
-	if( idx < this.ramVideoText.length ) {
-	  rv = (int) this.ramVideoText[ idx ] & 0xFF;
-	}
-      }
+    } else if( (addr >= 0xF800) && (this.graphicPoppe != null) ) {
+      rv = this.graphicPoppe.readMemByte( addr );
     } else {
       if( this.ram256kEnabled && this.ram256kReadable ) {
 	if( (addr >= 0xF700) && (addr < 0xF800) ) {
@@ -701,58 +640,48 @@ public class NANOS extends EmuSys implements
   @Override
   protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
-    int ch    = -1;
-    int nCols = 0;
-    int nRows = 0;
-    switch( this.graphicHW ) {
-      case Video2_64x32:
-	nCols = 64;
-	nRows = 32;
-	break;
-      case Video3_80x24:
-	nCols = 80;
-	nRows = 24;
-	break;
-      case Video3_80x25:
-	nCols = 80;
-	nRows = 25;
-	break;
-      case Poppe_64x32_80x24:
-	if( this.mode64x32 ) {
+    int    ch        = -1;
+    byte[] fontBytes = null;
+    if( this.graphicPoppe != null ) {
+      ch        = this.graphicPoppe.getScreenChar( chRaster, chX, chY );
+      fontBytes = this.graphicPoppe.getCurFontBytes();
+    } else {
+      int nCols = 0;
+      int nRows = 0;
+      switch( this.graphicHW ) {
+	case Video2_64x32:
 	  nCols = 64;
 	  nRows = 32;
-	} else {
+	  break;
+	case Video3_80x24:
 	  nCols = 80;
 	  nRows = 24;
-	}
-	break;
-    }
-    if( (chX >= 0) && (chX < nCols) && (chY >= 0) && (chY < nRows) ) {
-      int b   = 0;
-      int idx = (chY * nCols) + chX;
-      if( this.ramVideoText != null ) {
-	if( idx < this.ramVideoText.length ) {
-	  b = (int) this.ramVideoText[ idx ] & 0xFF;
-	}
-      } else {
-        b = this.emuThread.getRAMByte( 0xF800 + idx );
+	  break;
+	case Video3_80x25:
+	  nCols = 80;
+	  nRows = 25;
+	  break;
       }
-      if( this.fontBytes8x8 == fontNanos ) {
-	switch( b ) {
-	  case 0x5C:
-	    ch = '\u0278';
-	    break;
-	  case 0x5E:
-	    ch = '\u00AC';
-	    break;
-	  case 0x60:
-	    ch = '\\';
-	    break;
-	  default:
-	    if( (b >= 0x20) && (b < 0x7F) ) {
-	      ch = b;
-	    }
-	}
+      fontBytes = this.fontBytes;
+      if( (chX >= 0) && (chX < nCols) && (chY >= 0) && (chY < nRows) ) {
+	ch = this.emuThread.getRAMByte( 0xF800 + ((chY * nCols) + chX) );
+      }
+    }
+    if( fontBytes == fontNanos ) {
+      switch( ch ) {
+	case 0x5C:
+	  ch = '\u0278';
+	  break;
+	case 0x5E:
+	  ch = '\u00AC';
+	  break;
+	case 0x60:
+	  ch = '\\';
+	  break;
+	default:
+	  if( (ch < 0x20) && (ch > 0x7E) ) {
+	    ch = -1;
+	  }
       }
     }
     return ch;
@@ -765,7 +694,6 @@ public class NANOS extends EmuSys implements
     int rv = 0;
     switch( this.graphicHW ) {
       case Video2_64x32:
-      case Poppe_64x32_80x24:
 	rv = 256;
 	break;
       case Video3_80x24:
@@ -773,6 +701,11 @@ public class NANOS extends EmuSys implements
 	break;
       case Video3_80x25:
 	rv = 250;
+	break;
+      case Poppe:
+	if( this.graphicPoppe != null ) {
+	  rv = this.graphicPoppe.getScreenHeight();
+	}
 	break;
     }
     return rv;
@@ -787,13 +720,22 @@ public class NANOS extends EmuSys implements
       case Video2_64x32:
 	rv = 512;
 	break;
-      case Poppe_64x32_80x24:
-	if( this.mode64x32 ) {
-	  rv = 384;
+      case Poppe:
+	if( this.graphicPoppe != null ) {
+	  rv = this.graphicPoppe.getScreenWidth();
 	}
 	break;
     }
     return rv;
+  }
+
+
+  @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return this.k1520Sound != null ?
+	new AbstractSoundDevice[] { this.k1520Sound.getSoundDevice() }
+	: super.getSoundDevices();
   }
 
 
@@ -810,7 +752,7 @@ public class NANOS extends EmuSys implements
       else if( this.graphicHW == GraphicHW.Video3_80x24 ) {
 	rv = new FloppyDiskInfo[] { epos20Disk80x24 };
       }
-      else if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
+      else if( this.graphicHW == GraphicHW.Poppe ) {
 	rv = new FloppyDiskInfo[] { epos20Disk64x32, epos20Disk80x24 };
 
       }
@@ -847,9 +789,11 @@ public class NANOS extends EmuSys implements
 
 
   @Override
-  protected VDIP getVDIP()
+  public VDIP[] getVDIPs()
   {
-    return this.vdip;
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -922,6 +866,39 @@ public class NANOS extends EmuSys implements
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.romProp = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM );
+    String lowerProp = this.romProp.toLowerCase();
+    if( (this.romProp.length() > VALUE_PREFIX_FILE.length())
+	&& lowerProp.startsWith( VALUE_PREFIX_FILE ) )
+    {
+      this.romBytes = readROMFile(
+				this.romProp.substring( 5 ),
+				0x1000,
+				"ROM-Inhalt" );
+    }
+    if( (this.romBytes == null)
+	&& lowerProp.equalsIgnoreCase( VALUE_EPOS ) )
+    {
+      if( romEpos == null ) {
+	romEpos = readResource( "/rom/nanos/eposrom.bin" );
+      }
+      this.romBytes = romEpos;
+    }
+    if( this.romBytes == null ) {
+      if( romNanos == null ) {
+	romNanos = readResource( "/rom/nanos/nanosrom.bin" );
+      }
+      this.romBytes = romNanos;
+    }
+    loadFonts( props );
+  }
+
+
+  @Override
   protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
@@ -956,8 +933,6 @@ public class NANOS extends EmuSys implements
   public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
-
-    port &= 0xFF;
     if( (this.kcNet != null) && ((port & 0xFC) == 0x80) ) {
       rv = this.kcNet.read( port );
     } else if( (this.vdip != null) && ((port & 0xFC) == 0x88) ) {
@@ -967,7 +942,10 @@ public class NANOS extends EmuSys implements
       if( value >= 0 ) {
 	rv = value;
       }
+    } else if( (this.k1520Sound != null) && ((port & 0xF8) == 0xE0) ) {
+      rv = this.k1520Sound.read( port, tStates );
     } else {
+      port &= 0xFF;
       if( port < 0x80 ) {
 	// PIO auf ZRE-Karte
 	switch( port & 0x03 ) {
@@ -976,12 +954,6 @@ public class NANOS extends EmuSys implements
 	    break;
 	  case 1:
 	    rv = this.pio00.readDataB();
-	    break;
-	  case 2:
-	    rv = this.pio00.readControlA();
-	    break;
-	  case 0x3:
-	    rv = this.pio00.readControlB();
 	    break;
 	}
       } else {
@@ -995,16 +967,6 @@ public class NANOS extends EmuSys implements
 	  case 0x81:
 	    if( this.pio80 != null ) {
 	      rv = this.pio80.readDataB();
-	    }
-	    break;
-	  case 0x82:
-	    if( this.pio80 != null ) {
-	      rv = this.pio80.readControlA();
-	    }
-	    break;
-	  case 0x83:
-	    if( this.pio80 != null ) {
-	      rv = this.pio80.readControlB();
 	    }
 	    break;
 
@@ -1033,16 +995,6 @@ public class NANOS extends EmuSys implements
 	      rv = this.pio88.readDataB();
 	    }
 	    break;
-	  case 0x8A:
-	    if( this.pio88 != null ) {
-	      rv = this.pio88.readControlA();
-	    }
-	    break;
-	  case 0x8B:
-	    if( this.pio88 != null ) {
-	      rv = this.pio88.readControlB();
-	    }
-	    break;
 
 	  // CTC auf IO-Karte
 	  case 0x8C:
@@ -1062,20 +1014,8 @@ public class NANOS extends EmuSys implements
 
 	  // Farbgrafikkarte
 	  case 0xF2:
-	    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-	      rv = 0xF0;
-	      if( this.colorRamSelected ) {
-		rv |= 0x01;
-	      }
-	      if( !this.mode64x32 ) {
-		rv |= 0x02;
-	      }
-	      if( this.fillPixLines8And9 ) {
-		rv |= 0x04;
-	      }
-	      if( this.altFontSelected ) {
-		rv |= 0x08;
-	      }
+	    if( this.graphicPoppe != null ) {
+	      rv = this.graphicPoppe.readIOByte( port );
 	    }
 	    break;
 	}
@@ -1086,38 +1026,37 @@ public class NANOS extends EmuSys implements
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
       initSRAM( this.ram1000, props );
-      Arrays.fill( this.ram256k, (byte) 0xFF );
-      if( this.ramVideoText != null ) {
-	fillRandom( this.ramVideoText );
-      }
-      if( this.ramVideoColor != null ) {
-	fillRandom( this.ramVideoColor );
-      }
+      EmuUtil.initDRAM( this.ram256k );
     }
-    this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
-    boolean coldReset = ((resetLevel == EmuThread.ResetLevel.POWER_ON)
-		|| (resetLevel == EmuThread.ResetLevel.COLD_RESET));
-    this.pio00.reset( coldReset );
+    this.fdc.reset( powerOn );
+    this.pio00.reset( powerOn );
     if( this.pio80 != null ) {
-      this.pio80.reset( coldReset );
+      this.pio80.reset( powerOn );
     }
-    this.sio84.reset( coldReset );
+    this.sio84.reset( powerOn );
     this.sio84.setClearToSendA( true );
     this.sio84.setClearToSendB( true );
     if( this.pio88 != null ) {
-      this.pio88.reset( coldReset );
+      this.pio88.reset( powerOn );
     }
-    this.ctc8C.reset( coldReset );
+    this.ctc8C.reset( powerOn );
     if( this.gide != null ) {
       this.gide.reset();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.reset( powerOn );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.reset( powerOn );
+    }
+    if( this.vdip != null ) {
+      this.vdip.reset( powerOn );
     }
     setFDCSpeed( false );
     this.fdcTC = false;
@@ -1127,20 +1066,9 @@ public class NANOS extends EmuSys implements
 	drive.reset();
       }
     }
-    switch( this.graphicHW ) {
-      case Video2_64x32:
-      case Poppe_64x32_80x24:
-	setMode64x32( true );
-	break;
-      case Video3_80x24:
-      case Video3_80x25:
-	setMode64x32( false );
-	break;
+    if( this.graphicPoppe != null ) {
+      this.graphicPoppe.reset( powerOn, props );
     }
-    this.altFontSelected    = false;
-    this.colorRamSelected   = false;
-    this.fillPixLines8And9  = false;
-    this.tapeInPhase        = this.emuThread.readTapeInPhase();
     this.bootMemEnabled     = true;
     this.ram256kEnabled     = false;
     this.ram256kReadable    = false;
@@ -1193,21 +1121,8 @@ public class NANOS extends EmuSys implements
     }
     if( addr >= 0xF800 ) {
       boolean done = false;
-      if( (this.graphicHW == GraphicHW.Poppe_64x32_80x24)
-	  && (this.ramVideoText != null) && (this.ramVideoColor != null) )
-      {
-	int idx = addr - 0xF800;
-	if( this.colorRamSelected ) {
-	  if( idx < this.ramVideoColor.length ) {
-	    this.ramVideoColor[ idx ] = (byte) value;
-	    done = true;
-	  }
-	} else {
-	  if( idx < this.ramVideoText.length ) {
-	    this.ramVideoText[ idx ] = (byte) value;
-	    done = true;
-	  }
-	}
+      if( this.graphicPoppe != null ) {
+	this.graphicPoppe.writeMemByte( addr, value );
       }
       if( !done ) {
 	this.emuThread.setRAMByte( addr, value );
@@ -1222,7 +1137,7 @@ public class NANOS extends EmuSys implements
   @Override
   public boolean shouldAskConvertScreenChar()
   {
-    return (this.fontBytes8x8 != fontNanos);
+    return (this.fontBytes != fontNanos);
   }
 
 
@@ -1233,6 +1148,7 @@ public class NANOS extends EmuSys implements
       if( text != null ) {
 	if( !text.isEmpty() ) {
 	  cancelPastingText();
+	  informPastingTextStatusChanged( true );
 	  CharacterIterator iter = new StringCharacterIterator( text );
 	  if( this.pio00.isReadyPortA() ) {
 	    if( putKeyChar( iter.first() ) ) {
@@ -1247,7 +1163,7 @@ public class NANOS extends EmuSys implements
 	}
       }
       if( !done ) {
-	this.screenFrm.firePastingTextFinished();
+	informPastingTextStatusChanged( false );
       }
     } else {
       super.startPastingText( text );
@@ -1291,16 +1207,25 @@ public class NANOS extends EmuSys implements
 
 
   @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio00.putInValuePortB( this.tapeInPhase ? 0x20 : 0, 0x20 );
+  }
+
+
+  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
-    port &= 0xFF;
     if( (this.kcNet != null) && ((port & 0xFC) == 0x80) ) {
       this.kcNet.write( port, value );
     } else if( (this.vdip != null) && ((port & 0xFC) == 0x88) ) {
       this.vdip.write( port, value );
     } else if( (this.gide != null) && ((port & 0xF0) == 0xD0) ) {
       this.gide.write( port, value );
+    } else if( (this.k1520Sound != null) && ((port & 0xF8) == 0xE0) ) {
+      this.k1520Sound.write( port, value, tStates );
     } else {
+      port &= 0xFF;
       if( port < 0x80 ) {
 	// PIO auf ZRE-Karte
 	switch( port & 0x03 ) {
@@ -1308,12 +1233,7 @@ public class NANOS extends EmuSys implements
 	    this.pio00.writeDataA( value );
 	    break;
 	  case 1:
-	    {
-	      this.pio00.writeDataB( value );
-	      int outValue = this.pio00.fetchOutValuePortB( false );
-	      this.bootMemEnabled = ((outValue & 0x80) != 0);
-	      this.tapeOutPhase   = ((outValue & 0x40) != 0);
-	    }
+	    this.pio00.writeDataB( value );
 	    break;
 	  case 2:
 	    this.pio00.writeControlA( value );
@@ -1430,15 +1350,9 @@ public class NANOS extends EmuSys implements
 
 	  // Farbgrafikkarte
 	  case 0xF1:
-	    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-	      this.altFontSelected   = ((value & 0x08) != 0);
-	      this.fillPixLines8And9 = ((value & 0x04) != 0);
-	      setMode64x32( (value & 0x02) == 0 );
-	    }
-	    break;
 	  case 0xF2:
-	    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-	      this.colorRamSelected = ((value & 0x01) != 0);
+	    if( this.graphicPoppe != null ) {
+	      this.graphicPoppe.writeIOByte( port, value );
 	    }
 	    break;
 	}
@@ -1448,27 +1362,14 @@ public class NANOS extends EmuSys implements
 
 
   @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    if( this.kcNet != null ) {
-      this.kcNet.z80MaxSpeedChanged( cpu );
-    }
-  }
-
-
-  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
-
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio00.putInValuePortB( this.tapeInPhase ? 0x20 : 0, 0x20 );
-    }
     this.ctc8C.z80TStatesProcessed( cpu, tStates );
     this.fdc.z80TStatesProcessed( cpu, tStates );
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80TStatesProcessed( cpu, tStates );
+    }
     if( this.kcNet != null ) {
       this.kcNet.z80TStatesProcessed( cpu, tStates );
     }
@@ -1518,24 +1419,6 @@ public class NANOS extends EmuSys implements
   }
 
 
-  private boolean emulatesKCNet( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_KCNET_ENABLED,
-			false );
-  }
-
-
-  private boolean emulatesUSB( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_VDIP_ENABLED,
-			false );
-  }
-
-
   private GraphicHW getGraphicHW( Properties props )
   {
     GraphicHW rv = GraphicHW.Video3_80x25;
@@ -1550,7 +1433,7 @@ public class NANOS extends EmuSys implements
 	rv = GraphicHW.Video3_80x24;
 	break;
       case VALUE_GRAPHIC_POPPE:
-	rv = GraphicHW.Poppe_64x32_80x24;
+	rv = GraphicHW.Poppe;
 	break;
     }
     return rv;
@@ -1576,63 +1459,37 @@ public class NANOS extends EmuSys implements
   }
 
 
-  private void loadFonts( Properties props )
+  private boolean isFixedScreenSize( Properties props )
   {
-    this.fontBytes8x8 = readFontByProperty(
-		props,
-		this.propPrefix + PROP_FONT_8X8_PREFIX + PROP_FILE,
-		0x1000 );
-    if( this.fontBytes8x8 == null ) {
-      this.fontBytes8x8 = getNanosFontBytes();
-    }
-    if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
-      this.fontBytes8x6 = readFontByProperty(
-		props,
-		this.propPrefix + PROP_FONT_8X6_PREFIX + PROP_FILE,
-		0x1000 );
-      if( this.fontBytes8x6 == null ) {
-	this.fontBytes8x6 = getNanosFontBytes();
-      }
-    }
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_FIXED_SCREEN_SIZE,
+			false );
   }
 
 
-  private void loadROMs( Properties props )
+  private void loadFonts( Properties props )
   {
-    this.romProp = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM );
-    String lowerProp = this.romProp.toLowerCase();
-    if( (this.romProp.length() > VALUE_PREFIX_FILE.length())
-	&& lowerProp.startsWith( VALUE_PREFIX_FILE ) )
-    {
-      this.romBytes = readROMFile(
-				this.romProp.substring( 5 ),
-				0x1000,
-				"ROM-Inhalt" );
+    this.fontBytes = readFontByProperty(
+		props,
+		this.propPrefix + PROP_FONT_8X8_PREFIX + PROP_FILE,
+		0x1000 );
+    if( this.fontBytes == null ) {
+      this.fontBytes = getNanosFontBytes();
     }
-    if( (this.romBytes == null)
-	&& lowerProp.equalsIgnoreCase( VALUE_EPOS ) )
-    {
-      if( romEpos == null ) {
-	romEpos = readResource( "/rom/nanos/eposrom.bin" );
-      }
-      this.romBytes = romEpos;
+    if( this.graphicPoppe != null ) {
+      this.graphicPoppe.load8x6FontByProperty(
+		props,
+		this.propPrefix + PROP_FONT_8X6_PREFIX + PROP_FILE );
+      this.graphicPoppe.set8x8FontBytes( this.fontBytes );
     }
-    if( this.romBytes == null ) {
-      if( romNanos == null ) {
-	romNanos = readResource( "/rom/nanos/nanosrom.bin" );
-      }
-      this.romBytes = romNanos;
-    }
-    loadFonts( props );
   }
 
 
   private boolean putKeyChar( char ch )
   {
     boolean rv = false;
-    if( this.fontBytes8x8 == fontNanos ) {
+    if( this.fontBytes == fontNanos ) {
       switch( ch ) {
 	case '\u0278':
 	  ch = '|';
@@ -1676,15 +1533,5 @@ public class NANOS extends EmuSys implements
   private void setFDCSpeed( boolean mini )
   {
     this.fdc.setTStatesPerMilli( mini ? 4000 : 8000 );
-  }
-
-
-  private void setMode64x32( boolean state )
-  {
-    boolean oldMode64x32 = this.mode64x32;
-    this.mode64x32       = state;
-    if( this.mode64x32 != oldMode64x32 ) {
-      this.screenFrm.fireScreenSizeChanged();
-    }
   }
 }

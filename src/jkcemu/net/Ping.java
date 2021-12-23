@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,6 @@ package jkcemu.net;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -141,9 +140,9 @@ public class Ping
     }
     catch( Exception ex ) {}
     finally {
-      EmuUtil.closeSilent( in );
-      EmuUtil.closeSilent( out );
-      EmuUtil.closeSilent( socket );
+      EmuUtil.closeSilently( in );
+      EmuUtil.closeSilently( out );
+      EmuUtil.closeSilently( socket );
     }
     this.thread1 = null;
   }

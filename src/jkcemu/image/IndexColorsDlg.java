@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,11 +20,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EventObject;
-import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
@@ -33,11 +29,11 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import jkcemu.Main;
 import jkcemu.base.BaseDlg;
-import jkcemu.base.EmuUtil;
-import jkcemu.base.FileNameFld;
 import jkcemu.base.UserInputException;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
+import jkcemu.file.FileNameFld;
 
 
 public class IndexColorsDlg extends BaseDlg
@@ -62,13 +58,13 @@ public class IndexColorsDlg extends BaseDlg
   private BufferedImage      image;
   private BufferedImage      appliedImage;
   private IndexColorModel    importedICM;
-  private JRadioButton       btnReduceColors;
-  private JRadioButton       btnToA5105Colors;
-  private JRadioButton       btnToKC854HiresColors;
-  private JRadioButton       btnImportColorTab;
-  private JRadioButton       btnTranspToWhite;
-  private JRadioButton       btnTranspToBlack;
-  private JRadioButton       btnTranspKeep;
+  private JRadioButton       rbReduceColors;
+  private JRadioButton       rbToA5105Colors;
+  private JRadioButton       rbToKC854HiresColors;
+  private JRadioButton       rbImportColorTab;
+  private JRadioButton       rbTranspToWhite;
+  private JRadioButton       rbTranspToBlack;
+  private JRadioButton       rbTranspKeep;
   private JLabel             labelMaxColors;
   private JLabel             labelMaxColorsInfo;
   private JLabel             labelTranspColor;
@@ -97,10 +93,10 @@ public class IndexColorsDlg extends BaseDlg
     boolean rv = false;
     try {
       Object  src = e.getSource();
-      if( (src == this.btnReduceColors)
-	  || (src == this.btnToA5105Colors)
-	  || (src == this.btnToKC854HiresColors)
-	  || (src == this.btnImportColorTab) )
+      if( (src == this.rbReduceColors)
+	  || (src == this.rbToA5105Colors)
+	  || (src == this.rbToKC854HiresColors)
+	  || (src == this.rbImportColorTab) )
       {
 	rv = true;
 	updFieldsEnabled();
@@ -117,6 +113,23 @@ public class IndexColorsDlg extends BaseDlg
     }
     catch( IOException | UserInputException ex ) {
       BaseDlg.showErrorDlg( this, ex );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.btnColorTabSelect.removeActionListener( this );
+      this.rbReduceColors.removeActionListener( this );
+      this.rbToA5105Colors.removeActionListener( this );
+      this.rbToKC854HiresColors.removeActionListener( this );
+      this.rbImportColorTab.removeActionListener( this );
+      this.btnApply.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
     }
     return rv;
   }
@@ -146,9 +159,9 @@ public class IndexColorsDlg extends BaseDlg
 
 
     // Farbpalette
-    JPanel panelColorTab = new JPanel( new GridBagLayout() );
+    JPanel panelColorTab = GUIFactory.createPanel( new GridBagLayout() );
     panelColorTab.setBorder(
-		BorderFactory.createTitledBorder( "Farbpalette" ) );
+		GUIFactory.createTitledBorder( "Farbpalette" ) );
     add( panelColorTab, gbc );
 
     GridBagConstraints gbcColorTab = new GridBagConstraints(
@@ -162,13 +175,13 @@ public class IndexColorsDlg extends BaseDlg
 
     ButtonGroup grpColorTab = new ButtonGroup();
 
-    this.btnReduceColors = new JRadioButton(
+    this.rbReduceColors = GUIFactory.createRadioButton(
 			"Farbpalette ermitteln",
 			lastColorTabMode == MODE_REDUCE_COLORS );
-    grpColorTab.add( this.btnReduceColors );
-    panelColorTab.add( this.btnReduceColors, gbcColorTab );
+    grpColorTab.add( this.rbReduceColors );
+    panelColorTab.add( this.rbReduceColors, gbcColorTab );
 
-    this.labelMaxColors     = new JLabel( "Max. Anzahl Farben:" );
+    this.labelMaxColors = GUIFactory.createLabel( "Max. Anzahl Farben:" );
     gbcColorTab.insets.top  = 0;
     gbcColorTab.insets.left = 50;
     gbcColorTab.gridwidth   = 1;
@@ -205,41 +218,41 @@ public class IndexColorsDlg extends BaseDlg
     cbm.addElement( 8 );
     cbm.addElement( 4 );
     cbm.addElement( 2 );
-    this.comboMaxColors = new JComboBox<>( cbm );
+    this.comboMaxColors = GUIFactory.createComboBox( cbm );
     this.comboMaxColors.setEditable( true );
     this.comboMaxColors.setSelectedItem( lastMaxColors );
     gbcColorTab.insets.left = 5;
     gbcColorTab.gridx++;
     panelColorTab.add( this.comboMaxColors, gbcColorTab );
 
-    this.labelMaxColorsInfo = new JLabel(
+    this.labelMaxColorsInfo = GUIFactory.createLabel(
 			"inkl. Farbe f\u00FCr Transparenz" );
     gbcColorTab.gridx++;
     panelColorTab.add( this.labelMaxColorsInfo, gbcColorTab );
 
-    this.btnToA5105Colors = new JRadioButton(
+    this.rbToA5105Colors = GUIFactory.createRadioButton(
 			"A5105 (16 Farben)",
 			lastColorTabMode == MODE_TO_A5105_COLORS );
-    grpColorTab.add( this.btnToA5105Colors );
+    grpColorTab.add( this.rbToA5105Colors );
     gbcColorTab.insets.left = 5;
     gbcColorTab.gridwidth   = GridBagConstraints.REMAINDER;
     gbcColorTab.gridx       = 0;
     gbcColorTab.gridy++;
-    panelColorTab.add( this.btnToA5105Colors, gbcColorTab );
+    panelColorTab.add( this.rbToA5105Colors, gbcColorTab );
 
-    this.btnToKC854HiresColors = new JRadioButton(
+    this.rbToKC854HiresColors = GUIFactory.createRadioButton(
 			"KC85/4 HIRES (4 Farben)",
 			lastColorTabMode == MODE_TO_KC854HIRES_COLORS );
-    grpColorTab.add( this.btnToKC854HiresColors );
+    grpColorTab.add( this.rbToKC854HiresColors );
     gbcColorTab.gridy++;
-    panelColorTab.add( this.btnToKC854HiresColors, gbcColorTab );
+    panelColorTab.add( this.rbToKC854HiresColors, gbcColorTab );
 
-    this.btnImportColorTab = new JRadioButton(
+    this.rbImportColorTab = GUIFactory.createRadioButton(
 			"Farbpalette importieren",
 			lastColorTabMode == MODE_IMPORT_COLORTAB );
-    grpColorTab.add( this.btnImportColorTab );
+    grpColorTab.add( this.rbImportColorTab );
     gbcColorTab.gridy++;
-    panelColorTab.add( this.btnImportColorTab, gbcColorTab );
+    panelColorTab.add( this.rbImportColorTab, gbcColorTab );
 
     this.fldColorTabFile    = new FileNameFld();
     gbcColorTab.fill        = GridBagConstraints.HORIZONTAL;
@@ -249,9 +262,10 @@ public class IndexColorsDlg extends BaseDlg
     gbcColorTab.gridy++;
     panelColorTab.add( this.fldColorTabFile, gbcColorTab );
 
-    this.btnColorTabSelect    = createImageButton(
-					"/images/file/open.png",
-					"Ausw\u00E4hlen..." );
+    this.btnColorTabSelect = GUIFactory.createRelImageResourceButton(
+						this,
+						"file/open.png",
+						EmuUtil.TEXT_SELECT );
     gbcColorTab.fill          = GridBagConstraints.NONE;
     gbcColorTab.weightx       = 0.0;
     gbcColorTab.insets.left   = 5;
@@ -267,8 +281,8 @@ public class IndexColorsDlg extends BaseDlg
 
 
     // Optionen
-    JPanel panelOpt = new JPanel( new GridBagLayout() );
-    panelOpt.setBorder( BorderFactory.createTitledBorder( "Optionen" ) );
+    JPanel panelOpt = GUIFactory.createPanel( new GridBagLayout() );
+    panelOpt.setBorder( GUIFactory.createTitledBorder( "Optionen" ) );
     gbc.gridy++;
     add( panelOpt, gbc );
 
@@ -281,54 +295,54 @@ public class IndexColorsDlg extends BaseDlg
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.labelTranspColor = new JLabel( "Transparenz:" );
+    this.labelTranspColor = GUIFactory.createLabel( "Transparenz:" );
     panelOpt.add( this.labelTranspColor, gbcOpt );
 
     ButtonGroup grpTransp = new ButtonGroup();
 
-    this.btnTranspToWhite = new JRadioButton(
+    this.rbTranspToWhite = GUIFactory.createRadioButton(
 			"Transparente Bereiche hell f\u00E4rben" );
-    grpTransp.add( this.btnTranspToWhite );
+    grpTransp.add( this.rbTranspToWhite );
     gbcOpt.insets.top = 0;
     gbcOpt.gridwidth  = GridBagConstraints.REMAINDER;
     gbcOpt.gridx++;
-    panelOpt.add( this.btnTranspToWhite, gbcOpt );
+    panelOpt.add( this.rbTranspToWhite, gbcOpt );
 
-    this.btnTranspToBlack = new JRadioButton(
+    this.rbTranspToBlack = GUIFactory.createRadioButton(
 			"Transparente Bereiche dunkel f\u00E4rben" );
-    grpTransp.add( this.btnTranspToBlack );
+    grpTransp.add( this.rbTranspToBlack );
     gbcOpt.gridy++;
-    panelOpt.add( this.btnTranspToBlack, gbcOpt );
+    panelOpt.add( this.rbTranspToBlack, gbcOpt );
 
-    this.btnTranspKeep = new JRadioButton(
+    this.rbTranspKeep = GUIFactory.createRadioButton(
 			"Transparenz behalten (1 volltransparente Farbe)" );
-    grpTransp.add( this.btnTranspKeep );
+    grpTransp.add( this.rbTranspKeep );
     gbcOpt.insets.bottom = 5;
     gbcOpt.gridy++;
-    panelOpt.add( this.btnTranspKeep, gbcOpt );
+    panelOpt.add( this.rbTranspKeep, gbcOpt );
 
     if( lastTransparencyMode < 0 ) {
-      this.btnTranspToBlack.setSelected( true );
+      this.rbTranspToBlack.setSelected( true );
     } else if( lastTransparencyMode > 0 ) {
-      this.btnTranspToWhite.setSelected( true );
+      this.rbTranspToWhite.setSelected( true );
     } else {
-      this.btnTranspKeep.setSelected( true );
+      this.rbTranspKeep.setSelected( true );
     }
 
     if( image.getTransparency() == Transparency.OPAQUE ) {
       this.labelTranspColor.setEnabled( false );
-      this.btnTranspKeep.setEnabled( false );
-      this.btnTranspToBlack.setEnabled( false );
-      this.btnTranspToWhite.setEnabled( false );
+      this.rbTranspKeep.setEnabled( false );
+      this.rbTranspToBlack.setEnabled( false );
+      this.rbTranspToWhite.setEnabled( false );
     }
 
-    this.labelDithering = new JLabel( "Dithering:" );
+    this.labelDithering = GUIFactory.createLabel( "Dithering:" );
     gbcOpt.insets.top   = 5;
     gbcOpt.gridx        = 0;
     gbcOpt.gridy++;
     panelOpt.add( this.labelDithering, gbcOpt );
 
-    this.comboDithering = new JComboBox<>();
+    this.comboDithering = GUIFactory.createComboBox();
     this.comboDithering.setEditable( false );
     this.comboDithering.addItem( "Kein Dithering anwenden" );
     for( Dithering.Algorithm a : dithAlgorithms ) {
@@ -343,16 +357,16 @@ public class IndexColorsDlg extends BaseDlg
     panelOpt.add( this.comboDithering, gbcOpt );
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.weightx     = 0.0;
     gbc.fill        = GridBagConstraints.NONE;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnApply = new JButton( "OK" );
+    this.btnApply = GUIFactory.createButtonOK();
     panelBtn.add( this.btnApply );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -364,10 +378,11 @@ public class IndexColorsDlg extends BaseDlg
 
     // sonstiges
     updFieldsEnabled();
-    this.btnReduceColors.addActionListener( this );
-    this.btnToA5105Colors.addActionListener( this );
-    this.btnToKC854HiresColors.addActionListener( this );
-    this.btnImportColorTab.addActionListener( this );
+    this.btnColorTabSelect.addActionListener( this );
+    this.rbReduceColors.addActionListener( this );
+    this.rbToA5105Colors.addActionListener( this );
+    this.rbToKC854HiresColors.addActionListener( this );
+    this.rbImportColorTab.addActionListener( this );
     this.btnApply.addActionListener( this );
     this.btnCancel.addActionListener( this );
   }
@@ -377,16 +392,16 @@ public class IndexColorsDlg extends BaseDlg
 
   private void doApply() throws IOException, UserInputException
   {
-    if( this.btnReduceColors.isSelected() ) {
+    if( this.rbReduceColors.isSelected() ) {
       doReduceColors();
       lastColorTabMode = MODE_REDUCE_COLORS;
-    } else if( this.btnToA5105Colors.isSelected() ) {
-      doApplyIndexColorModel( ImgUtil.getColorModelA5105() );
+    } else if( this.rbToA5105Colors.isSelected() ) {
+      doApplyIndexColorModel( ImageUtil.getColorModelA5105() );
       lastColorTabMode = MODE_TO_A5105_COLORS;
-    } else if( this.btnToKC854HiresColors.isSelected() ) {
-      doApplyIndexColorModel( ImgUtil.getColorModelKC854Hires() );
+    } else if( this.rbToKC854HiresColors.isSelected() ) {
+      doApplyIndexColorModel( ImageUtil.getColorModelKC854Hires() );
       lastColorTabMode = MODE_TO_KC854HIRES_COLORS;
-    } else if( this.btnImportColorTab.isSelected() ) {
+    } else if( this.rbImportColorTab.isSelected() ) {
       if( (this.fldColorTabFile.getFile() == null)
 	  || (this.importedICM == null) )
       {
@@ -435,44 +450,11 @@ public class IndexColorsDlg extends BaseDlg
 
   public void doImportColorTabFile() throws IOException
   {
-    // Dateifilter erzeugen
-    java.util.List<String> usedSuffixes = new ArrayList<>();
-    String[]               iioSuffixes  = ImageIO.getReaderFileSuffixes();
-    if( iioSuffixes != null ) {
-      final String[] sortedPossibleSuffixes = {
-				"bmp", "gif", "png", "tif", "tiff" };
-      for( String s : iioSuffixes ) {
-	s = s.toString();
-	if( Arrays.binarySearch( sortedPossibleSuffixes, s ) >= 0 ) {
-	  usedSuffixes.add( s );
-	}
-      }
-    }
-    File preSelection = this.fldColorTabFile.getFile();
-    if( preSelection == null ) {
-      preSelection = Main.getLastDirFile( Main.FILE_GROUP_IMAGE );
-    }
-    File file = EmuUtil.showFileOpenDlg(
-	this,
-	"Farbpalette importieren",
-	preSelection,
-	ImgUtil.createFileFilter(
-		"Unterst\u00FCtzte Farbpaletten- und Bilddateien",
-		usedSuffixes.toArray( new String[ usedSuffixes.size() ] ),
-		IFFFile.getFileSuffixes(),
-		JASCPaletteFile.getFileSuffixes() ) );
+    File file = ImageUtil.chooseColorPaletteFile(
+					this,
+					this.fldColorTabFile.getFile() );
     if( file != null ) {
-      IndexColorModel icm = null;
-      if( IFFFile.accept( file ) ) {
-	icm = IFFFile.readPalette( file );
-      } else if( JASCPaletteFile.accept( file ) ) {
-	icm = JASCPaletteFile.read( file );
-      } else {
-	ImgEntry entry = ImgLoader.load( file );
-	if( entry != null ) {
-	  icm = ImgUtil.getIndexColorModel( entry.getImage() );
-	}
-      }
+      IndexColorModel icm = ImageUtil.readColorPaletteFile( file );
       if( icm != null ) {
 	this.importedICM = icm;
 	this.fldColorTabFile.setFile( file );
@@ -499,7 +481,7 @@ public class IndexColorsDlg extends BaseDlg
       if( (maxColors >= 2) && (maxColors <= 256) ) {
 	int             oldIdxColors  = -1;
 	boolean         state = true;
-	IndexColorModel icm   = ImgUtil.getIndexColorModel( this.image );
+	IndexColorModel icm   = ImageUtil.getIndexColorModel( this.image );
 	if( icm != null ) {
 	  oldIdxColors = icm.getMapSize();
 	  if( oldIdxColors <= maxColors ) {
@@ -532,7 +514,7 @@ public class IndexColorsDlg extends BaseDlg
 					dithAlgorithm );
 	  if( retImg != null ) {
 	    if( oldIdxColors > 0 ) {
-	      icm = ImgUtil.getIndexColorModel( retImg );
+	      icm = ImageUtil.getIndexColorModel( retImg );
 	      if( icm != null ) {
 		if( icm.getMapSize() >= oldIdxColors ) {
 		  retImg = null;
@@ -560,10 +542,10 @@ public class IndexColorsDlg extends BaseDlg
   private Color getSelectedColorForTransp()
   {
     Color colorForTransp = null;
-    if( this.btnTranspToBlack.isSelected() ) {
+    if( this.rbTranspToBlack.isSelected() ) {
       colorForTransp = Color.BLACK;
       lastTransparencyMode = -1;
-    } else if( this.btnTranspToWhite.isSelected() ) {
+    } else if( this.rbTranspToWhite.isSelected() ) {
       colorForTransp       = Color.WHITE;
       lastTransparencyMode = 1;
     } else {
@@ -595,14 +577,14 @@ public class IndexColorsDlg extends BaseDlg
       if( colorForTransp == null ) {
 	throw new UserInputException(
 		"Bei dieser Funktion ist die Option\n\'"
-			+ this.btnTranspKeep.getText()
+			+ this.rbTranspKeep.getText()
 			+ "\' nicht m\u00F6glich,\n"
 			+ "da die Farbpalette keine transparenten Farben"
 			+ " enth\u00E4lt.\n"
 			+ "W\u00E4hlen Sie bitte die Option\n\'"
-			+ this.btnTranspToWhite.getText()
+			+ this.rbTranspToWhite.getText()
 			+ "\' oder\n\'"
-			+ this.btnTranspToBlack.getText()
+			+ this.rbTranspToBlack.getText()
 			+ "\' aus!" );
       }
       int w = srcImg.getWidth();
@@ -626,13 +608,13 @@ public class IndexColorsDlg extends BaseDlg
 
   private void updFieldsEnabled()
   {
-    boolean state = this.btnReduceColors.isSelected();
+    boolean state = this.rbReduceColors.isSelected();
     this.labelMaxColors.setEnabled( state );
     this.comboMaxColors.setEnabled( state );
     this.labelMaxColorsInfo.setEnabled(
 		state && this.labelTranspColor.isEnabled() );
 
-    state = this.btnImportColorTab.isSelected();
+    state = this.rbImportColorTab.isSelected();
     this.fldColorTabFile.setEnabled( state );
     this.btnColorTabSelect.setEnabled( state );
   }

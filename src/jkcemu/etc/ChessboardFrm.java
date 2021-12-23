@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,16 +13,17 @@ import java.awt.Frame;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import jkcemu.Main;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
-import jkcemu.image.ImgSelection;
+import jkcemu.image.ImageUtil;
 
 
 public class ChessboardFrm extends BaseFrm
@@ -80,7 +81,9 @@ public class ChessboardFrm extends BaseFrm
       }
       else if( src == this.mnuCopy ) {
 	rv = true;
-	doCopy();
+	ImageUtil.copyToClipboard(
+			this,
+			this.chessboardFld.createImage() );
       }
       else if( src == this.mnuSwap ) {
 	rv = true;
@@ -88,10 +91,21 @@ public class ChessboardFrm extends BaseFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
+	HelpFrm.openPage( HELP_PAGE );
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
+  {
+    if( newEmuSys != null ) {
+      if( !newEmuSys.supportsChessboard() ) {
+	doClose();
+      }
+    }
   }
 
 
@@ -100,47 +114,43 @@ public class ChessboardFrm extends BaseFrm
   private ChessboardFrm( EmuThread emuThread )
   {
     setTitle( "JKCEMU Schachbrett" );
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuCopy = createJMenuItem( "Schachbrett kopieren" );
+    this.mnuCopy = createMenuItem( "Schachbrett kopieren" );
     mnuEdit.add( this.mnuCopy );
 
 
     // Menu Ansicht
-    JMenu mnuView = new JMenu( "Ansicht" );
+    JMenu mnuView = GUIFactory.createMenu( "Ansicht" );
     mnuView.setMnemonic( KeyEvent.VK_A );
 
-    this.mnuSwap = createJMenuItem( "Seite wechseln" );
+    this.mnuSwap = createMenuItem( "Seite wechseln" );
     mnuView.add( this.mnuSwap );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
+    JMenu mnuHelp = createMenuHelp();
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    this.mnuHelpContent = createMenuItem( "Hilfe zum Schachbrett..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuEdit );
-    mnuBar.add( mnuView );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar(
+					mnuFile,
+					mnuEdit,
+					mnuView,
+					mnuHelp ) );
 
 
     // Fensterinhalt
@@ -151,29 +161,10 @@ public class ChessboardFrm extends BaseFrm
 
 
     // Fenstergroesse
-    setLocationByPlatform( true );
-    if( !applySettings( Main.getProperties(), true ) ) {
-      pack();
-    }
     setResizable( false );
-  }
-
-
-	/* --- private Methoden --- */
-
-  private void doCopy()
-  {
-    try {
-      Toolkit tk = getToolkit();
-      if( tk != null ) {
-	Clipboard clipboard = tk.getSystemClipboard();
-	if( clipboard != null ) {
-	  ImgSelection ims = new ImgSelection(
-					this.chessboardFld.createImage() );
-	  clipboard.setContents( ims, ims );
-	}
-      }
+    if( !applySettings( Main.getProperties() ) ) {
+      pack();
+      setLocationByPlatform( true );
     }
-    catch( IllegalStateException ex ) {}
   }
 }

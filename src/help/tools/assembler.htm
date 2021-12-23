@@ -89,6 +89,14 @@
   mit dem Men&uuml;punkt <em>Assemblieren mit...</em>
   aufrufen und ver&auml;ndern.
  <br/><br/>
+  Die Optionen sind selbsterkl&auml;rend.
+  Eine Erl&auml;uterung findet man jedoch im Abschnitt
+  <a href="assembler.htm#cmdline">Kommandozeile</a>.
+  Entgegen der dortigen Beschreibung wird jedoch beim Aufruf
+  des Assemblers aus dem Texteditor heraus das optionale Assembler-Listing
+  nicht in eine Datei geschrieben, sondern im Texteditor angezeigt
+  und kann dort manuell gespeichert werden.
+ <br/><br/>
   In den Assembler-Optionen k&ouml;nnen Sie u.a. auch eine Datei angeben,
   in der der erzeugte Programmcode geschrieben wird.
   Das Format der Datei ergibt sich dabei aus der Dateiendung
@@ -214,6 +222,32 @@
     <th nowrap>Beschreibung</th>
    </tr>
    <tr>
+    <td valign=top><tt>ALIGN</tt></td>
+    <td valign=top>1 oder 2</td>
+    <td valign=top>Numerischer Ausdr&uuml;cke</td>
+    <td valign=top>
+     Ausrichten der aktuellen Adresse auf eine Zweierpotenz,
+     also z.B. auf 2, 4, 8, 16, usw.
+     <br/>
+     Beispiel:
+     <br/>
+     <tt>
+      &nbsp;&nbsp;ORG&nbsp;8000H&#10;<br/>
+      &nbsp;&nbsp;DB&nbsp;1&#10;<br/>
+      &nbsp;&nbsp;ALIGN&nbsp;100H&nbsp;&nbsp;;Aktuelle Adresse jetzt 8100H
+     </tt>
+     <br/><br/>
+     Optional kann als zweites Argument auch das Byte angegebene werden,
+     mit dem aufgef&uuml;llt werden soll:
+     <br/>
+     <tt>
+      &nbsp;&nbsp;ORG&nbsp;8000H&#10;<br/>
+      &nbsp;&nbsp;DB&nbsp;1&#10;<br/>
+      &nbsp;&nbsp;ALIGN&nbsp;4,0FFH&nbsp;&nbsp;;Es werden 3 Bytes FFh eingefuegt.
+     </tt>
+    </td>
+   </tr>
+   <tr>
     <td valign=top><tt>BINCLUDE</tt></td>
     <td valign=top>1</td>
     <td valign=top>Zeichenkette</td>
@@ -229,15 +263,19 @@
      betriebssystemunabh&auml;ngigen Form (also auch unter Windows)
      mit einem Slash&nbsp;(/) als Pfadtrennzeichen angegeben werden.
     </td>
+   </tr>
    <tr>
     <td valign=top><tt>CPU</tt></td>
     <td valign=top>1</td>
-    <td valign=top>Schl&uuml;sselwort <tt>U880</tt> oder <tt>Z80</tt></td>
+    <td valign=top>
+     Schl&uuml;sselwort <tt>U880</tt>, <tt>U880UNDOC</tt>,
+     <tt>Z80</tt> oder <tt>Z80UNDOC</tt>
+    </td>
     <td valign=top>
      Angabe des Prozessortyps,<br/>
-     Dieser Pseudobefehl ist aus Kompatibilit&auml;tsgr&uuml;nden
-     vorhanden und hat keine Wirkung,
-     da der Assembler sowieso nur diesen einen Prozessortyp unterst&uuml;tzt.
+     Die vier m&ouml;glichen Schl&uuml;sselw&ouml;rter k&ouml;nnen
+     auch als eigenst&auml;ndige Pseudobefehle geschrieben werden.
+     Dort ist auch die Bedeutung erl&auml;utert.
     </td>
    </tr>
    <tr>
@@ -301,16 +339,24 @@
     <td valign=top>0</td>
     <td></td>
     <td valign=top>
-     Ende des Quelltextes,<br/>
-     Alle weiteren Quelltextzeilen werden ignoriert.
+     Ende des Quelltextes bzw. der Quelltextdatei,<br/>
+     Alle weiteren Zeilen des Quelltextes bzw. der aktuellen
+     Quelltextdatei werden ignoriert.
+     Steht der Befehl in einer mit INCLUDE eingebundenen Datei,
+     wird diese eingebundene Datei beendet und der Assembler setzt
+     mit der n&auml;chsten Zeile hinter dem zugeh&ouml;rigen
+     INCLUDE-Befehl fort.
     </td>
    </tr>
    <tr>
-    <td valign=top><tt>ENT</tt></td>
+    <td valign=top>
+     <tt>ENT</tt><br/>
+     <tt>ENTRY</tt>
+    </td>
     <td valign=top>0</td>
     <td></td>
     <td valign=top>
-     Eintrittspunkt in das Programms,<br/>
+     Eintrittspunkt in das Programm,<br/>
      Die aktuelle Adresse wird als Startadresse verwendet.
      Fehlt der Befehl im Quelltext,
      gilt die Anfangsadresse als Startadresse.
@@ -327,6 +373,34 @@
     </td>
    </tr>
    <tr>
+    <td valign=top><tt>ERROR</tt></td>
+    <td valign=top>1</td>
+    <td valign=top>Zeichenkette</td>
+    <td valign=top>
+     Die angegebene Zeichenkette wird als Fehler ausgegeben.
+     Der Pseudobefehl ERROR ist i.d.R nur in Verbindung mit
+     <a href="assembler.htm#conditional_asm">bedingter Assemblierung</a>
+     sinnvoll, um z.B. bei nicht erf&uuml;llten Bedingungen
+     einen Fehler zu melden:
+     <br/>
+     <tt>
+      &nbsp;&nbsp;<tt>IF $ > 800h&#10;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;ERROR 'Programmcode zu gross fuer 2K-EPROM'&#10;<br/>
+      &nbsp;&nbsp;<tt>ENDIF&#10;<br/>
+     </tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>EVEN</tt></td>
+    <td valign=top>0</td>
+    <td valign=top></td>
+    <td valign=top>
+     Ausrichten der aktuellen Adresse auf einen geraden Wert,<br>
+     Der Befehl hat die gleiche Wirkung wie:<br/>
+      &nbsp;&nbsp;<tt>ALIGN 2</tt>
+    </td>
+   </tr>
+   <tr>
     <td valign=top><tt>INCLUDE</tt></td>
     <td valign=top>1</td>
     <td valign=top>Zeichenkette</td>
@@ -334,8 +408,39 @@
      Einbinden einer Quelltextdatei,<br/>
      Die angegebene Datei wird an der aktuellen Stelle in den Quelltext
      eingef&uuml;gt und mit assembliert.
-     Bzgl. des Dateinamens gelten die die gleichen Regeln wie beim
+     Bzgl. des Dateinamens gelten die gleichen Regeln wie beim
      weiter oben beschriebenen Pseudobefehl BINCLUDE.
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>NAME</tt></td>
+    <td valign=top>1</td>
+    <td valign=top>Zeichenkette</td>
+    <td valign=top>
+     Festlegen des Programmnamens,<br/>
+     Die einzige Wirkung des Befehls ist,
+     dass beim Speichern des erzeugten Programmcodes in eine Datei
+     der angegebene Name als Dateiname in die Datei geschrieben wird,
+     sofern das <a href="../fileformats.htm#memimg">Dateiformat</a>
+     einen Namen unterst&uuml;tzt.
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>NEWPAGE</tt></td>
+    <td valign=top>0</td>
+    <td></td>
+    <td valign=top>
+     Im Assembler-Listing wird ein Seitenumbruchzeichen&nbsp;0Ch
+     (Form&nbsp;Feed) eingef&uuml;gt und ein neuer Tabellenkopf erzeugt.
+     Die Zeile mit dem NEWPAGE steht auf der neuen Seite.
+     <br/><br/>
+     <b>Achtung!</b> Der JKCEMU-Texteditor hat keine Seitenverwaltung
+     und stellt deshalb das eingef&uuml;gte Seitenumbruchzeichen
+     als einzelnes Zeichen dar.
+     Abh&auml;ngig von der verwendeten Schriftart ist dieses Zeichen
+     m&ouml;glicherweise nicht sichtbar.
+     Beim Drucken werden allerdings die Seitenumbruchzeichen ausgewertet
+     und f&uuml;hren zu jeweils einer neuen Seite.
     </td>
    </tr>
    <tr>
@@ -350,14 +455,74 @@
     </td>
    </tr>
    <tr>
+    <td valign=top><tt>PAGE</tt></td>
+    <td valign=top>0</td>
+    <td></td>
+    <td valign=top>
+     PAGE ist ein Synonym f&uuml;r NEWPAGE
+     und hat deshalb die gleiche Wirkung wie NEWPAGE.
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>TITLE</tt></td>
+    <td valign=top>1</td>
+    <td valign=top>Zeichenkette</td>
+    <td valign=top>
+     Festlegen des Titels bzw. des Programmnamens,<br/>
+     Der Befehl <em>TITLE</em> ist ein Synonym f&uuml;r den Pseudobefehl
+     <em>NAME</em> und hat somit auch die gleiche Bedeutung wie dieser.
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>U880</tt></td>
+    <td valign=top>0</td>
+    <td valign=top></td>
+    <td valign=top>
+     Der Pseudobefehl <tt>U880</tt> erlaubt ausschlie&szlig;lich
+     die Robotron-Mnemonik/-Syntax und &uuml;berschreibt damit
+     die eingestellten Assembler-Optionen in der Gruppe
+     <em>Mnemonik/Syntax</em>.
+     Der Befehl hat die gleiche Bedeutung wie:<br/>
+     &nbsp;&nbsp;<tt>CPU U880</tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>U880UNDOC</tt></td>
+    <td valign=top>0</td>
+    <td valign=top></td>
+    <td valign=top>
+     Der Pseudobefehl <tt>U880UNDOC</tt> erlaubt
+     die Robotron-Mnemonik/-Syntax sowie undokumentierte Befehle.
+     Die eingestellten Assembler-Optionen in der Gruppe
+     <em>Mnemonik/Syntax</em> werden damit &uuml;berschrieben.
+     Der Befehl hat die gleiche Bedeutung wie:<br/>
+     &nbsp;&nbsp;<tt>CPU U880UNDOC</tt>
+    </td>
+   </tr>
+   <tr>
     <td valign=top><tt>Z80</tt></td>
     <td valign=top>0</td>
     <td valign=top></td>
     <td valign=top>
-     Angabe des Prozessortyps,<br/>
-     Dieser Pseudobefehl ist aus Kompatibilit&auml;tsgr&uuml;nden
-     vorhanden und hat keine Wirkung,
-     da der Assembler sowieso nur einen Prozessortyp unterst&uuml;tzt.
+     Der Pseudobefehl <tt>Z80</tt> erlaubt ausschlie&szlig;lich
+     die Zilog-Mnemonik/-Syntax und &uuml;berschreibt damit
+     die eingestellten Assembler-Optionen in der Gruppe
+     <em>Mnemonik/Syntax</em>.
+     Der Befehl hat die gleiche Bedeutung wie:<br/>
+     &nbsp;&nbsp;<tt>CPU Z80</tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign=top><tt>Z80UNDOC</tt></td>
+    <td valign=top>0</td>
+    <td valign=top></td>
+    <td valign=top>
+     Der Pseudobefehl <tt>Z80UNDOC</tt> erlaubt
+     die Zilog-Mnemonik/-Syntax sowie undokumentierte Befehle.
+     Die eingestellten Assembler-Optionen in der Gruppe
+     <em>Mnemonik/Syntax</em> werden damit &uuml;berschrieben.
+     Der Befehl hat die gleiche Bedeutung wie:<br/>
+     &nbsp;&nbsp;<tt>CPU Z80UNDOC</tt>
     </td>
    </tr>
   </table>
@@ -1052,22 +1217,6 @@
      wenn die angegebene Marke nicht existiert.
     </td>
    </tr>
-   <tr>
-    <td valign="top" nowrap="nowrap">
-     IF1
-    </td>
-    <td valign="top">
-     Der nachfolgende Quelltext wird im ersten Assembler-Lauf assembliert.
-    </td>
-   </tr>
-   <tr>
-    <td valign="top" nowrap="nowrap">
-     IF2
-    </td>
-    <td valign="top">
-     Der nachfolgende Quelltext wird im zweiten Assembler-Lauf assembliert.
-    </td>
-   </tr>
   </table>
  <br/>
   Die Anweisungen f&uuml;r die bedingte Assemblierung k&ouml;nnen
@@ -1141,7 +1290,13 @@
    </tr>
    <tr>
     <td valign="top">-l</td>
-    <td>Markentabelle ausgeben</td>
+    <td>
+     Assembler-Listing erzeugen,<br/>
+     Die Datei f&uuml;r das Assembler-Listing hat den gleichen Pfad
+     und den gleichen Basisnamen wie die Ausgabedatei
+     (siehe Option <em>-o</em>).
+     Die Endung ist jedoch: <em>.lst</em>
+    </td>
    </tr>
    <tr>
     <td valign="top" nowrap="nowrap">-o&nbsp;&lt;Ausgabedatei&gt;</td>
@@ -1155,6 +1310,15 @@
      der Endung den gleichen Namen wie die Quelltextdatei.
      Die Endung lautet: <em>*.bin</em>
    </tr>
+   <tr>
+    <td valign="top">-t</td>
+    <td>
+     Markentabelle ausgeben,<br/>
+     Die Markentabelle wird auf der Standard-Ausgabe ausgegebene,
+     es sei denn, Sie haben auch die Option <em>-l</em> angegebene.
+     In dem Fall wird die Markentabelle an das Assembler-Listing
+     angeh&auml;ngt.
+    </td>
    <tr>
     <td valign="top" nowrap="nowrap">-9</td>
     <td>
@@ -1179,10 +1343,26 @@
    <tr>
     <td valign="top">-D&nbsp;&lt;Marke=Wert&gt;</td>
     <td>
-     Marke mit dem angegebenen Wert definieren<br/>
+     Marke mit dem angegebenen Wert definieren,<br/>
      Der Wert wird in Form einer Dezimal-, Hexadezimal-, Oktal-
      oder Bin&auml;rzahl angegeben
      (siehe <a href="assembler.htm#num_literal">Zahlenliteral</a>).
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-J</td>
+    <td>
+     Zu gro&szlig;e relative Spr&uuml;nge als absolute &uuml;bersetzen,<br/>
+     Diese Option bewirkt, dass relative Sprungbefehle mit einer
+     zu gro&szlig;en Sprungdistanz nicht zu einem Fehler f&uuml;hren,
+     sondern als absolute Sprungebefehle &uuml;bersetzt werden.
+     In dem Fall wird eine Warnung ausgegeben.<br/>
+     Die Option hat jedoch keine Wirkung beim DJNZ-Befehl,
+     da es zu diesem keinen funktional gleichwertigen Befehl mit einem
+     absoluten Spring gibt.
+     Auch das Simulieren des DJNZ-Befehls durch andere CPU-Befehle
+     l&auml;sst sich funktional nicht hundertprozentig exakt realisieren,
+     da DJNZ keine CPU-Flags beeinflusst.
     </td>
    </tr>
    <tr>

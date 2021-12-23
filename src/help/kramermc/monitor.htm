@@ -1,123 +1,122 @@
 <html>
 <body>
-  <h1>Kramer-MC: Monitorprogramm</h1>
+ <h1>Kramer-MC: Monitorprogramm</h1>
 
-  <h2>Kommandos</h2>
-    <table border="1">
-      <tr><th>Kommando</th><th>Bedeutung</th><th>Syntax</th></tr>
-      <tr>
-	<td>A</td>
-	<td><a href="assembler.htm">Assembler</a>-Aufruf</td>
-	<td><tt>A</tt></td>
-      </tr>
-      <tr><td>B</td><td>Aufruf BASIC-Interpreter</td><td><tt>B</tt></td></tr>
-      <tr><td>C</td><td>COPY WO: = RI</td><td><tt>C</tt></td></tr>
-      <tr><td>D</td><td>DUMP</td><td><tt>DAADR, EADR</tt></td></tr>
-      <tr><td>E</td><td>End-File</td><td><tt>EAADR</tt></td></tr>
-      <tr><td>F</td><td>Fill</td><td><tt>FAADR,EADR, Byte</tt></td></tr>
-      <tr>
-	<td>G</td>
-	<td>GO</td>
-	<td>
-	  <tt>GAADR, EADR1, EADR2</tt> oder<br/>
-	  <tt>GAADR</tt> oder<br/>
-	  <tt>G</tt>
-	</td>
-      </tr>
-      <tr><td>H</td><td>HEX-Arithmetik</td><td><tt>HADR,ADR</tt></td></tr>
-      <tr>
-	<td>I</td>
-	<td>INPUT-Kanal zuweisen</td>
-	<td><tt>IT oder IL oder IU</tt></td>
-      </tr>
-      <tr><td>J</td><td>JUMP RAM-Tabelle</td><td><tt>J</tt></td></tr>
-      <tr><td>K</td><td>KNOW RAM-Test</td><td><tt>KAADR,EADR</tt></td></tr>
-      <tr>
-	<td>L</td>
-	<td>LIST-Zuweisung</td>
-	<td><tt>LT oder LL oder LU</tt></td>
-      </tr>
-      <tr><td>M</td><td>MOVE</td><td><tt>MAADR,EADR, ZADR</tt></td></tr>
-      <tr>
-	<td>O</td>
-	<td>OUTPUT-Kanal zuweisen</td>
-	<td><tt>OT oder OL oder OU</tt></td>
-      </tr>
-      <tr>
-	<td>P</td>
-	<td>PRINT Disassembler</td>
-	<td><tt>PAADR,EADR</tt></td></tr>
-      <tr><td>R</td><td>READ ext. Speicher</td><td><tt>RADR</tt></td></tr>
-      <tr>
-	<td>S</td>
-	<td>SUBSTITUTE<br/>(Byte im Arbeitsspeicher &auml;ndern)</td>
-	<td><tt>SADR,Byte</tt></td>
-      </tr>
-      <tr>
-	<td>T</td>
-	<td><a href="editor.htm">Texteditor</a></td>
-	<td><tt>T</tt></td></tr>
-      <tr><td>V</td><td>VERIFY</td><td><tt>VAADR, EADR, ZADR</tt></td></tr>
-      <tr><td>W</td><td>WRITE</td><td><tt>WAADR,EADR</tt></td></tr>
-      <tr><td>X</td><td>Register anzeigen</td><td><tt>X oder Xr</tt></td></tr>
-      <tr><td>Z</td><td>Zweitregistersatz</td><td><tt>Z oder Zr</tt></td></tr>
-    </table>
-  <br/>
-    Erl&auml;uterungen:<br/>
-    <table border="1">
-      <tr><td>ADR</td><td>Adresse</td></tr>
-      <tr><td>AADR</td><td>Anfangsadresse</td></tr>
-      <tr><td>EADR</td><td>Endadresse</td></tr>
-      <tr><td>ZADR</td><td>Zieladresse</td></tr>
-      <tr><td>r</td><td>Register A, B, ...</td></tr>
-    </table>
-  <br/><br/>
+ <h2>Kommandos</h2>
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th><th>Syntax</th></tr>
+   <tr>
+    <td>A</td>
+    <td><a href="assembler.htm">Assembler</a>-Aufruf</td>
+    <td><tt>A</tt></td>
+   </tr>
+   <tr><td>B</td><td>Aufruf BASIC-Interpreter</td><td><tt>B</tt></td></tr>
+   <tr><td>C</td><td>COPY WO: = RI</td><td><tt>C</tt></td></tr>
+   <tr><td>D</td><td>DUMP</td><td><tt>DAADR, EADR</tt></td></tr>
+   <tr><td>E</td><td>End-File</td><td><tt>EAADR</tt></td></tr>
+   <tr><td>F</td><td>Fill</td><td><tt>FAADR,EADR, Byte</tt></td></tr>
+   <tr>
+    <td>G</td>
+    <td>GO</td>
+    <td>
+     <tt>GAADR, EADR1, EADR2</tt> oder<br/>
+     <tt>GAADR</tt> oder<br/>
+     <tt>G</tt>
+    </td>
+   </tr>
+   <tr><td>H</td><td>HEX-Arithmetik</td><td><tt>HADR,ADR</tt></td></tr>
+   <tr>
+    <td>I</td>
+    <td>INPUT-Kanal zuweisen</td>
+    <td><tt>IT oder IL oder IU</tt></td>
+   </tr>
+   <tr><td>J</td><td>JUMP RAM-Tabelle</td><td><tt>J</tt></td></tr>
+   <tr><td>K</td><td>KNOW RAM-Test</td><td><tt>KAADR,EADR</tt></td></tr>
+   <tr>
+    <td>L</td>
+    <td>LIST-Zuweisung</td>
+    <td><tt>LT oder LL oder LU</tt></td>
+   </tr>
+   <tr><td>M</td><td>MOVE</td><td><tt>MAADR,EADR, ZADR</tt></td></tr>
+   <tr>
+    <td>O</td>
+    <td>OUTPUT-Kanal zuweisen</td>
+    <td><tt>OT oder OL oder OU</tt></td>
+   </tr>
+   <tr>
+    <td>P</td>
+    <td>PRINT Disassembler</td>
+    <td><tt>PAADR,EADR</tt></td></tr>
+   <tr><td>R</td><td>READ ext. Speicher</td><td><tt>RADR</tt></td></tr>
+   <tr>
+    <td>S</td>
+    <td>SUBSTITUTE<br/>(Byte im Arbeitsspeicher &auml;ndern)</td>
+    <td><tt>SADR,Byte</tt></td>
+   </tr>
+   <tr>
+    <td>T</td>
+    <td><a href="editor.htm">Texteditor</a></td>
+    <td><tt>T</tt></td>
+   </tr>
+   <tr><td>V</td><td>VERIFY</td><td><tt>VAADR, EADR, ZADR</tt></td></tr>
+   <tr><td>W</td><td>WRITE</td><td><tt>WAADR,EADR</tt></td></tr>
+   <tr><td>X</td><td>Register anzeigen</td><td><tt>X oder Xr</tt></td></tr>
+   <tr><td>Z</td><td>Zweitregistersatz</td><td><tt>Z oder Zr</tt></td></tr>
+  </table>
+ <br/>
+  Erl&auml;uterungen:<br/>
+  <table border="1">
+   <tr><td>ADR</td><td>Adresse</td></tr>
+   <tr><td>AADR</td><td>Anfangsadresse</td></tr>
+   <tr><td>EADR</td><td>Endadresse</td></tr>
+   <tr><td>ZADR</td><td>Zieladresse</td></tr>
+   <tr><td>r</td><td>Register A, B, ...</td></tr>
+  </table>
+ <br/><br/>
 
-
-  <h2>Einsprungtabelle</h2>
-    <table border="1">
-      <tr><th>Adresse</th><th>Befehl</th><th>Bedeutung</th></tr>
-      <tr>
-	<td>00E0H</td>
-	<td>MCI: JMP CI</td>
-	<td>Einzelzeicheneingabe Tastatur, Zeichen in Register A</td>
-      </tr>
-      <tr>
-	<td>00E3H</td>
-	<td>MRI: JMP RI</td>
-	<td>Einzelzeicheneingabe INPUT-Kanal, Zeichen in Register A</td>
-      </tr>
-      <tr>
-	<td>00E6H</td>
-	<td>MCO: JMPCO</td>
-	<td>Einzelzeichenausgabe Bildschirm, Zeichen in Register C</td>
-      </tr>
-      <tr>
-	<td>00E9H</td>
-	<td>MWO: JMPWO</td>
-	<td>Einzelzeichenausgabe OUTPUT-Kanal, Zeichen in Register C</td>
-      </tr>
-      <tr>
-	<td>00ECH</td>
-	<td>MLO: JMP LO</td>
-	<td>Einzelzeichenausgabe LIST-Kanal, Zeichen in Register C</td>
-      </tr>
-      <tr>
-	<td>00EFH</td>
-	<td>MCSTS: JMP CSTS</td>
-	<td>Tastaturstatus 0: kein Zeichen, -1: Zeichen</td>
-      </tr>
-      <tr>
-	<td>0F2H</td>
-	<td>MIOC: JMP IOCHK</td>
-	<td>IN/OUT-Zuweisung abfragen, Byte in Register A</td>
-      </tr>
-      <tr>
-	<td>0F5H</td>
-	<td>MIOS: JMP IOSET</td>
-	<td>IN/OUT-Gerät zuweisen, Byte in Register A</td>
-      </tr>
-    </table>
+ <h2>Einsprungtabelle</h2>
+  <table border="1">
+   <tr><th>Adresse</th><th>Befehl</th><th>Bedeutung</th></tr>
+   <tr>
+    <td>00E0H</td>
+    <td>MCI: JMP CI</td>
+    <td>Einzelzeicheneingabe Tastatur, Zeichen in Register A</td>
+   </tr>
+   <tr>
+    <td>00E3H</td>
+    <td>MRI: JMP RI</td>
+    <td>Einzelzeicheneingabe INPUT-Kanal, Zeichen in Register A</td>
+   </tr>
+   <tr>
+    <td>00E6H</td>
+    <td>MCO: JMPCO</td>
+    <td>Einzelzeichenausgabe Bildschirm, Zeichen in Register C</td>
+   </tr>
+   <tr>
+    <td>00E9H</td>
+    <td>MWO: JMPWO</td>
+    <td>Einzelzeichenausgabe OUTPUT-Kanal, Zeichen in Register C</td>
+   </tr>
+   <tr>
+    <td>00ECH</td>
+    <td>MLO: JMP LO</td>
+    <td>Einzelzeichenausgabe LIST-Kanal, Zeichen in Register C</td>
+   </tr>
+   <tr>
+    <td>00EFH</td>
+    <td>MCSTS: JMP CSTS</td>
+    <td>Tastaturstatus 0: kein Zeichen, -1: Zeichen</td>
+   </tr>
+   <tr>
+    <td>0F2H</td>
+    <td>MIOC: JMP IOCHK</td>
+    <td>IN/OUT-Zuweisung abfragen, Byte in Register A</td>
+   </tr>
+   <tr>
+    <td>0F5H</td>
+    <td>MIOS: JMP IOSET</td>
+    <td>IN/OUT-Gerät zuweisen, Byte in Register A</td>
+   </tr>
+  </table>
 </body>
 </html>
-

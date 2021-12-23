@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
@@ -21,14 +20,16 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.KramerMC;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class KramerMCSettingsFld extends AbstractSettingsFld
@@ -37,7 +38,7 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
   private JPanel               tabEtc;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JCheckBox            btnCatchPrintCalls;
+  private JCheckBox            cbCatchPrintCalls;
   private ROMFileSettingsFld   fldAltRom0000;
   private ROMFileSettingsFld   fldAltRom8000;
   private ROMFileSettingsFld   fldAltRomC000;
@@ -50,7 +51,7 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
@@ -67,12 +68,13 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		AutoInputCharSet.getStdCharSet(),
 		KramerMC.DEFAULT_SWAP_KEY_CHAR_CASE,
 		KramerMC.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -84,18 +86,17 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnCatchPrintCalls = new JCheckBox(
-		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
-		false );
-    this.btnCatchPrintCalls.addActionListener( this );
-    this.tabEtc.add( this.btnCatchPrintCalls, gbcEtc );
+    this.cbCatchPrintCalls = GUIFactory.createCheckBox(
+		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen" );
+    this.cbCatchPrintCalls.addActionListener( this );
+    this.tabEtc.add( this.cbCatchPrintCalls, gbcEtc );
 
     gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx       = 1.0;
     gbcEtc.insets.top    = 10;
     gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
-    this.tabEtc.add( new JSeparator(), gbcEtc );
+    this.tabEtc.add( GUIFactory.createSeparator(), gbcEtc );
 
     this.fldAltRom0000 = new ROMFileSettingsFld(
 			this.settingsFrm,
@@ -162,7 +163,7 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
       props.setProperty(
 		this.propPrefix + KramerMC.PROP_CATCH_PRINT_CALLS,
 		Boolean.toString(
-			this.btnCatchPrintCalls.isSelected() ) );
+			this.cbCatchPrintCalls.isSelected() ) );
 
       // alternative ROM-Inhalte
       this.fldAltRom0000.applyInput( props, selected );
@@ -182,28 +183,20 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
   @Override
   protected boolean doAction( EventObject e )
   {
-    Object  src = e.getSource();
     boolean rv  = this.tabAutoLoad.doAction( e );
     if( !rv ) {
       rv = this.tabAutoInput.doAction( e );
     }
-    if( !rv && (src instanceof AbstractButton) ) {
-      fireDataChanged();
-      rv = true;
+    if( !rv ) {
+      Object src = e.getSource();
+      if( src != null ) {
+	if( src instanceof AbstractButton ) {
+	  fireDataChanged();
+	  rv = true;
+	}
+      }
     }
     return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-    this.fldAltRom0000.lookAndFeelChanged();
-    this.fldAltRom8000.lookAndFeelChanged();
-    this.fldAltRomC000.lookAndFeelChanged();
-    this.fldAltFont.lookAndFeelChanged();
   }
 
 
@@ -213,7 +206,7 @@ public class KramerMCSettingsFld extends AbstractSettingsFld
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );
 
-    this.btnCatchPrintCalls.setSelected(
+    this.cbCatchPrintCalls.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + KramerMC.PROP_CATCH_PRINT_CALLS,

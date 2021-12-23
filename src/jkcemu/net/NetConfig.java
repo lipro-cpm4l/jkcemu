@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.net;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.*;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -19,6 +18,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.regex.PatternSyntaxException;
 import javax.naming.Context;
+import javax.naming.NamingException;
 import javax.naming.directory.InitialDirContext;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
@@ -89,9 +89,8 @@ public class NetConfig
 
   public static NetConfig readNetConfig()
   {
-    NetConfig netConfig = null;
-    int       debugMask = 0;
-    String    text      = System.getProperty( KCNet.SYSPROP_DEBUG );
+    int    debugMask = 0;
+    String text      = System.getProperty( KCNet.SYSPROP_DEBUG );
     if( text != null ) {
       try {
 	debugMask = Integer.parseInt( text );
@@ -203,14 +202,15 @@ public class NetConfig
      * Aus diesem Grund wird aus den gefundenen DNS-Server der ausgewaehlt,
      * der am "naechsten" an der lokalen IP-Adresse liegt.
      */
-    byte[] dnsServerIpAddr = null;
+    byte[]            dnsServerIpAddr = null;
+    InitialDirContext context         = null;
     try {
       Hashtable<String,String> env = new Hashtable<>();
       env.put(
 	Context.INITIAL_CONTEXT_FACTORY,
 	"com.sun.jndi.dns.DnsContextFactory" );
-      Object o = (new InitialDirContext( env )).getEnvironment().get(
-					"java.naming.provider.url" );
+      context  = new InitialDirContext( env );
+      Object o = context.getEnvironment().get( "java.naming.provider.url" );
       if( o != null ) {
 	String s = o.toString();
 	if( s != null ) {
@@ -244,7 +244,14 @@ public class NetConfig
 	}
       }
     }
-    catch( Exception ex ) {}
+    catch( NamingException ex ) {}
+    catch( PatternSyntaxException ex ) {}
+    if( context != null ) {
+      try {
+	context.close();
+      }
+      catch( NamingException ex ) {}
+    }
 
     /*
      * Falls der DNS-Server nicht ermittelt werden konnte,
@@ -280,7 +287,7 @@ public class NetConfig
       catch( IOException ex ) {}
       catch( PatternSyntaxException ex ) {}
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
 

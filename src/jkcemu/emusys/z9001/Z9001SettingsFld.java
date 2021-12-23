@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,17 +25,18 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.AutoLoadSettingsFld;
-import jkcemu.base.RAMFloppiesSettingsFld;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.RAMFloppy;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
 import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.Z9001;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.RAMFloppiesSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class Z9001SettingsFld extends AbstractSettingsFld
@@ -54,33 +54,34 @@ public class Z9001SettingsFld extends AbstractSettingsFld
   private RAMFloppiesSettingsFld               tabRF;
   private AutoLoadSettingsFld                  tabAutoLoad;
   private AutoInputSettingsFld                 tabAutoInput;
-  private JRadioButton                         btnMonoGraphNone;
-  private JRadioButton                         btnMonoGraphKRT;
-  private JRadioButton                         btnColorGraphNone;
-  private JRadioButton                         btnColorGraphKRT;
-  private JRadioButton                         btnColorGraphRobotron;
-  private JCheckBox                            btnFontProgrammable;
-  private JCheckBox                            btn80Chars;
-  private JCheckBox                            btnFixedScreenSize;
-  private JCheckBox                            btnRam16k4000;
-  private JCheckBox                            btnRam16k8000;
-  private JCheckBox                            btnRam64k;
-  private JCheckBox                            btnRom16k4000;
-  private JCheckBox                            btnRom32k4000;
-  private JCheckBox                            btnRom16k8000;
-  private JCheckBox                            btnRom10kC000;
-  private JCheckBox                            btnRomMega;
-  private JCheckBox                            btnRomBoot;
+  private JRadioButton                         rbMonoGraphNone;
+  private JRadioButton                         rbMonoGraphKRT;
+  private JRadioButton                         rbColorGraphNone;
+  private JRadioButton                         rbColorGraphKRT;
+  private JRadioButton                         rbColorGraphRobotron;
+  private JCheckBox                            cbFontProgrammable;
+  private JCheckBox                            cb80Chars;
+  private JCheckBox                            cbFixedScreenSize;
+  private JCheckBox                            cbRam16k4000;
+  private JCheckBox                            cbRam16k8000;
+  private JCheckBox                            cbRam64k;
+  private JCheckBox                            cbRom16k4000;
+  private JCheckBox                            cbRom32k4000;
+  private JCheckBox                            cbRom16k8000;
+  private JCheckBox                            cbRom10kC000;
+  private JCheckBox                            cbRomMega;
+  private JCheckBox                            cbRomBoot;
   private ROMFileSettingsFld                   fldRomModule;
-  private JRadioButton                         btnCatchPrintCalls;
-  private JRadioButton                         btnPrinterModule;
-  private JRadioButton                         btnNoPrinter;
-  private JCheckBox                            btnFloppyDisk;
-  private JCheckBox                            btnPlotter;
-  private JCheckBox                            btnKCNet;
-  private JCheckBox                            btnVDIP;
-  private JCheckBox                            btnRTC;
-  private JCheckBox                            btnPasteFast;
+  private JRadioButton                         rbCatchPrintCalls;
+  private JRadioButton                         rbPrinterModule;
+  private JRadioButton                         rbNoPrinter;
+  private JCheckBox                            cbFloppyDisk;
+  private JCheckBox                            cbK1520Sound;
+  private JCheckBox                            cbKCNet;
+  private JCheckBox                            cbPlotter;
+  private JCheckBox                            cbRTC;
+  private JCheckBox                            cbVDIP;
+  private JCheckBox                            cbPasteFast;
   private ROMFileSettingsFld                   fldAltOS;
   private ROMFileSettingsFld                   fldAltBASIC;
   private ROMFileSettingsFld                   fldAltFont;
@@ -96,12 +97,12 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.switchOffMap = new HashMap<>();
 
     setLayout( new BorderLayout() );
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Grafik
-    this.tabGraph = new JPanel( new GridBagLayout() );
+    this.tabGraph = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Grafik", this.tabGraph );
 
     GridBagConstraints gbcGraph = new GridBagConstraints(
@@ -115,66 +116,60 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpGraph = new ButtonGroup();
 
-    this.btnMonoGraphNone = new JRadioButton(
-					"S/W, Blockgrafik",
-					false );
-    grpGraph.add( this.btnMonoGraphNone );
-    this.tabGraph.add( this.btnMonoGraphNone, gbcGraph );
+    this.rbMonoGraphNone = GUIFactory.createRadioButton(
+					"S/W, Blockgrafik" );
+    grpGraph.add( this.rbMonoGraphNone );
+    this.tabGraph.add( this.rbMonoGraphNone, gbcGraph );
 
-    this.btnMonoGraphKRT = new JRadioButton(
-					"S/W, KRT-Vollgrafikerweiterung",
-					false );
-    grpGraph.add( this.btnMonoGraphKRT );
+    this.rbMonoGraphKRT = GUIFactory.createRadioButton(
+					"S/W, KRT-Vollgrafikerweiterung" );
+    grpGraph.add( this.rbMonoGraphKRT );
     gbcGraph.insets.top = 0;
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnMonoGraphKRT, gbcGraph );
+    this.tabGraph.add( this.rbMonoGraphKRT, gbcGraph );
 
-    this.btnColorGraphNone = new JRadioButton(
+    this.rbColorGraphNone = GUIFactory.createRadioButton(
 					"Farbe, Blockgrafik",
 					true );
-    grpGraph.add( this.btnColorGraphNone );
+    grpGraph.add( this.rbColorGraphNone );
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnColorGraphNone, gbcGraph );
+    this.tabGraph.add( this.rbColorGraphNone, gbcGraph );
 
-    this.btnColorGraphKRT = new JRadioButton(
-				"Farbe, KRT-Vollgrafikerweiterung",
-				false );
-    grpGraph.add( this.btnColorGraphKRT );
+    this.rbColorGraphKRT = GUIFactory.createRadioButton(
+				"Farbe, KRT-Vollgrafikerweiterung" );
+    grpGraph.add( this.rbColorGraphKRT );
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnColorGraphKRT, gbcGraph );
+    this.tabGraph.add( this.rbColorGraphKRT, gbcGraph );
 
-    this.btnColorGraphRobotron = new JRadioButton(
-				"Farbe, Robotron-Vollgrafikerweiterung",
-				false );
-    grpGraph.add( this.btnColorGraphRobotron );
+    this.rbColorGraphRobotron = GUIFactory.createRadioButton(
+				"Farbe, Robotron-Vollgrafikerweiterung" );
+    grpGraph.add( this.rbColorGraphRobotron );
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnColorGraphRobotron, gbcGraph );
+    this.tabGraph.add( this.rbColorGraphRobotron, gbcGraph );
 
-    this.btnFontProgrammable = new JCheckBox(
-				"Programmierbarer Zeichengenerator",
-				false );
+    this.cbFontProgrammable = GUIFactory.createCheckBox(
+				"Programmierbarer Zeichengenerator" );
     gbcGraph.insets.top    = 10;
     gbcGraph.insets.bottom = 0;
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnFontProgrammable, gbcGraph );
+    this.tabGraph.add( this.cbFontProgrammable, gbcGraph );
 
-    this.btn80Chars = new JCheckBox(
-				"40/80-Zeichen-Umschaltung",
-				false );
+    this.cb80Chars = GUIFactory.createCheckBox(
+					"40/80-Zeichen-Umschaltung" );
     gbcGraph.insets.top = 0;
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btn80Chars, gbcGraph );
+    this.tabGraph.add( this.cb80Chars, gbcGraph );
 
-    this.btnFixedScreenSize = new JCheckBox(
+    this.cbFixedScreenSize = GUIFactory.createCheckBox(
 		"Gleiche Fenstergr\u00F6\u00DFe in beiden Bildschirmmodi" );
     gbcGraph.insets.left   = 50;
     gbcGraph.insets.bottom = 5;
     gbcGraph.gridy++;
-    this.tabGraph.add( this.btnFixedScreenSize, gbcGraph );
+    this.tabGraph.add( this.cbFixedScreenSize, gbcGraph );
 
 
     // Tab Speichermodule
-    this.tabMem = new JPanel( new GridBagLayout() );
+    this.tabMem = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Speichermodule", this.tabMem );
 
     GridBagConstraints gbcMem = new GridBagConstraints(
@@ -186,69 +181,59 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnRam16k4000 = new JCheckBox(
-				"16K RAM-Modul (4000h-7FFFh)",
-				false );
-    this.tabMem.add( this.btnRam16k4000, gbcMem );
+    this.cbRam16k4000 = GUIFactory.createCheckBox(
+					"16K RAM-Modul (4000h-7FFFh)" );
+    this.tabMem.add( this.cbRam16k4000, gbcMem );
 
-    this.btnRam16k8000 = new JCheckBox(
-				"16K RAM-Modul (8000h-BFFFh)",
-				false );
+    this.cbRam16k8000 = GUIFactory.createCheckBox(
+					"16K RAM-Modul (8000h-BFFFh)" );
     gbcMem.gridx++;
-    this.tabMem.add( this.btnRam16k8000, gbcMem );
+    this.tabMem.add( this.cbRam16k8000, gbcMem );
 
-    this.btnRam64k = new JCheckBox(
-			"64K RAM-Modul (2 x 4000h-7FFFh, 1 x 8000h-E7FFh)",
-			false );
+    this.cbRam64k = GUIFactory.createCheckBox(
+		"64K RAM-Modul (2 x 4000h-7FFFh, 1 x 8000h-E7FFh)" );
     gbcMem.insets.top = 0;
     gbcMem.gridwidth  = 2;
     gbcMem.gridx      = 0;
     gbcMem.gridy++;
-    this.tabMem.add( this.btnRam64k, gbcMem );
+    this.tabMem.add( this.cbRam64k, gbcMem );
 
-    this.btnRom16k4000 = new JCheckBox(
-				"16K ROM-Modul (4000h-7FFFh)",
-				false );
-    gbcMem.insets.top = 10;
-    gbcMem.gridwidth  = 1;
+    this.cbRom16k4000 = GUIFactory.createCheckBox(
+					"16K ROM-Modul (4000h-7FFFh)" );
+    gbcMem.insets.top  = 10;
+    gbcMem.gridwidth   = 1;
     gbcMem.gridy++;
-    this.tabMem.add( this.btnRom16k4000, gbcMem );
+    this.tabMem.add( this.cbRom16k4000, gbcMem );
 
-    this.btnRom16k8000 = new JCheckBox(
-				"16K ROM-Modul (8000h-BFFFh)",
-				false );
+    this.cbRom16k8000 = GUIFactory.createCheckBox(
+					"16K ROM-Modul (8000h-BFFFh)" );
     gbcMem.gridx++;
-    this.tabMem.add( this.btnRom16k8000, gbcMem );
+    this.tabMem.add( this.cbRom16k8000, gbcMem );
 
-    this.btnRom32k4000 = new JCheckBox(
-				"32K ROM-Modul (4000h-BFFFh)",
-				false );
-    gbcMem.insets.top = 0;
-    gbcMem.gridwidth  = 1;
-    gbcMem.gridx      = 0;
+    this.cbRom32k4000 = GUIFactory.createCheckBox(
+					"32K ROM-Modul (4000h-BFFFh)" );
+    gbcMem.insets.top  = 0;
+    gbcMem.gridwidth   = 1;
+    gbcMem.gridx       = 0;
     gbcMem.gridy++;
-    this.tabMem.add( this.btnRom32k4000, gbcMem );
+    this.tabMem.add( this.cbRom32k4000, gbcMem );
 
-    this.btnRom10kC000 = new JCheckBox(
-				"10K ROM-Modul (C000h-E7FFh)",
-				false );
+    this.cbRom10kC000 = GUIFactory.createCheckBox(
+					"10K ROM-Modul (C000h-E7FFh)" );
     gbcMem.gridx++;
-    this.tabMem.add( this.btnRom10kC000, gbcMem );
+    this.tabMem.add( this.cbRom10kC000, gbcMem );
 
-    this.btnRomMega = new JCheckBox(
-				"Mega-ROM-Modul (256 x C000h-E7FFh)",
-				false );
+    this.cbRomMega  = GUIFactory.createCheckBox(
+				"Mega-ROM-Modul (256 x C000h-E7FFh)" );
     gbcMem.gridwidth = 2;
     gbcMem.gridx     = 0;
     gbcMem.gridy++;
-    this.tabMem.add( this.btnRomMega, gbcMem );
+    this.tabMem.add( this.cbRomMega, gbcMem );
 
-    this.btnRomBoot = new JCheckBox(
-		"Boot-ROM-Modul"
-			+ " (C000h-E7FFh, nur mit Floppy-Disk-Modul sinnvoll)",
-		false );
+    this.cbRomBoot = GUIFactory.createCheckBox( "Boot-ROM-Modul"
+		+ " (C000h-E7FFh, nur mit Floppy-Disk-Modul sinnvoll)" );
     gbcMem.gridy++;
-    this.tabMem.add( this.btnRomBoot, gbcMem );
+    this.tabMem.add( this.cbRomBoot, gbcMem );
 
     this.fldRomModule = new ROMFileSettingsFld(
 				settingsFrm,
@@ -262,81 +247,81 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.tabMem.add( this.fldRomModule, gbcMem );
 
     this.switchOffMap.put(
-		this.btnRam16k4000,
+		this.cbRam16k4000,
 		toArray(
-			this.btnRam64k,
-			this.btnRom16k4000,
-			this.btnRom32k4000 ) );
+			this.cbRam64k,
+			this.cbRom16k4000,
+			this.cbRom32k4000 ) );
     this.switchOffMap.put(
-		this.btnRam16k8000,
+		this.cbRam16k8000,
 		toArray(
-			this.btnRam64k,
-			this.btnRom32k4000,
-			this.btnRom16k8000 ) );
+			this.cbRam64k,
+			this.cbRom32k4000,
+			this.cbRom16k8000 ) );
     this.switchOffMap.put(
-		this.btnRam64k,
+		this.cbRam64k,
 		toArray(
-			this.btnRam16k4000,
-			this.btnRam16k8000,
-			this.btnRom16k4000,
-			this.btnRom32k4000,
-			this.btnRom16k8000,
-			this.btnRom10kC000 ) );
+			this.cbRam16k4000,
+			this.cbRam16k8000,
+			this.cbRom16k4000,
+			this.cbRom32k4000,
+			this.cbRom16k8000,
+			this.cbRom10kC000 ) );
     this.switchOffMap.put(
-		this.btnRom16k4000,
+		this.cbRom16k4000,
 		toArray(
-			this.btnRam16k4000,
-			this.btnRam64k,
-			this.btnRom32k4000,
-			this.btnRom16k8000,
-			this.btnRom10kC000,
-			this.btnRomBoot,
-			this.btnRomMega ) );
+			this.cbRam16k4000,
+			this.cbRam64k,
+			this.cbRom32k4000,
+			this.cbRom16k8000,
+			this.cbRom10kC000,
+			this.cbRomBoot,
+			this.cbRomMega ) );
     this.switchOffMap.put(
-		this.btnRom32k4000,
+		this.cbRom32k4000,
 		toArray(
-			this.btnRam16k4000,
-			this.btnRam64k,
-			this.btnRom16k4000,
-			this.btnRom16k8000,
-			this.btnRom10kC000,
-			this.btnRomBoot,
-			this.btnRomMega ) );
+			this.cbRam16k4000,
+			this.cbRam64k,
+			this.cbRom16k4000,
+			this.cbRom16k8000,
+			this.cbRom10kC000,
+			this.cbRomBoot,
+			this.cbRomMega ) );
     this.switchOffMap.put(
-		this.btnRom16k8000,
+		this.cbRom16k8000,
 		toArray(
-			this.btnRam16k8000,
-			this.btnRam64k,
-			this.btnRom16k4000,
-			this.btnRom32k4000,
-			this.btnRom10kC000,
-			this.btnRomBoot,
-			this.btnRomMega ) );
+			this.cbRam16k8000,
+			this.cbRam64k,
+			this.cbRom16k4000,
+			this.cbRom32k4000,
+			this.cbRom10kC000,
+			this.cbRomBoot,
+			this.cbRomMega ) );
     this.switchOffMap.put(
-		this.btnRom10kC000,
+		this.cbRom10kC000,
 		toArray(
-			this.btnRam64k,
-			this.btnRom16k4000,
-			this.btnRom32k4000,
-			this.btnRom16k8000,
-			this.btnRomBoot,
-			this.btnRomMega ) );
+			this.cbRam64k,
+			this.cbRom16k4000,
+			this.cbRom32k4000,
+			this.cbRom16k8000,
+			this.cbRomBoot,
+			this.cbRomMega ) );
     this.switchOffMap.put(
-		this.btnRomBoot,
+		this.cbRomBoot,
 		toArray(
-			this.btnRom16k4000,
-			this.btnRom32k4000,
-			this.btnRom16k8000,
-			this.btnRom10kC000,
-			this.btnRomMega ) );
+			this.cbRom16k4000,
+			this.cbRom32k4000,
+			this.cbRom16k8000,
+			this.cbRom10kC000,
+			this.cbRomMega ) );
     this.switchOffMap.put(
-		this.btnRomMega,
+		this.cbRomMega,
 		toArray(
-			this.btnRom16k4000,
-			this.btnRom32k4000,
-			this.btnRom16k8000,
-			this.btnRom10kC000,
-			this.btnRomBoot ) );
+			this.cbRom16k4000,
+			this.cbRom32k4000,
+			this.cbRom16k8000,
+			this.cbRom10kC000,
+			this.cbRomBoot ) );
     updMemFieldsEnabled();
 
 
@@ -352,7 +337,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
 
     // Tab Drucker
-    this.tabPrinter = new JPanel( new GridBagLayout() );
+    this.tabPrinter = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Drucker", this.tabPrinter );
 
     GridBagConstraints gbcPrinter = new GridBagConstraints(
@@ -366,27 +351,25 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpPrinter = new ButtonGroup();
 
-    this.btnCatchPrintCalls = new JRadioButton(
-			"BOS-Aufrufe f\u00FCr Druckerausgaben abfangen",
-			false );
-    grpPrinter.add( this.btnCatchPrintCalls );
-    this.tabPrinter.add( this.btnCatchPrintCalls, gbcPrinter );
+    this.rbCatchPrintCalls = GUIFactory.createRadioButton(
+			"BOS-Aufrufe f\u00FCr Druckerausgaben abfangen" );
+    grpPrinter.add( this.rbCatchPrintCalls );
+    this.tabPrinter.add( this.rbCatchPrintCalls, gbcPrinter );
 
-    this.btnPrinterModule = new JRadioButton(
-			"V.24-Druckermodul emulieren",
-			false );
-    grpPrinter.add( this.btnPrinterModule );
+    this.rbPrinterModule = GUIFactory.createRadioButton(
+			"V.24-Druckermodul emulieren" );
+    grpPrinter.add( this.rbPrinterModule );
     gbcPrinter.insets.top = 0;
     gbcPrinter.gridy++;
-    this.tabPrinter.add( this.btnPrinterModule, gbcPrinter );
+    this.tabPrinter.add( this.rbPrinterModule, gbcPrinter );
 
-    this.btnNoPrinter = new JRadioButton(
+    this.rbNoPrinter = GUIFactory.createRadioButton(
 			"Keinen Drucker emulieren",
 			true );
-    grpPrinter.add( this.btnNoPrinter );
+    grpPrinter.add( this.rbNoPrinter );
     gbcPrinter.insets.bottom = 5;
     gbcPrinter.gridy++;
-    this.tabPrinter.add( this.btnNoPrinter, gbcPrinter );
+    this.tabPrinter.add( this.rbNoPrinter, gbcPrinter );
 
 
     // Tab GIDE
@@ -395,7 +378,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
 
     // Tab Erweiterungen
-    this.tabExt = new JPanel( new GridBagLayout() );
+    this.tabExt = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
     GridBagConstraints gbcExt = new GridBagConstraints(
@@ -407,33 +390,36 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
-    this.tabExt.add( this.btnFloppyDisk, gbcExt );
+    this.cbRTC = GUIFactory.createCheckBox( "Echtzeituhr" );
+    this.tabExt.add( this.cbRTC, gbcExt );
 
-    this.btnPlotter = new JCheckBox( "Plotter XY4131 / XY4140", false );
+    this.cbFloppyDisk = GUIFactory.createCheckBox( "Floppy-Disk-Modul" );
     gbcExt.insets.top = 0;
     gbcExt.gridy++;
-    this.tabExt.add( this.btnPlotter, gbcExt );
+    this.tabExt.add( this.cbFloppyDisk, gbcExt );
 
-    this.btnKCNet = new JCheckBox( "KCNet-kompatible Netzwerkkarte", false );
+    this.cbK1520Sound = GUIFactory.createCheckBox( "K1520-Sound-Karte" );
     gbcExt.gridy++;
-    this.tabExt.add( this.btnKCNet, gbcExt );
+    this.tabExt.add( this.cbK1520Sound, gbcExt );
 
-    this.btnVDIP = new JCheckBox(
-		"USB-Anschluss (Vinculum VDIP Modul)",
-		false );
+    this.cbKCNet = GUIFactory.createCheckBox(
+				"KCNet-kompatible Netzwerkkarte" );
     gbcExt.gridy++;
-    this.tabExt.add( this.btnVDIP, gbcExt );
+    this.tabExt.add( this.cbKCNet, gbcExt );
 
-    this.btnRTC = new JCheckBox( "Echtzeituhr", false );
-    this.btnRTC.addActionListener( this );
+    this.cbPlotter = GUIFactory.createCheckBox( "Plotter XY4131 / XY4140" );
+    gbcExt.gridy++;
+    this.tabExt.add( this.cbPlotter, gbcExt );
+
+    this.cbVDIP = GUIFactory.createCheckBox(
+				"USB-Anschluss (Vinculum VDIP Modul)" );
     gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
-    this.tabExt.add( this.btnRTC, gbcExt );
+    this.tabExt.add( this.cbVDIP, gbcExt );
 
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -445,18 +431,17 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnPasteFast = new JCheckBox(
-		"Einf\u00FCgen von Text direkt in den Tastaturpuffer",
-		true );
+    this.cbPasteFast = GUIFactory.createCheckBox(
+		"Einf\u00FCgen von Text direkt in den Tastaturpuffer" );
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnPasteFast, gbcEtc );
+    this.tabEtc.add( this.cbPasteFast, gbcEtc );
 
     gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx       = 1.0;
     gbcEtc.insets.top    = 10;
     gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
-    this.tabEtc.add( new JSeparator(), gbcEtc );
+    this.tabEtc.add( GUIFactory.createSeparator(), gbcEtc );
 
     this.fldAltOS = new ROMFileSettingsFld(
 			settingsFrm,
@@ -499,37 +484,40 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		Z9001.getAutoInputCharSet(),
 		Z9001.DEFAULT_SWAP_KEY_CHAR_CASE,
 		Z9001.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
-    this.btnMonoGraphNone.addActionListener( this );
-    this.btnMonoGraphKRT.addActionListener( this );
-    this.btnColorGraphNone.addActionListener( this );
-    this.btnColorGraphKRT.addActionListener( this );
-    this.btnColorGraphRobotron.addActionListener( this );
-    this.btnFontProgrammable.addActionListener( this );
-    this.btn80Chars.addActionListener( this );
-    this.btnFixedScreenSize.addActionListener( this );
-    this.btnRam16k4000.addActionListener( this );
-    this.btnRam16k8000.addActionListener( this );
-    this.btnRam64k.addActionListener( this );
-    this.btnRom16k4000.addActionListener( this );
-    this.btnRom32k4000.addActionListener( this );
-    this.btnRom16k8000.addActionListener( this );
-    this.btnRom10kC000.addActionListener( this );
-    this.btnRomBoot.addActionListener( this );
-    this.btnRomMega.addActionListener( this );
-    this.btnCatchPrintCalls.addActionListener( this );
-    this.btnPrinterModule.addActionListener( this );
-    this.btnNoPrinter.addActionListener( this );
-    this.btnFloppyDisk.addActionListener( this );
-    this.btnPlotter.addActionListener( this );
-    this.btnKCNet.addActionListener( this );
-    this.btnVDIP.addActionListener( this );
-    this.btnPasteFast.addActionListener( this );
+    this.rbMonoGraphNone.addActionListener( this );
+    this.rbMonoGraphKRT.addActionListener( this );
+    this.rbColorGraphNone.addActionListener( this );
+    this.rbColorGraphKRT.addActionListener( this );
+    this.rbColorGraphRobotron.addActionListener( this );
+    this.cbFontProgrammable.addActionListener( this );
+    this.cb80Chars.addActionListener( this );
+    this.cbFixedScreenSize.addActionListener( this );
+    this.cbRam16k4000.addActionListener( this );
+    this.cbRam16k8000.addActionListener( this );
+    this.cbRam64k.addActionListener( this );
+    this.cbRom16k4000.addActionListener( this );
+    this.cbRom32k4000.addActionListener( this );
+    this.cbRom16k8000.addActionListener( this );
+    this.cbRom10kC000.addActionListener( this );
+    this.cbRomBoot.addActionListener( this );
+    this.cbRomMega.addActionListener( this );
+    this.rbCatchPrintCalls.addActionListener( this );
+    this.rbPrinterModule.addActionListener( this );
+    this.rbNoPrinter.addActionListener( this );
+    this.cbFloppyDisk.addActionListener( this );
+    this.cbK1520Sound.addActionListener( this );
+    this.cbKCNet.addActionListener( this );
+    this.cbPlotter.addActionListener( this );
+    this.cbRTC.addActionListener( this );
+    this.cbVDIP.addActionListener( this );
+    this.cbPasteFast.addActionListener( this );
   }
 
 
@@ -547,14 +535,14 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       tab = this.tabGraph;
       boolean color = false;
       String  graph = Z9001.VALUE_NONE;
-      if( this.btnMonoGraphKRT.isSelected() ) {
+      if( this.rbMonoGraphKRT.isSelected() ) {
 	graph = "krt";
-      } else if( this.btnColorGraphNone.isSelected() ) {
+      } else if( this.rbColorGraphNone.isSelected() ) {
 	color = true;
-      } else if( this.btnColorGraphKRT.isSelected() ) {
+      } else if( this.rbColorGraphKRT.isSelected() ) {
 	color = true;
 	graph = "krt";
-      } else if( this.btnColorGraphRobotron.isSelected() ) {
+      } else if( this.rbColorGraphRobotron.isSelected() ) {
 	color = true;
 	graph = "robotron";
       }
@@ -569,36 +557,36 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FONT_PROGRAMMABLE,
-		this.btnFontProgrammable.isSelected() );
+		this.cbFontProgrammable.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_80CHARS_ENABLED,
-		this.btn80Chars.isSelected() );
+		this.cb80Chars.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FIXED_SCREEN_SIZE,
-		this.btnFixedScreenSize.isSelected() );
+		this.cbFixedScreenSize.isSelected() );
 
       // Tab Speichermodule
       tab = this.tabMem;
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM16K4000_ENABLED,
-		this.btnRam16k4000.isSelected() );
+		this.cbRam16k4000.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM16K8000_ENABLED,
-		this.btnRam16k8000.isSelected() );
+		this.cbRam16k8000.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM64K_ENABLED,
-		this.btnRam64k.isSelected() );
+		this.cbRam64k.isSelected() );
 
       File    file            = this.fldRomModule.getFile();
-      boolean stateRom16k4000 = this.btnRom16k4000.isSelected();
-      boolean stateRom32k4000 = this.btnRom32k4000.isSelected();
-      boolean stateRom16k8000 = this.btnRom16k8000.isSelected();
-      boolean stateRom10kC000 = this.btnRom10kC000.isSelected();
+      boolean stateRom16k4000 = this.cbRom16k4000.isSelected();
+      boolean stateRom32k4000 = this.cbRom32k4000.isSelected();
+      boolean stateRom16k8000 = this.cbRom16k8000.isSelected();
+      boolean stateRom10kC000 = this.cbRom10kC000.isSelected();
       if( (stateRom16k4000
 		|| stateRom32k4000
 		|| stateRom16k8000
@@ -632,11 +620,11 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROMBOOT_ENABLED,
-		this.btnRomBoot.isSelected() );
+		this.cbRomBoot.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROMMEGA_ENABLED,
-		this.btnRomMega.isSelected() );
+		this.cbRomMega.isSelected() );
 
       // Tab RAM-Floppies
       tab = this.tabRF;
@@ -647,11 +635,11 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_CATCH_PRINT_CALLS,
-		this.btnCatchPrintCalls.isSelected() );
+		this.rbCatchPrintCalls.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_PRINTER_MOD_ENABLED,
-		this.btnPrinterModule.isSelected() );
+		this.rbPrinterModule.isSelected() );
 
       // Tab GIDE
       tab = this.tabGIDE;
@@ -662,30 +650,34 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FDC_ENABLED,
-		this.btnFloppyDisk.isSelected() );
+		this.cbFloppyDisk.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
-		this.btnPlotter.isSelected() );
+		this.propPrefix + Z9001.PROP_K1520SOUND_ENABLED,
+		this.cbK1520Sound.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_KCNET_ENABLED,
-		this.btnKCNet.isSelected() );
+		this.cbKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
-		this.btnVDIP.isSelected() );
+		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
+		this.cbPlotter.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RTC_ENABLED,
-		this.btnRTC.isSelected() );
+		this.cbRTC.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
+		this.cbVDIP.isSelected() );
 
       // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + Z9001.PROP_PASTE_FAST,
-		this.btnPasteFast.isSelected() );
+		this.cbPasteFast.isSelected() );
 
       this.fldAltOS.applyInput( props, selected );
       if( this.fldAltBASIC != null ) {
@@ -745,21 +737,6 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.fldRomModule.lookAndFeelChanged();
-    this.fldAltOS.lookAndFeelChanged();
-    if( this.fldAltBASIC != null ) {
-      this.fldAltBASIC.lookAndFeelChanged();
-    }
-    this.fldAltFont.lookAndFeelChanged();
-    this.tabGIDE.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     // Tab Grafik
@@ -772,77 +749,77 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 			this.propPrefix + Z9001.PROP_GRAPHIC_TYPE );
     if( color ) {
       if( text.equals( Z9001.VALUE_GRAPHIC_KRT ) ) {
-	this.btnColorGraphKRT.setSelected( true );
+	this.rbColorGraphKRT.setSelected( true );
       } else if( text.equals( Z9001.VALUE_GRAPHIC_ROBOTRON ) ) {
-	this.btnColorGraphRobotron.setSelected( true );
+	this.rbColorGraphRobotron.setSelected( true );
       } else {
-	this.btnColorGraphNone.setSelected( true );
+	this.rbColorGraphNone.setSelected( true );
       }
     } else {
       if( text.equals( Z9001.VALUE_GRAPHIC_KRT ) ) {
-	this.btnMonoGraphKRT.setSelected( true );
+	this.rbMonoGraphKRT.setSelected( true );
       } else {
-	this.btnMonoGraphNone.setSelected( true );
+	this.rbMonoGraphNone.setSelected( true );
       }
     }
-    this.btnFontProgrammable.setSelected(
+    this.cbFontProgrammable.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FONT_PROGRAMMABLE,
 		false ) );
-    this.btn80Chars.setSelected(
+    this.cb80Chars.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_80CHARS_ENABLED,
 				false ) );
-    this.btnFixedScreenSize.setSelected(
+    this.cbFixedScreenSize.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FIXED_SCREEN_SIZE,
 		false ) );
 
     // Tab Speichermodule
-    this.btnRam16k4000.setSelected(
+    this.cbRam16k4000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM16K4000_ENABLED,
 		false ) );
-    this.btnRam16k8000.setSelected(
+    this.cbRam16k8000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM16K8000_ENABLED,
 		false ) );
-    this.btnRam64k.setSelected(
+    this.cbRam64k.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RAM64K_ENABLED,
 		false ) );
-    this.btnRom16k4000.setSelected(
+    this.cbRom16k4000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROM16K4000_ENABLED,
 		false ) );
-    this.btnRom32k4000.setSelected(
+    this.cbRom32k4000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROM32K4000_ENABLED,
 		false ) );
-    this.btnRom16k8000.setSelected(
+    this.cbRom16k8000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROM16K8000_ENABLED,
 		false ) );
-    this.btnRom10kC000.setSelected(
+    this.cbRom10kC000.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROM10KC000_ENABLED,
 		false ) );
-    this.btnRomBoot.setSelected(
+    this.cbRomBoot.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROMBOOT_ENABLED,
 		false ) );
-    this.btnRomMega.setSelected(
+    this.cbRomMega.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_ROMMEGA_ENABLED,
@@ -859,49 +836,54 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		this.propPrefix + Z9001.PROP_PRINTER_MOD_ENABLED,
 		false ) )
     {
-      this.btnPrinterModule.setSelected( true );
+      this.rbPrinterModule.setSelected( true );
     } else if( EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_CATCH_PRINT_CALLS,
 		false ) )
     {
-      this.btnCatchPrintCalls.setSelected( true );
+      this.rbCatchPrintCalls.setSelected( true );
     } else {
-      this.btnNoPrinter.setSelected( true );
+      this.rbNoPrinter.setSelected( true );
     }
 
     // Tab GIDE
     this.tabGIDE.updFields( props );
 
     // Tab Erweiterungen
-    this.btnFloppyDisk.setSelected(
+   this.cbFloppyDisk.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_FDC_ENABLED,
 		false ) );
-    this.btnPlotter.setSelected(
+    this.cbK1520Sound.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
-		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
-				false ) );
-    this.btnKCNet.setSelected(
+		this.propPrefix + Z9001.PROP_K1520SOUND_ENABLED,
+		false ) );
+    this.cbKCNet.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_KCNET_ENABLED,
 		false ) );
-    this.btnVDIP.setSelected(
+    this.cbPlotter.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
-		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
+		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
 		false ) );
-    this.btnRTC.setSelected(
+    this.cbRTC.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_RTC_ENABLED,
 		false ) );
+    this.cbVDIP.setSelected(
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
+		false ) );
 
     // Tab Sonstiges
-    this.btnPasteFast.setSelected(
+    this.cbPasteFast.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + Z9001.PROP_PASTE_FAST,
@@ -932,21 +914,21 @@ public class Z9001SettingsFld extends AbstractSettingsFld
   {
     String  label = DEFAULT_LABEL_ROM_MODULE;
     boolean state = false;
-    if( this.btnRom16k4000.isSelected()
-	|| this.btnRom32k4000.isSelected()
-	|| this.btnRom16k8000.isSelected()
-	|| this.btnRom10kC000.isSelected() )
+    if( this.cbRom16k4000.isSelected()
+	|| this.cbRom32k4000.isSelected()
+	|| this.cbRom16k8000.isSelected()
+	|| this.cbRom10kC000.isSelected() )
     {
       state = true;
-    } else if( this.btnRomBoot.isSelected() ) {
+    } else if( this.cbRomBoot.isSelected() ) {
       label = "Alternativer Inhalt des Boot-ROM-Moduls:";
       state = true;
-    } else if( this.btnRomMega.isSelected() ) {
+    } else if( this.cbRomMega.isSelected() ) {
       label = "Alternativer Inhalt des Mega-ROM-Moduls:";
       state = true;
     }
     this.fldRomModule.setLabelText( label );
     this.fldRomModule.setEnabled( state );
-    this.btnFixedScreenSize.setEnabled( this.btn80Chars.isSelected() );
+    this.cbFixedScreenSize.setEnabled( this.cb80Chars.isSelected() );
   }
 }

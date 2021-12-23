@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,12 +15,11 @@ import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import jkcemu.file.DirSelectDlg;
 
 
 public class ReplyDirDlg extends BaseDlg
@@ -70,6 +69,20 @@ public class ReplyDirDlg extends BaseDlg
 
 
   @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.textFld.removeActionListener( this );
+      this.btnSelect.removeActionListener( this );
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.textFld != null) ) {
@@ -79,7 +92,7 @@ public class ReplyDirDlg extends BaseDlg
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- Konstruktor --- */
 
   private ReplyDirDlg(
 		Window owner,
@@ -105,20 +118,20 @@ public class ReplyDirDlg extends BaseDlg
 
 
     // Bereich Eingabe
-    add( new JLabel( msg ), gbc );
-    this.textFld = new JTextField();
+    add( GUIFactory.createLabel( msg ), gbc );
+    this.textFld = GUIFactory.createTextField();
     if( defaultText != null ) {
       this.textFld.setText( defaultText );
     }
-    this.textFld.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
     gbc.gridx++;
     add( this.textFld, gbc );
 
-    this.btnSelect = createImageButton(
-				"/images/file/open.png",
-				"Ausw\u00E4hlen" );
+    this.btnSelect = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_SELECT );
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;
@@ -126,16 +139,12 @@ public class ReplyDirDlg extends BaseDlg
 
 
     // Bereich Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
     gbc.anchor    = GridBagConstraints.CENTER;
@@ -147,12 +156,21 @@ public class ReplyDirDlg extends BaseDlg
     add( panelBtn, gbc );
 
 
+    // Listener
+    this.textFld.addActionListener( this );
+    this.btnSelect.addActionListener( this );
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
+
+
     // sonstiges
     pack();
     setParentCentered();
     setResizable( true );
   }
 
+
+	/* --- private und Methoden --- */
 
   private void doApprove()
   {

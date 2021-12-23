@@ -49,7 +49,7 @@
    </li>
   </ol>
  <br/>
-  Das erste Format ist identisch zu den
+  Das erste Format, auch RAW-Format genannt, ist identisch zu den
   <a href="disk/diskimgformats.htm#plain">einfachen Abbilddateien bei der Diskettenemulation</a>.
   Abbilddateien mit diesem Format kann JKCEMU von einem Datentr&auml;ger
   erzeugen (siehe <a href="disk/creatediskimg.htm">hier</a>).
@@ -59,8 +59,13 @@
   Der 256&nbsp;Byte gro&szlig;e Kopfblock wird von JKCEMU nicht ausgewertet
   und auch nicht beschrieben.
  <br/><br/>
+  Beim &Ouml;ffnen einer Datei wird deren Typ anhand der Dateil&auml;nge
+  erkannt (RAW-Dateien m&uuml;ssen auf eine 512-Byte-Grenze enden).
+  Beim Anlegen einer neuen Datei wird man gefragt,
+  welchen Typ man haben m&ouml;chte.
+ <br/><br/>
   Abbilddateien in beiden Formaten lassen sich mit JKCEMU auch wieder
-  auf einen Datentr&auml;ger schreiben
+  auf einen Datenträger schreiben
   (siehe <a href="disk/writediskimg.htm">hier</a>).
 </body>
 </html>

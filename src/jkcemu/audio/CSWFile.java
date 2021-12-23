@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,11 +13,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.Main;
-import jkcemu.base.FileInfo;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileInfo;
+import jkcemu.file.FileUtil;
 
 
 public class CSWFile
@@ -25,18 +25,15 @@ public class CSWFile
   private static class CSWFormat
   {
     private long    sampleRate;
-    private long    pulses;
     private boolean initialPhase;
     private int     headerLen;
 
     private CSWFormat(
 		long    sampleRate,
-		long    pulses,
 		boolean initialPhase,
 		int     headerLen )
     {
       this.sampleRate   = sampleRate;
-      this.pulses       = pulses;
       this.initialPhase = initialPhase;
       this.headerLen    = headerLen;
     }
@@ -160,8 +157,8 @@ public class CSWFile
 	out.write( 1 );
 
 	// 2 Bytes Abtastrate
-	out.write( (int) (frameRate & 0xFF) );
-	out.write( (int) ((frameRate >> 8) & 0xFF) );
+	out.write( frameRate & 0xFF );
+	out.write( (frameRate >> 8) & 0xFF );
 
 	// Kompression
 	out.write( 1 );				// RLE
@@ -217,7 +214,7 @@ public class CSWFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 
@@ -228,12 +225,10 @@ public class CSWFile
 				byte[] buf,
 				int    pos ) throws IOException
   {
-    CSWFormat rv = null;
     if( !FileInfo.isCswMagicAt( buf, pos ) ) {
-      EmuUtil.throwUnsupportedFileFormat();
+      FileUtil.throwUnsupportedFileFormat();
     }
     long sampleRate  = 0;
-    long pulses      = 0;
     int  compression = 0;
     int  flags       = 0;
     int  headerLen   = 0;
@@ -244,7 +239,6 @@ public class CSWFile
       headerLen   = 0x20;
     } else {
       sampleRate  = EmuUtil.getInt4LE( buf, pos + 0x19 );
-      pulses      = EmuUtil.getInt4LE( buf, pos + 0x1D );
       compression = (int) buf[ pos + 0x21 ] & 0xFF;
       flags       = (int) buf[ pos + 0x22 ] & 0xFF;
       headerLen   = 0x34 + ((int) buf[ pos + 0x23 ] & 0xFF);
@@ -265,7 +259,6 @@ public class CSWFile
     }
     return new CSWFormat(
 			sampleRate,
-			pulses,
 			(flags & 0x01) != 0,
 			headerLen );
   }

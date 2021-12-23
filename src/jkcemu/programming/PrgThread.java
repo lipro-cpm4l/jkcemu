@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,15 @@
 
 package jkcemu.programming;
 
+import java.awt.Component;
 import java.awt.EventQueue;
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.Main;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.ErrorMsg;
-import jkcemu.base.LoadData;
+import jkcemu.file.FileFormat;
+import jkcemu.file.LoadData;
 import jkcemu.programming.assembler.Z80Assembler;
 import jkcemu.text.EditText;
 import jkcemu.text.TextEditFrm;
@@ -67,6 +68,20 @@ public abstract class PrgThread extends Thread
   protected abstract boolean execute() throws IOException;
 
 
+  protected void fireOpenResultText( final String text )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    openResultText( text );
+		  }
+		} );
+  }
+
+
   protected void fireReplaceSourceText( final String text )
   {
     final EditText editText = this.editText;
@@ -88,7 +103,10 @@ public abstract class PrgThread extends Thread
   }
 
 
-  protected void writeCodeToEmu( Z80Assembler assembler, boolean logAddrs )
+  protected void writeCodeToEmu(
+			Z80Assembler assembler,
+			FileFormat   fileFmt,
+			boolean      logAddrs )
   {
     boolean forceRun  = this.options.getForceRun();
     byte[]  codeBytes = assembler.getCreatedCode();
@@ -110,46 +128,70 @@ public abstract class PrgThread extends Thread
 	    secondSysName = emuSys.getSecondSystemName();
 	  }
 	}
-	appendToLog( "Lade Programmcode in Arbeitsspeicher" );
-	if( logAddrs || (secondSysName != null) ) {
-	  appendToLog( " (" );
-	  if( secondSysName != null ) {
-	    appendToLog( secondSysName );
-	    appendToLog( ", " );
-	  }
-	  appendToLog(
+	appendToLog( "Lade Programmcode in Arbeitsspeicher...\n" );
+	try {
+	  if( (emuSys != null) && (secondSysName != null) ) {
+	    emuSys.loadIntoSecondSystem( codeBytes, begAddr );
+	    appendToLog(
 		String.format(
-			"Bereich %04X-%04X)",
+			"Programmcode in %s nach %04X-%04X geladen\n",
+			secondSysName,
 			begAddr,
 			begAddr + codeBytes.length -  1) );
-	}
-	if( forceRun && (startAddr >= 0) ) {
-	  appendToLog(
-		String.format(
-			"\nund starte Programm auf Adresse %04X",
-			startAddr ) );
-	} else {
-	  if( forceRun ) {
-	    appendToLog( "\nStart des Programms nicht m\u00F6glich,\n"
-		+ "da Quelltext keine ENT-Anweisung (Programmeintrittspunkt)"
-		+ " enth\u00E4lt" );
-	  }
-	}
-	appendToLog( "...\n" );
-	if( (emuSys != null) && (secondSysName != null) ) {
-	  emuSys.loadIntoSecondSystem(
-			codeBytes,
-			begAddr,
-			forceRun ? startAddr : -1 );
-	} else {
-	  this.emuThread.loadIntoMemory(
+	    if( forceRun ) {
+	      appendToLog( "\n" + secondSysName
+		+ ": automatischer Programmstart nicht unterst\u00FCtzt\n" );
+	    }
+	  } else {
+	    StringBuilder rvStatusMsg = new StringBuilder();
+	    this.emuThread.loadIntoMemory(
 		new LoadData(
 			codeBytes,
 			0,
 			codeBytes.length,
 			begAddr,
 			forceRun ? startAddr : -1,
-			null ) );
+			fileFmt ),
+		rvStatusMsg );
+	    if( rvStatusMsg.length() > 0 ) {
+	      String msg     = rvStatusMsg.toString();
+	      String pattern = "Datei ";
+	      if( msg.startsWith( pattern ) ) {
+		appendToLog( "Programmcode "
+				+ msg.substring( pattern.length() ) );
+	      } else {
+		appendToLog( msg );
+	      }
+	    } else if( logAddrs ) {
+	      appendToLog(
+		String.format(
+			"Programmcode nach %04X-%04X geladen",
+			begAddr,
+			begAddr + codeBytes.length -  1) );
+	    }
+	    appendToLog( "\n" );
+	    if( forceRun ) {
+	      if( startAddr >= 0 ) {
+		appendToLog(
+			String.format(
+				"Starte Programm auf Adresse %04X...\n",
+				startAddr ) );
+	      } else {
+		appendToLog( "\nStart des Programms nicht m\u00F6glich,\n"
+			+ "da Quelltext keine ENT-Anweisung"
+			+ " (Programmeintrittspunkt) enth\u00E4lt\n" );
+	      }
+	    }
+	  }
+	}
+	catch( IOException ex ) {
+	  appendToLog( "Laden des Programmcodes fehlgeschlagen\n" );
+	  String msg = ex.getMessage();
+	  if( msg != null ) {
+	    if( !msg.isEmpty() ) {
+	      appendToLog( msg + "\n" );
+	    }
+	  }
 	}
       }
     } else {
@@ -196,11 +238,39 @@ public abstract class PrgThread extends Thread
     }
     catch( Exception ex ) {
       if( this.execEnabled ) {
-	EventQueue.invokeLater( new ErrorMsg( textEditFrm, ex ) );
+	ErrorMsg.showLater( textEditFrm, ex );
       }
     }
     if( textEditFrm != null ) {
       textEditFrm.threadTerminated( this );
+    }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void openResultText( String text )
+  {
+    TextEditFrm textEditFrm = this.editText.getTextEditFrm();
+    if( textEditFrm != null ) {
+      EditText editText = this.editText.getResultEditText();
+      if( editText != null ) {
+	if( editText.hasDataChanged()
+	    || !textEditFrm.contains( editText ) )
+	{
+	  editText = null;
+	}
+      }
+      if( editText != null ) {
+	editText.setText( text );
+	Component tab = editText.getTab();
+	if( tab != null ) {
+	  textEditFrm.setSelectedTab( tab );
+	}
+      } else {
+	editText = textEditFrm.openText( text );
+	this.editText.setResultEditText( editText );
+      }
     }
   }
 }

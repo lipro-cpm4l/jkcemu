@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.assembler;
 
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
@@ -21,6 +20,7 @@ public class AsmLine
   private boolean  commentAtStart;
   private String   comment;
   private String   label;
+  private int      begOfInst;
   private String   instruction;
   private AsmArg[] args;
   private int      argPos;
@@ -40,6 +40,7 @@ public class AsmLine
 	boolean                commentAtStart = false;
 	String                 comment        = null;
 	String                 label          = null;
+	int                    begOfInst      = -1;
 	String                 instruction    = null;
 	java.util.List<AsmArg> args           = null;
 
@@ -109,6 +110,7 @@ public class AsmLine
 	    ch = iter.next();
 	  }
 	  if( (ch != CharacterIterator.DONE) && (ch != ';') ) {
+	    begOfInst         = iter.getIndex();
 	    StringBuilder buf = new StringBuilder();
 	    while( (ch != CharacterIterator.DONE)
 		   && !PrgUtil.isWhitespace( ch )
@@ -117,7 +119,11 @@ public class AsmLine
 	      buf.append( Character.toUpperCase( ch ) );
 	      ch = iter.next();
 	    }
-	    instruction = buf.toString();
+	    if( buf.length() > 0 ) {
+	      instruction = buf.toString();
+	    } else {
+	      begOfInst = -1;
+	    }
 	  }
 
 	  // Argumente extrahieren
@@ -160,6 +166,7 @@ public class AsmLine
 			commentAtStart,
 			comment,
 			label,
+			begOfInst,
 			instruction,
 			args != null ?
 				args.toArray( new AsmArg[ args.size() ] )
@@ -177,23 +184,23 @@ public class AsmLine
     if( this.label != null ) {
       if( !this.label.isEmpty() ) {
 	buf.append( this.label );
-	buf.append( (char) ':' );
+	buf.append( ':' );
 	hasLabel = true;
       }
     }
     if( instruction != null ) {
       if( !instruction.isEmpty() ) {
-	buf.append( (char) '\t' );
+	buf.append( '\t' );
 	buf.append( instruction );
 	--tabsToComment;
       }
     }
     if( this.args != null ) {
       if( this.args.length > 0 ) {
-	buf.append( (char) '\t' );
+	buf.append( '\t' );
 	for( int i = 0; i < this.args.length; i++ ) {
 	  if( i > 0 ) {
-	    buf.append( (char) ',' );
+	    buf.append( ',' );
 	  }
 	  buf.append( this.args[ i ].createFormattedText() );
 	}
@@ -204,11 +211,11 @@ public class AsmLine
       if( !this.comment.isEmpty() ) {
 	if( hasLabel || (tabsToComment < 3) || !this.commentAtStart ) {
 	  while( tabsToComment > 0 ) {
-	    buf.append( (char) '\t' );
+	    buf.append( '\t' );
 	    --tabsToComment;
 	  }
 	}
-	buf.append( (char) ';' );
+	buf.append( ';' );
 	buf.append( this.comment );
       }
     }
@@ -231,6 +238,12 @@ public class AsmLine
 	throw new PrgException( buf.toString() );
       }
     }
+  }
+
+
+  public int getBegOfInstruction()
+  {
+    return this.begOfInst;
   }
 
 
@@ -279,12 +292,14 @@ public class AsmLine
 		boolean commentAtStart,
 		String  comment,
 		String  label,
+		int     begOfInst,
 		String  instruction,
 		AsmArg[] args )
   {
     this.commentAtStart = commentAtStart;
     this.comment        = comment;
     this.label          = label;
+    this.begOfInst      = begOfInst;
     this.instruction    = instruction;
     this.args           = args;
     this.argPos         = 0;
@@ -345,7 +360,7 @@ public class AsmLine
   {
     StringBuilder buf = new StringBuilder( 40 );
     if( ch >= '\u0020' ) {
-      buf.append( (char) '\'' );
+      buf.append( '\'' );
       buf.append( ch );
       buf.append( "\': " );
     }

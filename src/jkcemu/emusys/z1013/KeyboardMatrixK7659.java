@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@
 package jkcemu.emusys.z1013;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
 
 
 public class KeyboardMatrixK7659 extends KeyboardMatrix12x8

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -127,8 +126,18 @@ public class GIDE implements Runnable
 				Properties props,
 				String     propPrefix )
   {
+    return complies( gide, props, propPrefix, false );
+  }
+
+
+  public static boolean complies(
+				GIDE       gide,
+				Properties props,
+				String     propPrefix,
+				boolean    emulateAlways )
+  {
     boolean rv = false;
-    if( emulatesGIDE( props, propPrefix ) ) {
+    if( emulateAlways || emulatesGIDE( props, propPrefix ) ) {
       if( gide != null ) {
 	rv = gide.sameDisks( getHardDisks( props, propPrefix ) );
       }
@@ -138,6 +147,15 @@ public class GIDE implements Runnable
       }
     }
     return rv;
+  }
+
+
+  public static GIDE createGIDE(
+			Component  owner,
+			Properties props,
+			String     propPrefix )
+  {
+    return new GIDE( owner, propPrefix, getHardDisks( props, propPrefix ) );
   }
 
 
@@ -160,10 +178,7 @@ public class GIDE implements Runnable
 			String     propPrefix )
   {
     return emulatesGIDE( props, propPrefix ) ?
-			new GIDE(
-				owner,
-				propPrefix,
-				getHardDisks( props, propPrefix ) )
+			createGIDE( owner, props, propPrefix )
 			: null;
   }
 
@@ -324,10 +339,10 @@ public class GIDE implements Runnable
       }
       int maxSectsPerTrack = 0;
       for( int i = 0; i < this.disks.length; i++ ) {
-	this.offsets[ i ]         = disks[ i ].getOffset();
-	this.cylinders[ i ]       = disks[ i ].getCylinders();
-	this.heads[ i ]           = disks[ i ].getHeads();
-	this.sectorsPerTrack[ i ] = disks[ i ].getSectorsPerTrack();
+	this.offsets[ i ]         = this.disks[ i ].getOffset();
+	this.cylinders[ i ]       = this.disks[ i ].getCylinders();
+	this.heads[ i ]           = this.disks[ i ].getHeads();
+	this.sectorsPerTrack[ i ] = this.disks[ i ].getSectorsPerTrack();
 	this.totalSectors[ i ]    = (long) this.cylinders[ i ]
 					* (long) this.heads[ i ]
 					* (long) this.sectorsPerTrack[ i ];
@@ -941,11 +956,11 @@ public class GIDE implements Runnable
 	err = true;
 	if( !this.writeErrShown ) {
 	  this.writeErrShown = true;
-	  EmuUtil.fireShowError( this.owner, null, ex );
+	  EmuUtil.fireShowErrorDlg( this.owner, null, ex );
 	}
       }
       finally {
-	EmuUtil.closeSilent( raf );
+	EmuUtil.closeSilently( raf );
       }
       if( err ) {
 	this.errorReg = ERROR_UNCORRECTABLE_DATA;
@@ -963,6 +978,7 @@ public class GIDE implements Runnable
     }
     int cnt = task.byteCnt;
     if( (task.file != null) && (task.filePos >= 0) && (cnt > 0) ) {
+      Arrays.fill( this.ioBuf, 0, cnt, (byte) 0xE5 );
       if( task.file.exists() ) {
 	RandomAccessFile raf = null;
 	try {
@@ -981,7 +997,7 @@ public class GIDE implements Runnable
 	  }
 	  if( !this.readErrShown ) {
 	    this.readErrShown = true;
-	    EmuUtil.fireShowError(
+	    EmuUtil.fireShowErrorDlg(
 		this.owner,
 		"Die Festplattenabbilddatei kann nicht gelesen"
 			+ " werden.\n"
@@ -991,12 +1007,12 @@ public class GIDE implements Runnable
 	  }
 	}
 	finally {
-	  EmuUtil.closeSilent( raf );
+	  EmuUtil.closeSilently( raf );
 	}
       } else {
 	if( !this.readMissingFileShown ) {
 	  this.readMissingFileShown = true;
-	  EmuUtil.fireShowError(
+	  EmuUtil.fireShowErrorDlg(
 		this.owner,
 		"Die Festplattenabbilddatei existiert nicht und"
 			+ " kann deshalb auch nicht gelesen werden.\n"
@@ -1024,7 +1040,23 @@ public class GIDE implements Runnable
       boolean          err  = false;
       RandomAccessFile raf = null;
       try {
-	raf = new RandomAccessFile( task.file, "rw" );
+	raf      = new RandomAccessFile( task.file, "rw" );
+	long len = raf.length();
+	if( len < task.filePos ) {
+	  try {
+	    byte[] buf = new byte[ 512 ];
+	    Arrays.fill( buf, (byte) 0xE5 );
+	    raf.seek( len );
+	    while( (len + buf.length) <= task.filePos ) {
+	      raf.write( buf );
+	      len += buf.length;
+	    }
+	    if( len < task.filePos ) {
+	      raf.write( buf, 0, (int) (task.filePos - len) );
+	    }
+	  }
+	  catch( IOException ex ) {}
+	}
 	raf.seek( task.filePos );
 	raf.write( this.ioBuf, 0, SECTOR_SIZE );
 	raf.close();
@@ -1034,11 +1066,11 @@ public class GIDE implements Runnable
 	err = true;
 	if( !this.writeErrShown ) {
 	  this.writeErrShown = true;
-	  EmuUtil.fireShowError( this.owner, null, ex );
+	  EmuUtil.fireShowErrorDlg( this.owner, null, ex );
 	}
       }
       finally {
-	EmuUtil.closeSilent( raf );
+	EmuUtil.closeSilently( raf );
       }
       if( err ) {
 	this.errorReg = ERROR_UNCORRECTABLE_DATA;

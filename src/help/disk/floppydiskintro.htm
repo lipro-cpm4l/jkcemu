@@ -52,8 +52,11 @@
   mit dem das Diskettenlaufwerk im Windows sichtbar ist.
   Auf einem Linux/Unix-System geben Sie die entsprechende
   Ger&auml;tedatei an.
-  Anschlie&szlig;end m&uuml;ssen Sie nur noch das Diskettenformat
-  ausw&auml;hlen.
+ <br/><br/>
+  <b>Achtung!</b> Auf einem Linux/Unix-System muss JKCEMU
+  m&ouml;glicherweise mit Adimistratorberechtigungen
+  (Benutzername <em>root</em>) laufen,
+  um auf das Diskettenlaufwerk zugreifen zu k&ouml;nnen.
  <br/><br/>
   Bei der Emulation eines Diskettenlaufwerkes mit einer realen Diskette
   gelten folgende Einschr&auml;nkungen:
@@ -61,30 +64,58 @@
    <li>
     Das physische Diskettenformat, d.h. die Anzahl der Spuren,
     die Anzahl der Sektoren pro Spur und die Sektorgr&ouml;&szlig;e,
-    muss vom Betriebssystem des Emulatorrechners unterst&uuml;tzt werden.
-    <br/>
-    Dagegen muss das logische Format, d.h. das CP/M-Dateisystem,
-    vom Emulatorrechner nicht unterst&uuml;tzt werden
-    (und wird i.d.R. auch nicht), d.h., 
+    muss von der Hardware und vom Betriebssystem des Emulatorrechners
+    unterst&uuml;tzt werden.
+    Neuere Betriebssysteme und USB-Disksttenlaufwerke
+    unterst&uuml;tzten wahrscheinlich nur noch 512&nbsp;Byte
+    gro&szlig;e Sektoren.
+    <br/><br/>
+   </li>
+   <li>
+    Das logische Format, d.h. das CP/M-Dateisystem,
+    muss dagegen vom Emulatorrechner nicht unterst&uuml;tzt werden
+    (und wird i.d.R. auch nicht unterst&uuml;tzt), d.h., 
     die Dateien auf der Diskette werden Sie im Dateisystem
     des Emulatorrechners nicht sehen k&ouml;nnen.
     <br/><br/>
    </li>
    <li>
+    Der Emulator kann einen Diskettenwechsel nicht erkennen.
+    Deshalb ist es wichtig, vor dem Auswerfen der Diskette
+    im Fenster <em>JKCEMU Diskettenstation</em>
+    im Men&uuml; <em>&Ouml;ffnen/Laden</em> den Punkt
+    <em>Diskette/Abbilddatei schlie&szlig;en</em> aufzurufen.
+    Sollten Sie das vergessen, dann tun Sie es halt danach.
+    Auf keinen Fall d&uuml;rfen Sie ohne die Diskette zu schlie&szlig;en
+    eine andere Diskette mit einam andern Diskettenformat einlegen
+    und darauf schreiben wollen!
+    Wenn Sie das tun, m&uuml;ssen Sie mit Datenverlust rechnen!
+    <br/><br/>
+   </li>
+   <li>
     Wenn Sie im emulierten System die Diskette formatieren,
-    wird sie nicht physisch formatiert.
-    Das Formatieren ist m&ouml;glich,
-    solange das neue Format mit dem alten identisch ist.
+    wird sie nicht physisch formatiert, sondern nur &uuml;berschrieben.
+    Deshalb ist das Formatieren in der Emulation nur m&ouml;glich,
+    wenn das neue Format mit dem alten identisch ist.
     Unterscheiden sich die Formate, wird ein Schreibfehler emuliert,
     und das Formatierprogramm sollte diesen Fehler auch ausgeben.
    </li>
   </ul>
  <br/>
-  <b>Achtung!</b> Der Zugriff auf physische Laufwerke h&auml;ngt
-  von verschiedenen Faktoren ab und kann deshalb nicht auf
-  allen Plattformen und Betriebssystemumgebungen garantiert werden.
-  M&ouml;glicherweise steht die Funktion auf Ihrem System
-  nicht zur Verf&uuml;gung.
+  <b>Achtung!</b> Ist auf der Diskette ein CP/M-Dateisystem
+  oder ein anderes &quot;altes&quot; Dateisystem enthalten,
+  kann das Betriebssystem des Emulatorrechners damit wahrscheinlich
+  nichts anfangen.
+  Windows bietet in dem Fall das Formatieren des Datentr&auml;gers an.
+  Das d&uuml;rfen Sie auf keinen Fall tun, sonst sind alle Daten weg!
+  Des Weiteren kann es vorkommen, dass bei Anschluss eines
+  USB-Diskettenlaufwerks mit eingelegter Diskette,
+  die ein &quot;altes&quot; Dateisystem hat,
+  das Diskettenlaufwerk nicht richtig erkannt wird.
+  Schliel&szlig;en Sie deshalb ein USB-Diskettenlaufwerk immer
+  ohne eingelegter Diskette an und legen die Diskette erst dann ein,
+  wenn das Betriebssystem das Laufwerk erkannt hat und
+  die Zugriffsanzeige des Laufwerks erloschen ist.
  <br/><br/>
 
  <h2><a name="file">2. Emulation mit einer Diskettenabbilddatei</a></h2>

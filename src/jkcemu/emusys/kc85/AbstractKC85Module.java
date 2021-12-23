@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 package jkcemu.emusys.kc85;
 
 import java.awt.Component;
-import java.lang.*;
 import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 
@@ -18,15 +17,27 @@ public abstract class AbstractKC85Module
 {
   protected int     slot;
   protected boolean enabled;
+  protected String  title;
 
-  private String typeByteText;
+  private boolean switchable;
+  private String  externalModuleName;
+  private String  typeByteText;
+
+
+  protected AbstractKC85Module( int slot, boolean switchable )
+  {
+    this.slot               = slot;
+    this.switchable         = switchable;
+    this.enabled            = !switchable;
+    this.title              = null;
+    this.externalModuleName = null;
+    this.typeByteText       = null;
+  }
 
 
   protected AbstractKC85Module( int slot )
   {
-    this.slot         = slot;
-    this.enabled      = false;
-    this.typeByteText = null;
+    this( slot, true );
   }
 
 
@@ -39,12 +50,6 @@ public abstract class AbstractKC85Module
 	EmuUtil.appendHTML( buf, fileName );
       }
     }
-  }
-
-
-  public void clearRAM()
-  {
-    // leer
   }
 
 
@@ -89,7 +94,38 @@ public abstract class AbstractKC85Module
   }
 
 
+  public String getExternalModuleName()
+  {
+    return this.externalModuleName != null ?
+			this.externalModuleName
+			: getModuleName();
+  }
+
+
   public String getFileName()
+  {
+    return null;
+  }
+
+
+  public int getLEDrgb()
+  {
+    int rv = KC85FrontFld.RGB_LED_NONE;
+    if( this.switchable ) {
+      if( this.enabled ) {
+	rv = KC85FrontFld.RGB_LED_GREEN;
+      } else {
+	rv = KC85FrontFld.RGB_LED_DARK;
+      }
+    }
+    return rv;
+  }
+
+
+  public abstract String getModuleName();
+
+
+  public Boolean getReadWrite()
   {
     return null;
   }
@@ -101,20 +137,16 @@ public abstract class AbstractKC85Module
   }
 
 
-  public Boolean getReadWrite()
-  {
-    return null;
-  }
-
-
   public int getSlot()
   {
     return this.slot;
   }
 
 
-  public abstract String getModuleName();
-  public abstract int    getTypeByte();
+  public int getTypeByte()
+  {
+    return 0xFF;		// kein Strukturbyte
+  }
 
 
   public String getTypeByteText()
@@ -129,6 +161,12 @@ public abstract class AbstractKC85Module
   public boolean isEnabled()
   {
     return this.enabled;
+  }
+
+
+  public boolean isSwitchable()
+  {
+    return this.switchable;
   }
 
 
@@ -158,9 +196,22 @@ public abstract class AbstractKC85Module
   }
 
 
+  public void reset( boolean powerOn )
+  {
+    // leer
+  }
+
+
   public void setStatus( int value )
   {
-    this.enabled = ((value & 0x01) != 0);
+    if( this.switchable )
+      this.enabled = ((value & 0x01) != 0);
+  }
+
+
+  public void setExternalModuleName( String externalModuleName )
+  {
+    this.externalModuleName = externalModuleName;
   }
 
 
@@ -190,5 +241,20 @@ public abstract class AbstractKC85Module
   public int writeMemByte( int addr, int value )
   {
     return 0;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public synchronized String toString()
+  {
+    if( this.title == null ) {
+      this.title = String.format(
+				"%s im Schacht %02X",
+				getModuleName(),
+				this.slot );
+    }
+    return this.title;
   }
 }

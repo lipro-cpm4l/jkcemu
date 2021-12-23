@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,11 +13,12 @@ package jkcemu.net;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.net.SocketException;
 
 
@@ -87,11 +88,15 @@ public class EmuDatagramSocket implements AutoCloseable, Closeable
   }
 
 
-  public void joinGroup( InetAddress multicastAddr ) throws IOException
+  public void joinGroup(
+		SocketAddress    multicastAddr,
+		NetworkInterface netIf ) throws IOException
   {
     if( this.datagramSocket != null ) {
       if( this.datagramSocket instanceof MulticastSocket ) {
-	((MulticastSocket) this.datagramSocket).joinGroup( multicastAddr );
+	((MulticastSocket) this.datagramSocket).joinGroup(
+							multicastAddr,
+							netIf );
       }
     }
   }

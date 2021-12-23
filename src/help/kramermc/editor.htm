@@ -1,112 +1,111 @@
 <html>
 <body>
-  <h1>Kramer-MC: Editor</h1>
-    Der Editor hat einen Kommando- und einen Eingabemodus.
-    Nach dem Start (Monitorkommando <tt>T</tt>) befindet man sich
-    im Kommandomodus.
-  <br/><br/>
-    Als Textspeicher wird der Adressbereich 4000H bid 7FFFH verwendet.
-    Mit dem A-Kommando kann auch ein anderer Textspeicher eingestellt werden.
-  <br/><br/>
+ <h1>Kramer-MC: Editor</h1>
+  Der Editor hat einen Kommando- und einen Eingabemodus.
+  Nach dem Start (Monitorkommando <tt>T</tt>) befindet man sich
+  im Kommandomodus.
+ <br/><br/>
+  Als Textspeicher wird der Adressbereich 4000H bid 7FFFH verwendet.
+  Mit dem A-Kommando kann auch ein anderer Textspeicher eingestellt werden.
+ <br/><br/>
 
-  <h2>Kommandos</h2>
-    <table border="1">
-      <tr><th>Kommando</th><th>Funktion</th><th>Syntax</th></tr>
-      <tr>
-	<td>A(sign)</td>
-	<td>Textspeicherzuweisung</td><td>A nnnn (CR)</td>
-      </tr>
-      <tr>
-	<td>D(isplay)</td>
-	<td>
-	  Darstellen einer Anzahl von n mit Weiterstellen
-	  des Zeilenz&auml;hlers
-	</td>
-	<td>Dn (CR)</td>
-      </tr>
-      <tr><td>E(dit)</td><td>Texteingabemodus</td><td>En (CR)</td></tr>
-      <tr>
-	<td>G(o)</td>
-	<td>Weiterstellen des Zeilenz&auml;hlers vorw&auml;rts um n Zeilen</td>
-	<td>Gn (CR)</td>
-      </tr>
-      <tr>
-	<td>I(nput)</td>
-	<td>Zuweisung Eingabekanal</td>
-	<td>IT, IL oder IU</td>
-      </tr>
-      <tr>
-	<td>L(ist)</td>
-	<td>Zuweisung Druckerkanal</td>
-	<td>LT, LL oder LU</td>
-      </tr>
-      <tr>
-	<td>0(utput)</td>
-	<td>Zuweisung Ausgabekanal</td>
-	<td>OT, OL oder OU</td>
-      </tr>
-      <tr>
-	<td>P(rint)</td>
-	<td>Ausgabe aller Zeilen auf Listkanal</td>
-	<td>P</td>
-      </tr>
-      <tr><td>Q(uit)</td><td>Rücksprung in den Monitor</td><td>Q</td></tr>
-    </table>
-  <br/><br/>
+ <h2>Kommandos</h2>
+  <table border="1">
+   <tr><th>Kommando</th><th>Funktion</th><th>Syntax</th></tr>
+   <tr>
+    <td>A(sign)</td>
+    <td>Textspeicherzuweisung</td><td>A nnnn (CR)</td>
+   </tr>
+   <tr>
+    <td>D(isplay)</td>
+    <td>
+     Darstellen einer Anzahl von n mit Weiterstellen
+     des Zeilenz&auml;hlers
+    </td>
+    <td>Dn (CR)</td>
+   </tr>
+   <tr><td>E(dit)</td><td>Texteingabemodus</td><td>En (CR)</td></tr>
+   <tr>
+    <td>G(o)</td>
+    <td>Weiterstellen des Zeilenz&auml;hlers vorw&auml;rts um n Zeilen</td>
+    <td>Gn (CR)</td>
+   </tr>
+   <tr>
+    <td>I(nput)</td>
+    <td>Zuweisung Eingabekanal</td>
+    <td>IT, IL oder IU</td>
+   </tr>
+   <tr>
+    <td>L(ist)</td>
+    <td>Zuweisung Druckerkanal</td>
+    <td>LT, LL oder LU</td>
+   </tr>
+   <tr>
+    <td>0(utput)</td>
+    <td>Zuweisung Ausgabekanal</td>
+    <td>OT, OL oder OU</td>
+   </tr>
+   <tr>
+    <td>P(rint)</td>
+    <td>Ausgabe aller Zeilen auf Listkanal</td>
+    <td>P</td>
+   </tr>
+   <tr><td>Q(uit)</td><td>Rücksprung in den Monitor</td><td>Q</td></tr>
+  </table>
+ <br/><br/>
 
-  <h2>Editor-Steuerzeichen</h2>
-    <table border="1">
-      <tr><th>Taste</th><th>Funktion</th></tr>
-      <tr>
-	<td>BS</td>
-	<td>
-	  Cursor nach links,
-	  Korrektur durch &Uuml;berschreiben m&ouml;glich
-	</td>
-      </tr>
-      <tr><td>DEL</td><td>Inhalt der Anzeigezeile l&ouml;schen</td></tr>
-      <tr>
-	<td>LP</td>
-	<td>
-	  Zeile in Textpuffer &uuml;bernehmen,
-	  n&auml;chste Zeile aus dem Puffer anzeigen
-	</td>
-      </tr>
-      <tr>
-	<td>CR</td>
-	<td>Zeile in Puffer &uuml;bernehmen, E-Kommando verlassen</td>
-      </tr>
-      <tr>
-	<td>Control D</td>
-	<td>vorletzte Zeile in Arbeitszeile doppeln</td>
-      </tr>
-      <tr>
-	<td>Control Z</td>
-	<td>Zeile in Puffer &uuml;bernehmen, neue Zeile beginnen</td>
-      </tr>
-      <tr>
-	<td>Control X</td>
-	<td>
-	  Zeichen &uuml;ber dem Cursor l&ouml;schen,
-	  Rest nach links verschieben
-	</td>
-      </tr>
-      <tr>
-	<td>Control S</td>
-	<td>
-	  Zeichen &uuml;ber dem Cursor einf&uuml;gen,
-	  Rest nach rechts verschieben
-	</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h2>Editor-Steuerzeichen</h2>
+  <table border="1">
+   <tr><th>Taste</th><th>Funktion</th></tr>
+   <tr>
+    <td>BS</td>
+    <td>
+     Cursor nach links,
+     Korrektur durch &Uuml;berschreiben m&ouml;glich
+    </td>
+   </tr>
+   <tr><td>DEL</td><td>Inhalt der Anzeigezeile l&ouml;schen</td></tr>
+   <tr>
+    <td>LP</td>
+    <td>
+     Zeile in Textpuffer &uuml;bernehmen,
+     n&auml;chste Zeile aus dem Puffer anzeigen
+    </td>
+   </tr>
+   <tr>
+    <td>CR</td>
+    <td>Zeile in Puffer &uuml;bernehmen, E-Kommando verlassen</td>
+   </tr>
+   <tr>
+    <td>Control D</td>
+    <td>vorletzte Zeile in Arbeitszeile doppeln</td>
+   </tr>
+   <tr>
+    <td>Control Z</td>
+    <td>Zeile in Puffer &uuml;bernehmen, neue Zeile beginnen</td>
+   </tr>
+   <tr>
+    <td>Control X</td>
+    <td>
+     Zeichen &uuml;ber dem Cursor l&ouml;schen,
+     Rest nach links verschieben
+    </td>
+   </tr>
+   <tr>
+    <td>Control S</td>
+    <td>
+     Zeichen &uuml;ber dem Cursor einf&uuml;gen,
+     Rest nach rechts verschieben
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
 
-  <h2>Editor-Fehlermeldungen</h2>
-    <table border="1">
-      <tr><td>E1</td><td>Kommandofehler</td></tr>
-      <tr><td>E2</td><td>Textpuffer voll</td></tr>
-      <tr><td>E3</td><td>Parameterfehler</td></tr>
-    </table>
+ <h2>Editor-Fehlermeldungen</h2>
+  <table border="1">
+   <tr><td>E1</td><td>Kommandofehler</td></tr>
+   <tr><td>E2</td><td>Textpuffer voll</td></tr>
+   <tr><td>E3</td><td>Parameterfehler</td></tr>
+  </table>
 </body>
 </html>
-

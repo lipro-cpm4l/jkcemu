@@ -13,8 +13,8 @@
   <em>Z9001 &rarr; Betriebssystemversion&nbsp;1.1</em> und
   <em>KC85/1 &rarr; Betriebssystemversion&nbsp;1.2</em>.
   Obwohl diese Zuordnung nicht ganz der Realit&auml;t entspricht
-  (der Versionssprung hat mit der Umbenennung eigentlich nichts zu tun,
-  sie liegen nur zeitlich relativ nah beieinander),
+  (der Versionssprung hat mit der Umbenennung nichts zu tun,
+  beide Ereignisse lagen nur zeitlich relativ nah beieinander),
   emuliert JKCEMU beide Ger&auml;te als separate Systeme
   mit unterschiedlichen Betriebssystemversionen.
  <br/><br/>
@@ -72,6 +72,7 @@
      </li>
      <li><a href="z9001.htm#rtc">1.13. Echtzeituhrmodul</a></li>
      <li><a href="z9001.htm#audio">1.14. Kassetten- und Tonausgabe</a></li>
+     <li><a href="z9001.htm#interrupts">1.15. Interrupt-Handling bei Modulen</a></li>
     </ul>
    </li>
    <li><a href="z9001.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -155,6 +156,7 @@
       <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
       an der E/A-Basisadresse&nbsp;50h
      </li>
+     <li><a href="k1520sound.htm">K1520-Sound-Karte</a></li>
      <li>
       <a href="z9001.htm#kcnet">KCNet-kompatible Netzwerkkarte</a>
       an der E/A-Basisadressen&nbsp;C0h
@@ -163,7 +165,7 @@
       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
       an der E/A-Basisadressen&nbsp;DCh
      </li>
-     <li><a href="z9001.htm#rtc">1.13. Echtzeituhrmodul</a></li>
+     <li><a href="z9001.htm#rtc">Echtzeituhrmodul</a></li>
      <li><a href="plotter.htm">Plotter</a> XY4131 / XY4140</li>
     </ul>
    </li>
@@ -373,25 +375,12 @@
   In dem Fall wird dann zwischen den unteren und den oberen 2&nbsp;KByte
   umgeschaltet.
  <br/><br/>
-  Auf der im JKCEMU enthaltenen <em>Z9001 CP/A Systemdiskette</em>
+  Auf der im JKCEMU enthaltenen
+  <a href="z9001.htm#disks">Z9001 CP/A Systemdiskette</a>
   befinden sich auch Treiber f&uuml;r den 80-Zeichen-Modus.
   Da diese Treiber die Hardware &uuml;ber die E/A-Adressen
-  nach Ulrich Zander ansteuern, beginnen sie mit <em>uz80...</em>.
-  <table border="1">
-   <tr><th>Dateiname</th><th>Bedeutung</th></tr>
-   <tr>
-    <td>uz80c.com</td>
-    <td>Einschalten der 80-Zeichen-Darstellung (Farbe)</td>
-   </tr>
-   <tr>
-    <td>uz80bw.com</td>
-    <td>Einschalten der 80-Zeichen-Darstellung (schwarz/wei&szlig;)</td>
-   </tr>
-   <tr>
-    <td>uz80ex.com</td>
-    <td>Ausschalten der 80-Zeichen-Darstellung</td>
-   </tr>
-  </table>
+  nach Ulrich Zander ansteuern,
+  beginnen die Dateinamen mit <em>UZ80...</em>.
  <br/><br/>
 
  <h3><a name="screensize">1.5.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a></h3>
@@ -540,8 +529,24 @@
   h&ouml;rbar, jedoch zus&auml;tzlich &uuml;ber die
   E/A-Adresse&nbsp;88h, Bit&nbsp;7, an- und abschaltbar.
   F&uuml;r dieses Lautsprechersignal ist der Reiter
-  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
-  zust&auml;ndig.
+  <a href="audio.htm#sound_out">Lautsprecher</a> zust&auml;ndig.
+  Ein weiterer Reiter erscheint, wenn Sie die Emulation der
+  <a href="k1520sound.htm">K1520-Sound-Karte</a> aktiviert haben.
+ <br/><br/>
+
+ <h3><a name="interrupts">1.15. Interrupt-Handling bei Modulen</a></h3>
+  Auf der originalen Hardware haben Module,
+  die auf den Modultr&auml;ger gesteckt sind
+  (z.B. <a href="k1520sound.htm">K1520-Sound-Karte</a>),
+  Probleme mit dem Interrupt-Handling,
+  wenn die Interrupt-Serviceroutine im RAM der Grundplatine
+  (Addressbereich 0000h bis 3FFFh) l&auml;uft.
+  Konkret sperrt ein Datenbustreiber den Modultr&auml;ger,
+  wenn die Adresse kleiner 4000h ist.
+  Wird nun ein RETI-Befehl im Adressbereich kleiner 4000h ausgef&uuml;hrt,
+  k&ouml;nnen die Module diesen Befehl nicht erkennen
+  und somit ihren Interrupt-Status nicht zur&uuml;cksetzen.
+  Diese Einschr&auml;nkung wird auch von JKCEMU emuliert.
  <br/><br/>
 
 
@@ -602,11 +607,65 @@
   Die Diskette selbst ist somit unter dem Laufwerk&nbsp;<em>A:</em>
   ansprechbar.
  <br/><br/>
-  Auf der Diskette befinden sich auch Treiber f&uuml;r zwei RAM-Floppies,
-  40/80-Zeichen-Umschaltung und Systemuhr.
-  Wenn Sie diese Treiber laden m&ouml;chten, muss nat&uuml;rlich
-  die Emulation der entsprechenden Hardware aktiviert sein.
+  Auf der Diskette befinden sich auch Treiber zur Nutzung spezifischer
+  Z9001-Hardware-Features bzw. einiger Hardware-Erweiterungen:
  <br/><br/>
+  <table border="1">
+   <tr><th>Programm</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">20Z.COM</td>
+    <td>Bildschirm auf 20&nbsp;Zeilen einstellen</td>
+   </tr>
+   <tr>
+    <td valign="top">24Z.COM</td>
+    <td>Bildschirm auf 24&nbsp;Zeilen einstellen</td>
+   </tr>
+   <tr>
+    <td valign="top">CLOCK.COM</td>
+    <td>Systemuhr installieren bzw. deinstallieren</td>
+   </tr>
+   <tr>
+    <td valign="top">RAF2X20P.COM</td>
+    <td>
+     RAM-Floppy an E/A-Adrese 20h/21h als Laufwerk P: installieren<br/>
+     (Emulation der ersten RAM-Floppy muss aktiviert sein)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">RAF2X24O.COM</td>
+    <td>
+     RAM-Floppy an E/A-Adrese 24h/25h als Laufwerk O: installieren<br/>
+     (Emulation der zweiten RAM-Floppy muss aktiviert sein)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">UZ80BW.COM</td>
+    <td>
+     80-Zeichen-Treiber f&uuml;r S/W-Grafik installieren<br/>
+     (Emulation der 40/80-Zeichenumschaltung muss aktiviert sein)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">UZ80C.COM</td>
+    <td>
+     80-Zeichen-Treiber f&uuml;r Farbgrafik installieren<br/>
+     (Emulation der 40/80-Zeichenumschaltung muss aktiviert sein)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">UZ80EX.COM</td>
+    <td>80-Zeichen-Treiber deinstallieren</td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Auf der Diskette ist auch die leere Datei
+  <a href="go_com.htm">GO.COM</a> enthalten.
+  Diese dient zum Starten eines im Arbeitsspeicher befindlichen
+  CP/M-kompatiblen Programms.
+  Wird <em>GO</em> aufgerufen ohne dass ein Programm im Arbeitsspeicher
+  vorhanden ist, f&uuml;hrt das zu einem Absturz.
+ <br/><br/>
+
 
  <h2><a name="etc">4. Sonstiges</a></h2>
 

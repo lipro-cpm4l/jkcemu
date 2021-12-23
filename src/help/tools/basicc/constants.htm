@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Konstanten</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -10,14 +11,18 @@
   (z.B. bei den Farben) oder auch von einem zum n&auml;chsten
   Compiler-Lauf (z.B. bei den Adressen).
  <br/><br/>
+  Alle Konstanten haben den Datentyp
+  <a href="datatypes.htm#integer">Integer</a>.
+ <br/><br/>
   <ul>
    <li><a href="constants.htm#boolean">1. Boolsche Werte</a></li>
-   <li><a href="constants.htm#color">2. Farben</a></li>
-   <li><a href="constants.htm#pen">3. Grafikstifte</a></li>
-   <li><a href="constants.htm#joyst">4. Joystick</a></li>
-   <li><a href="constants.htm#error">5. Fehlercodes</a></li>
-   <li><a href="constants.htm#target">6. Zielsysteme</a></li>
-   <li><a href="constants.htm#system">7. Systemkonstanten</a></li>
+   <li><a href="constants.htm#round">2. Rundungsmethoden</a></li>
+   <li><a href="constants.htm#color">3. Farben</a></li>
+   <li><a href="constants.htm#pen">4. Grafikstifte</a></li>
+   <li><a href="constants.htm#joyst">5. Joystick</a></li>
+   <li><a href="constants.htm#error">6. Fehlercodes</a></li>
+   <li><a href="constants.htm#target">7. Zielsysteme</a></li>
+   <li><a href="constants.htm#system">8. Systemkonstanten</a></li>
   </ul>
  <br/>
 
@@ -41,7 +46,30 @@
   </table>
  <br/>
 
- <h3><a name="color">2. Farben</a></h3>
+ <h3><a name="round">2. Rundungsmethoden</a></h3>
+  Diese Konstanten finden Anwendung bei der Funktion
+  <a href="functions.htm#round">ROUND</a> und geben an,
+  wie grundet werden soll, wenn der zu rundende Wert exakt in der Mitte
+  zwischen zwei m&ouml;glichen Ergebniswerten liegt.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">ROUND_HALF_DOWN</td>
+    <td valign="top">Betrag abrunden, d.h. zur Null hin runden</td>
+   </tr>
+   <tr>
+    <td valign="top">ROUND_HALF_EVEN</td>
+    <td valign="top">Betrag auf ganze Zahl runden</td>
+   </tr>
+   <tr>
+    <td valign="top">ROUND_HALF_UP</td>
+    <td valign="top">Betrag aufrunden, d.h. von der Null weg runden</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="color">3. Farben</a></h3>
   Die Konstanten f&uuml;r die Farben sind f&uuml;r die Anwendung
   bei den Anweisungen
   <a href="instructions.htm#border">BORDER</a>,
@@ -101,13 +129,17 @@
   </table>
  <br/>
 
- <h3><a name="pen">3. Grafikstifte</a></h3>
+ <h3><a name="pen">4. Grafikstifte</a></h3>
   Die Konstanten f&uuml;r die Grafikstifte werden als Parameter f&uuml;r die
-  <a href="instructions.htm#pen">PEN</a>-Anweisung verwendet.
+  <a href="instructions.htm#pen">PEN</a>-Anweisung verwendet
   und sind auch dort beschrieben.
  <br/><br/>
   <table border="1">
    <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>PEN_ERASER</tt></td>
+    <td>L&ouml;schmodus</td>
+   </tr>
    <tr>
     <td valign="top"><tt>PEN_NONE</tt></td>
     <td>Stift angehoben</td>
@@ -117,17 +149,13 @@
     <td>normaler Zeichenmodus</td>
    </tr>
    <tr>
-    <td valign="top"><tt>PEN_RUBBER</tt></td>
-    <td>L&ouml;schmodus</td>
-   </tr>
-   <tr>
     <td valign="top"><tt>PEN_XOR</tt></td>
     <td>XOR-Modus</td>
    </tr>
   </table>
  <br/>
  
- <h3><a name="joyst">4. Joystick</a></h3>
+ <h3><a name="joyst">5. Joystick</a></h3>
   Die Joystick-Konstanten dienen zur Auswertung des R&uuml;ckgabewertes
   der <a href="functions.htm#joyst">JOYST</a>-Funktion.
   Dazu ist der R&uuml;ckgabewert mit der jeweiligen Konstante mit
@@ -166,7 +194,7 @@
   </table>
  <br/>
 
- <h3><a name="error">5. Fehlercodes</a></h3>
+ <h3><a name="error">6. Fehlercodes</a></h3>
   Die Fehlercodekonstanten dienen zur Auswertung der Systemvariable
   <a href="functions.htm#err">ERR</a>.
  <br/><br/>
@@ -200,6 +228,16 @@
      Entweder ist das Ger&auml;t nicht vorhanden oder nicht betriebsbereit
      oder f&uuml;r das Zielsystem wird das Ger&auml;t nicht unterst&uuml;tzt
      oder der Ger&auml;tename wurde falsch geschrieben.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_DIGITS_TRUNCATED</td>
+    <td valign="top">
+     Bei der letzten Berechnung mit dem Datentyp
+     <a href="datatypes.htm#decimal">Decimal</a>
+     wurden Nachkommastellen abgeschnitten,
+     da diese nicht in den Datentyp passen (max. 7&nbsp;Nachkommastellen).
+     Das Ergebnis ist somit nicht mehr mathematisch exakt.
     </td>
    </tr>
    <tr>
@@ -292,7 +330,7 @@
   </table>
  <br/>
 
- <h3><a name="target">6. Konstanten f&uuml;r Zielsysteme</a></h3>
+ <h3><a name="target">7. Konstanten f&uuml;r Zielsysteme</a></h3>
   <table border="1">
    <tr><th>Konstante</th><th>Zielsystem</th></tr>
    <tr>
@@ -326,6 +364,12 @@
     </td>
    </tr>
    <tr>
+    <td valign="top">TARGET_KC85_CAOS48</td>
+    <td valign="top">
+     <a href="targets.htm#kc85_caos48">KC85/5 mit CAOS&nbsp;&gt;=&nbsp;48</a>
+    </td>
+   </tr>
+   <tr>
     <td valign="top">TARGET_KRAMER</td>
     <td valign="top">
      <a href="targets.htm#kramer">Kramer-MC</a>
@@ -356,6 +400,18 @@
     </td>
    </tr>
    <tr>
+    <td valign="top">TARGET_Z1013_KRT</td>
+    <td valign="top">
+     <a href="targets.htm#z1013krt">Z1013 mit KRT-Grafik</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_Z1013_ZX</td>
+    <td valign="top">
+     <a href="targets.htm#z1013zx">Z1013 mit ZX-Grafik</a>
+    </td>
+   </tr>
+   <tr>
     <td valign="top">TARGET_Z9001</td>
     <td valign="top">
      <a href="targets.htm#z9001">KC85/1, KC87, Z9001</a>
@@ -370,7 +426,7 @@
   </table>
  <br/>
 
- <h3><a name="system">7. Systemkonstanten</a></h3>
+ <h3><a name="system">8. Systemkonstanten</a></h3>
   <table border="1">
    <tr><th>Konstante</th><th>Bedeutung</th></tr>
    <tr>
@@ -393,7 +449,7 @@
     <td valign="top">TOP</td>
     <td valign="top">
      Adresse des ersten freien Bytes hinter dem vom compiliertem
-     BASIC-Programm belegten bzw. benutzten Speicher
+     BASIC-Programm belegten bzw. verwendeten Speicher
     </td>
    </tr>
   </table>

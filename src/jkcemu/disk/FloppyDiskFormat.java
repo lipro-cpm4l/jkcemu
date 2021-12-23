@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,89 +8,114 @@
 
 package jkcemu.disk;
 
-import java.lang.*;
-
 
 public class FloppyDiskFormat
 {
   public static final FloppyDiskFormat FMT_400K
 	= new FloppyDiskFormat(
-		1, 80, 5, 1024, 1,
+		80, 1, 5, 1024, 1,
 		0, 2, 2048, true, false,
 		"400K (LLC2 CP/L)" );
 
   public static final FloppyDiskFormat FMT_624K
 	= new FloppyDiskFormat(
-		2, 80, 16, 256, 1,
+		80, 2, 16, 256, 1,
 		2, 2, 2048, true, false,
-		"624K Standard (PC/M)" );
+		"640/624K (PC/M)" );
+
+  public static final FloppyDiskFormat FMT_702K_I3_DS
+	= new FloppyDiskFormat(
+		80, 2, 9, 512, 3,
+		2, 2, 2048, true, true,
+		"720/702K mit Interleave 3:1 und DateStamper (ML-DOS)" );
 
   public static final FloppyDiskFormat FMT_711K_I5_BASDOS
 	= new FloppyDiskFormat(
-		2, 80, 9, 512, 5,
+		80, 2, 9, 512, 5,
 		1, 1, 4096, false, false,
-		"711K (KC compact BASDOS)" );
+		"720/711K (KC compact BASDOS)" );
 
   public static final FloppyDiskFormat FMT_720K
 	= new FloppyDiskFormat(
-		2, 80, 9, 512, 1,
+		80, 2, 9, 512, 1,
 		0, 2, 2048, true, false,
-		"720K Standard (A5105 RBASIC/SCPX)" );
+		"720K (A5105 RBASIC/SCPX)" );
 
   public static final FloppyDiskFormat FMT_780K
 	= new FloppyDiskFormat(
-		2, 80, 5, 1024, 1,
+		80, 2, 5, 1024, 1,
 		2, 2, 2048, true, false,
-		"780K Standard (CAOS, NANOS, Z1013 CP/M)" );
+		"800/780K (CAOS, NANOS, Z1013 CP/M)" );
 
   public static final FloppyDiskFormat FMT_780K_I2
 	= new FloppyDiskFormat(
-		2, 80, 5, 1024, 2,
+		80, 2, 5, 1024, 2,
 		2, 2, 2048, true, false,
-		"780K mit Interleave 2:1 (A5105 RBASIC/SCPX)" );
+		"800/780K mit Interleave 2:1 (A5105 RBASIC/SCPX)" );
 
   public static final FloppyDiskFormat FMT_780K_I3
 	= new FloppyDiskFormat(
-		2, 80, 5, 1024, 3,
+		80, 2, 5, 1024, 3,
 		2, 2, 2048, true, false,
-		"780K mit Interleave 3:1 (MicroDOS)" );
+		"800/780K mit Interleave 3:1 (MicroDOS)" );
 
-  public static final FloppyDiskFormat FMT_780K_I3_DATESTAMPER
+  public static final FloppyDiskFormat FMT_780K_I3_DS
 	= new FloppyDiskFormat(
-		2, 80, 5, 1024, 3,
+		80, 2, 5, 1024, 3,
 		2, 2, 2048, true, true,
-		"780K mit Interleave 3:1 und DateStamper (ZDOS/ML-DOS)" );
+		"800/780K mit Interleave 3:1 und DateStamper (ML-DOS)" );
 
   public static final FloppyDiskFormat FMT_800K_I4
 	= new FloppyDiskFormat(
-		2, 80, 5, 1024, 4,
+		80, 2, 5, 1024, 4,
 		0, 3, 2048, true, false,
 		"800K mit Interleave 4:1 (Z9001 CP/A)" );
 
+  public static final FloppyDiskFormat FMT_1200K
+	= new FloppyDiskFormat(
+		80, 2, 15, 512, 1,
+		0, 2, 4096, true, false,
+		"1200K (5.25 Zoll MS-DOS)" );
+
+  public static final FloppyDiskFormat FMT_1440K
+	= new FloppyDiskFormat(
+		80, 2, 18, 512, 1,
+		0, 2, 4096, true, false,
+		"1440K (3.5 Zoll MS-DOS)" );
+
+  public static final FloppyDiskFormat FMT_1738K_I3_DS
+	= new FloppyDiskFormat(
+		80, 2, 11, 1024, 3,
+		1, 2, 4096, true, true,
+		"1760/1738K mit Interleave 3:1 und DateStamper"
+					+ " (KC85/D008 ML-DOS)" );
+
   private static final FloppyDiskFormat[] formats = {
-			new FloppyDiskFormat( 2, 80,  9,  512 ),
-			new FloppyDiskFormat( 2, 80,  5, 1024 ),
-			new FloppyDiskFormat( 2, 80, 15,  512 ),
-			new FloppyDiskFormat( 2, 80, 18,  512 ),
-			new FloppyDiskFormat( 2, 80, 11, 1024 ),
-			new FloppyDiskFormat( 2, 80, 36,  512 ),
-			new FloppyDiskFormat( 2, 80, 16,  256 ),
-			new FloppyDiskFormat( 1, 80,  5, 1024 ),
-			new FloppyDiskFormat( 1, 80, 16,  256 ),
-			new FloppyDiskFormat( 1, 40, 16,  256 ),
-			new FloppyDiskFormat( 2, 40, 16,  256 ),
-			new FloppyDiskFormat( 1, 40,  8,  512 ),
-			new FloppyDiskFormat( 1, 40,  9,  512 ),
-			new FloppyDiskFormat( 2, 40,  8,  512 ),
-			new FloppyDiskFormat( 2, 40,  9,  512 ),
-			new FloppyDiskFormat( 1, 40,  5, 1024 ),
-			new FloppyDiskFormat( 2, 40,  5, 1024 ) };
+			new FloppyDiskFormat( 80, 2,  9,  512 ),
+			new FloppyDiskFormat( 80, 2,  5, 1024 ),
+			new FloppyDiskFormat( 80, 2, 11, 1024 ),
+			new FloppyDiskFormat( 80, 2, 15,  512 ),
+			new FloppyDiskFormat( 80, 2, 18,  512 ),
+			new FloppyDiskFormat( 80, 2, 11, 1024 ),
+			new FloppyDiskFormat( 80, 2, 28,  256 ),
+			new FloppyDiskFormat( 80, 2, 36,  512 ),
+			new FloppyDiskFormat( 80, 2, 16,  256 ),
+			new FloppyDiskFormat( 80, 1,  5, 1024 ),
+			new FloppyDiskFormat( 80, 1, 16,  256 ),
+			new FloppyDiskFormat( 40, 1, 16,  256 ),
+			new FloppyDiskFormat( 40, 2, 16,  256 ),
+			new FloppyDiskFormat( 40, 1,  8,  512 ),
+			new FloppyDiskFormat( 40, 1,  9,  512 ),
+			new FloppyDiskFormat( 40, 2,  8,  512 ),
+			new FloppyDiskFormat( 40, 2,  9,  512 ),
+			new FloppyDiskFormat( 40, 1,  5, 1024 ),
+			new FloppyDiskFormat( 40, 2,  5, 1024 ) };
 
   private static Integer maxDiskSize = null;
 
-  private int     sides;
   private int     cyls;
-  private int     sectorsPerCyl;
+  private int     sides;
+  private int     sectorsPerTrack;
   private int     sectorSize;
   private int     interleave;
   private int     diskSize;
@@ -103,9 +128,9 @@ public class FloppyDiskFormat
 
 
   public FloppyDiskFormat(
-		int     sides,
 		int     cyls,
-		int     sectorsPerCyl,
+		int     sides,
+		int     sectorsPerTrack,
 		int     sectorSize,
 		int     interleave,
 		int     sysTracks,
@@ -115,17 +140,17 @@ public class FloppyDiskFormat
 		boolean dateStamper,
 		String  infoText )
   {
-    this.sides         = sides;
-    this.cyls          = cyls;
-    this.sectorsPerCyl = sectorsPerCyl;
-    this.sectorSize    = sectorSize;
-    this.interleave    = interleave;
-    this.diskSize      = sides * cyls * sectorsPerCyl * sectorSize;
-    this.sysTracks     = sysTracks;
-    this.dirBlocks     = dirBlocks;
-    this.blockSize     = blockSize;
-    this.blockNum16Bit = blockNum16Bit;
-    this.dateStamper   = dateStamper;
+    this.cyls            = cyls;
+    this.sides           = sides;
+    this.sectorsPerTrack = sectorsPerTrack;
+    this.sectorSize      = sectorSize;
+    this.interleave      = interleave;
+    this.diskSize        = cyls * sides * sectorsPerTrack * sectorSize;
+    this.sysTracks       = sysTracks;
+    this.dirBlocks       = dirBlocks;
+    this.blockSize       = blockSize;
+    this.blockNum16Bit   = blockNum16Bit;
+    this.dateStamper     = dateStamper;
     if( infoText != null ) {
       this.infoText = infoText;
     } else {
@@ -134,7 +159,7 @@ public class FloppyDiskFormat
       buf.append( " KByte, " );
       buf.append( cyls );
       buf.append( " Spuren a " );
-      buf.append( sectorsPerCyl );
+      buf.append( sectorsPerTrack );
       buf.append( " * " );
       buf.append( sectorSize );
       buf.append( " Bytes" );
@@ -152,15 +177,15 @@ public class FloppyDiskFormat
 
 
   public FloppyDiskFormat(
-			int sides,
 			int cyls,
-			int sectorsPerCyl,
+			int sides,
+			int sectorsPerTrack,
 			int sectorSize )
   {
     this(
-	sides,
 	cyls,
-	sectorsPerCyl,
+	sides,
+	sectorsPerTrack,
 	sectorSize,
 	1,
 	-1,
@@ -196,18 +221,18 @@ public class FloppyDiskFormat
   }
 
 
-  public static FloppyDiskFormat getFormat(
-					int sides,
+  private static FloppyDiskFormat getFormat(
 					int cyls,
-					int sectorsPerCyl,
+					int sides,
+					int sectorsPerTrack,
 					int sectorSize )
   {
     FloppyDiskFormat rv = null;
     for( int i= 0; i < formats.length; i++ ) {
       FloppyDiskFormat fmt = formats[ i ];
-      if( (fmt.getSides() == sides)
-	  && (fmt.getCylinders() == cyls)
-	  && (fmt.getSectorsPerCylinder() == sectorsPerCyl)
+      if( (fmt.getCylinders() == cyls)
+	  && (fmt.getSides() == sides)
+	  && (fmt.getSectorsPerTrack() == sectorsPerTrack)
 	  && (fmt.getSectorSize() == sectorSize) )
       {
 	rv = fmt;
@@ -264,9 +289,9 @@ public class FloppyDiskFormat
   }
 
 
-  public int getSectorsPerCylinder()
+  public int getSectorsPerTrack()
   {
-    return this.sectorsPerCyl;
+    return this.sectorsPerTrack;
   }
 
 
@@ -300,37 +325,17 @@ public class FloppyDiskFormat
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean equals( Object o )
+  public boolean isHD()
   {
-    boolean rv = false;
-    if( o != null ) {
-      if( o instanceof FloppyDiskFormat ) {
-	FloppyDiskFormat fmt = (FloppyDiskFormat) o;
-	if( (fmt.sides == this.sides)
-	    && (fmt.cyls == this.cyls)
-	    && (fmt.sectorsPerCyl == this.sectorsPerCyl)
-	    && (fmt.sectorSize == this.sectorSize)
-	    && (fmt.diskSize == this.diskSize)
-	    && (fmt.sysTracks == this.sysTracks)
-	    && (fmt.dirBlocks == this.dirBlocks)
-	    && (fmt.blockSize == this.blockSize)
-	    && (fmt.blockNum16Bit == this.blockNum16Bit)
-	    && (fmt.dateStamper == this.dateStamper) )
-	{
-	  rv = true;
-	}
-      }
-    }
-    return rv;
+    return DiskUtil.isHD( this.sectorsPerTrack, this.sectorSize );
   }
 
+
+	/* --- ueberschriebene Methoden --- */
 
   @Override
   public String toString()
   {
-    return this.infoText;
+    return this.infoText != null ? this.infoText : "";
   }
 }

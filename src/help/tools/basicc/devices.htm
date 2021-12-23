@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Ein-/Ausgabeger&auml;te</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -79,7 +80,7 @@
   die die gleichen Ausgaben entweder parallel oder umschaltbar
   auf mehreren Ger&auml;ten erm&ouml;glichen.
   Man braucht dann die Logik zur Erzeugung der Ausgaben nur einmal
-  zu implementieren und gibt nur in den OPEN-Anweisung an,
+  zu implementieren und gibt nur in der OPEN-Anweisung an,
   auf welchem Ger&auml;t die Ausgabe erfolgen soll.
  <br/><br/>
 
@@ -120,7 +121,7 @@
   Dateien in einem CP/M-kompatiblen System werden immer in Bl&ouml;cken
   zu 128&nbsp;Byte gespeichert,
   d.h., die Dateil&auml;nge ist auch nur in 128-Byte-Schritten m&ouml;glich.
-  Um aber trotzdem Dateioperationen mit einer Byte-exakte Dateil&auml;nge
+  Um aber trotzdem Dateioperationen mit einer Byte-exaktne Dateil&auml;nge
   zu erm&ouml;glichen,
   wird das Byte&nbsp;1Ah als Dateiendezeichen verwendet.
   Dieses Byte wird deshalb automatisch beim Schlie&szlig;en
@@ -142,8 +143,8 @@
   (siehe Schl&uuml;selwort&nbsp;BINARY in der Anweisung
   <a href="instructions.htm#open">OPEN</a>).
   Der Bin&auml;rmodus verwendet keine Dateiendezeichen,
-  d.h. es wird weder ein solches Zeichen automatisch angeh&auml;gt
-  noch beim Lesen eines speziellen Zeichens ein Dateiende erkennt.
+  d.h. es wird weder ein solches Zeichen automatisch angeh&auml;ngt
+  noch beim Lesen eines solchen Zeichens ein Dateiende erkannt.
  <br/><br/>
 
  <h3>

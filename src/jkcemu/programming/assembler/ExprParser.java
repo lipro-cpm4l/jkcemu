@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.assembler;
 
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
@@ -27,6 +26,56 @@ public class ExprParser
   private Map<String,AsmLabel> labels;
   private boolean              checkLabels;
   private boolean              labelsCaseSensitive;
+
+
+  public static boolean checkAndParseToken(
+				CharacterIterator iter,
+				String            token )
+  {
+    boolean rv  = true;
+    int     len = token.length();
+    if( len > 0 ) {
+      char chSrc   = skipSpaces( iter );
+      char chToken = CharacterIterator.DONE;
+      int  idx     = iter.getIndex();
+      for( int i = 0; i < len; i++ ) {
+	chToken = token.charAt( i );
+	if( Character.toUpperCase( chSrc )
+			!= Character.toUpperCase( chToken ) )
+	{
+	  rv = false;
+	  break;
+	}
+	chSrc = iter.next();
+      }
+      /*
+       * Wenn das letzte Zeichen im Token ein Zeichen
+       * fuer einen Bezeichner war,
+       * darf das naechste Zeichen im Eingabestrom kein Zeichen
+       * eines Bezeichners sein.
+       */
+      if( rv && AsmLabel.isIdentifierPart( chToken ) ) {
+	if( AsmLabel.isIdentifierPart( chSrc ) ) {
+	  rv = false;
+	}
+      }
+      /*
+       * Wenn das letzte Zeichen im Token eine spitze Klammer war
+       * darf das naechste Zeichen im Eingabestrom keine spitze Klammer
+       * und auch kein Gleichheitszeichen sein.
+       */
+      if( rv && ((chToken == '<') || (chToken == '>')) ) {
+	char ch = iter.current();
+	if( (ch == '<') || (ch == '>') || (ch == '=') ) {
+	  rv = false;
+	}
+      }
+      if( !rv ) {
+	iter.setIndex( idx );
+      }
+    }
+    return rv;
+  }
 
 
   public static boolean isReservedWord( String text )
@@ -63,7 +112,7 @@ public class ExprParser
 	   || ((ch >= 'A') && (ch <= 'F'))
 	   || ((ch >= 'a') && (ch <= 'f')) )
     {
-      buf.append( (char) ch );
+      buf.append( ch );
       ch = iter.next();
     }
     if( enclosedHex || simpleHex || (ch == 'H') || (ch == 'h') ) {
@@ -159,56 +208,6 @@ public class ExprParser
   }
 
 
-  private static boolean checkAndParseToken(
-				CharacterIterator iter,
-				String            token )
-  {
-    boolean rv  = true;
-    int     len = token.length();
-    if( len > 0 ) {
-      char chSrc   = skipSpaces( iter );
-      char chToken = CharacterIterator.DONE;
-      int  idx     = iter.getIndex();
-      for( int i = 0; i < len; i++ ) {
-	chToken = token.charAt( i );
-	if( Character.toUpperCase( chSrc )
-			!= Character.toUpperCase( chToken ) )
-	{
-	  rv = false;
-	  break;
-	}
-	chSrc = iter.next();
-      }
-      /*
-       * Wenn das letzte Zeichen im Token ein Zeichen
-       * fuer einen Bezeichner war,
-       * darf das naechste Zeichen im Eingabestrom kein Zeichen
-       * eines Bezeichners sein.
-       */
-      if( rv && AsmLabel.isIdentifierPart( chToken ) ) {
-	if( AsmLabel.isIdentifierPart( chSrc ) ) {
-	  rv = false;
-	}
-      }
-      /*
-       * Wenn das letzte Zeichen im Token eine spitze Klammer war
-       * darf das naechste Zeichen im Eingabestrom keine spitze Klammer
-       * und auch kein Gleichheitszeichen sein.
-       */
-      if( rv && ((chToken == '<') || (chToken == '>')) ) {
-	char ch = iter.current();
-	if( (ch == '<') || (ch == '>') || (ch == '=') ) {
-	  rv = false;
-	}
-      }
-      if( !rv ) {
-	iter.setIndex( idx );
-      }
-    }
-    return rv;
-  }
-
-
   private Integer parse() throws PrgException
   {
     Integer value = parseExpr();
@@ -229,6 +228,8 @@ public class ExprParser
 	Integer v2 = parseXorExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() | v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -246,6 +247,8 @@ public class ExprParser
 	Integer v2 = parseAndExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() ^ v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -263,6 +266,8 @@ public class ExprParser
 	Integer v2 = parseEqualityExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() & v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -280,12 +285,16 @@ public class ExprParser
 	Integer v2 = parseRelationalExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() == v2.intValue() ? -1 : 0);
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( "<>" ) || checkAndParseToken( "NE" ) ) {
 	Integer v2 = parseRelationalExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() != v2.intValue() ? 0 : -1);
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -303,24 +312,32 @@ public class ExprParser
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() <= v2.intValue() ? -1 : 0);
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( "<" ) || checkAndParseToken( "LT" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() < v2.intValue() ? -1 : 0);
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( ">=" ) || checkAndParseToken( "GE" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() >= v2.intValue() ? -1 : 0);
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( ">" ) || checkAndParseToken( "GT" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() > v2.intValue() ? -1 : 0);
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -338,12 +355,16 @@ public class ExprParser
 	Integer v2 = parseAddExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() << v2.intValue());
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( ">>" ) || checkAndParseToken( "SHR" ) ) {
 	Integer v2 = parseAddExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() >> v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -361,11 +382,15 @@ public class ExprParser
 	Integer v2 = parseMulExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() + v2.intValue());
+	} else {
+	  value = null;
 	}
       } else if( checkAndParseToken( "-" ) ) {
 	Integer v2 = parseMulExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() - v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -383,6 +408,8 @@ public class ExprParser
 	Integer v2 = parseUnaryExpr();
 	if( (value != null) && (v2 != null) ) {
 	  value = (value.intValue() * v2.intValue());
+	} else {
+	  value = null;
 	}
       }
       else if( checkAndParseToken( "/" ) ) {
@@ -392,10 +419,9 @@ public class ExprParser
 	    throw new PrgException( "Division durch 0" );
 	  }
 	  value = (value.intValue() / v2.intValue());
+	} else {
+	  value = null;
 	}
-
-
-	value /= parseUnaryExpr();
       }
       else if( checkAndParseToken( "MOD" ) ) {
 	Integer v2 = parseUnaryExpr();
@@ -404,6 +430,8 @@ public class ExprParser
 	    throw new PrgException( "Modulo 0" );
 	  }
 	  value = (value.intValue() % v2.intValue());
+	} else {
+	  value = null;
 	}
       } else {
 	break;
@@ -534,7 +562,8 @@ public class ExprParser
 	}
       } else {
 	if( this.checkLabels ) {
-	  throw new PrgException( buf.toString() + ": Unbekannte Marke" );
+	  throw new PrgException(
+			"Marke \'" + buf.toString() + "\' nicht definiert" );
 	}
       }
     }

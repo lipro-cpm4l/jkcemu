@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,12 +14,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.nio.channels.FileLock;
 import java.util.Properties;
-import java.util.zip.GZIPInputStream;
 import jkcemu.base.DeviceIO;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class PlainDisk extends AbstractFloppyDisk
@@ -45,9 +44,9 @@ public class PlainDisk extends AbstractFloppyDisk
   {
     return new PlainDisk(
 			owner,
-			fmt.getSides(),
 			fmt.getCylinders(),
-			fmt.getSectorsPerCylinder(),
+			fmt.getSides(),
+			fmt.getSectorsPerTrack(),
 			fmt.getSectorSize(),
 			0,			// kein Interleave
 			driveFileName,
@@ -71,9 +70,9 @@ public class PlainDisk extends AbstractFloppyDisk
     if( fileBytes != null ) {
       rv = new PlainDisk(
 			owner,
-			fmt.getSides(),
 			fmt.getCylinders(),
-			fmt.getSectorsPerCylinder(),
+			fmt.getSides(),
+			fmt.getSectorsPerTrack(),
 			fmt.getSectorSize(),
 			interleave,
 			fileName,
@@ -107,9 +106,9 @@ public class PlainDisk extends AbstractFloppyDisk
   {
     return new PlainDisk(
 			owner,
-			fmt.getSides(),
 			fmt.getCylinders(),
-			fmt.getSectorsPerCylinder(),
+			fmt.getSides(),
+			fmt.getSectorsPerTrack(),
 			fmt.getSectorSize(),
 			0,			// kein Interleave
 			driveFileName,
@@ -134,28 +133,28 @@ public class PlainDisk extends AbstractFloppyDisk
       out     = new FileOutputStream( file );
       created = true;
 
-      boolean hasDeleted    = false;
-      int     sides         = disk.getSides();
-      int     cyls          = disk.getCylinders();
-      int     sectorsPerCyl = disk.getSectorsPerCylinder();
-      int     sectorSize    = disk.getSectorSize();
+      boolean dataDeleted     = false;
+      int     cyls            = disk.getCylinders();
+      int     sides           = disk.getSides();
+      int     sectorsPerTrack = disk.getSectorsPerTrack();
+      int     sectorSize      = disk.getSectorSize();
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
-	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
-	  if( cylSectors != sectorsPerCyl ) {
+	  int cylSectors = disk.getSectorsOfTrack( cyl, head );
+	  if( cylSectors != sectorsPerTrack ) {
 	    if( msgBuf == null ) {
 	      msgBuf = new StringBuilder( 1024 );
 	    }
 	    msgBuf.append(
 		String.format(
-			"Seite %d, Spur %d: %d anstelle von %d Sektoren"
+			"Spur %d, Seite %d: %d anstelle von %d Sektoren"
 				+ " vorhanden",
-			head + 1,
 			cyl,
+			head + 1,
 			cylSectors,
-			sectorsPerCyl ) );
+			sectorsPerTrack ) );
 	  }
-	  for( int i = 0; i < sectorsPerCyl; i++ ) {
+	  for( int i = 0; i < sectorsPerTrack; i++ ) {
 	    SectorData sector = disk.getSectorByID(
 						cyl,
 						head,
@@ -174,8 +173,8 @@ public class PlainDisk extends AbstractFloppyDisk
 			i + 1  ) );
 	    }
 	    if( sector.checkError()
-		|| sector.hasBogusID()
-		|| sector.isDeleted() )
+		|| sector.getDataDeleted()
+		|| sector.hasBogusID() )
 	    {
 	      if( msgBuf == null ) {
 		msgBuf = new StringBuilder( 1024 );
@@ -193,23 +192,23 @@ public class PlainDisk extends AbstractFloppyDisk
 	      }
 	      if( sector.checkError() ) {
 		if( appended ) {
-		  msgBuf.append( (char) ',' );
+		  msgBuf.append( ',' );
 		}
 		msgBuf.append( " CRC-Fehler" );
 		appended = true;
 	      }
-	      if( sector.isDeleted() ) {
+	      if( sector.getDataDeleted() ) {
 		if( appended ) {
-		  msgBuf.append( (char) ',' );
+		  msgBuf.append( ',' );
 		}
-		msgBuf.append( " als gel\u00F6scht markiert" );
-		appended   = true;
-		hasDeleted = true;
+		msgBuf.append( " Daten als gel\u00F6scht markiert" );
+		appended    = true;
+		dataDeleted = true;
 	      }
-	      msgBuf.append( (char) '\n' );
+	      msgBuf.append( '\n' );
 	    }
-	    if( sector.isDeleted() ) {
-	      hasDeleted = true;
+	    if( sector.getDataDeleted() ) {
+	      dataDeleted = true;
 	      if( msgBuf == null ) {
 		msgBuf = new StringBuilder( 1024 );
 	      }
@@ -247,8 +246,8 @@ public class PlainDisk extends AbstractFloppyDisk
 		+ " in einer einfachen Abbilddatei nicht gespeichert werden\n"
 		+ "und sind deshalb in der erzeugten Datei"
 		+ " nicht mehr enthalten.\n" );
-	if( hasDeleted ) {
-	  msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+	if( dataDeleted ) {
+	  msgBuf.append( "\nSektoren mit gel\u00F6schten Daten werden"
 		+ " in einfachen Abbilddateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
 	}
@@ -258,7 +257,7 @@ public class PlainDisk extends AbstractFloppyDisk
       ioEx = ex;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     if( ioEx != null ) {
       if( created ) {
@@ -277,7 +276,7 @@ public class PlainDisk extends AbstractFloppyDisk
     RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile( file, "rw" );
-      fl  = EmuUtil.lockFile( file, raf );
+      fl  = FileUtil.lockFile( file, raf );
       raf.setLength( 0 );
       rv = new PlainDisk(
 			owner,
@@ -296,8 +295,8 @@ public class PlainDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-        EmuUtil.releaseSilent( fl );
-        EmuUtil.closeSilent( raf );
+        FileUtil.releaseSilent( fl );
+        EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -316,13 +315,13 @@ public class PlainDisk extends AbstractFloppyDisk
     try {
       raf = new RandomAccessFile( file, readOnly ? "r" : "rw" );
       if( !readOnly ) {
-	fl = EmuUtil.lockFile( file, raf );
+	fl = FileUtil.lockFile( file, raf );
       }
       rv = new PlainDisk(
 			owner,
-			fmt.getSides(),
 			fmt.getCylinders(),
-			fmt.getSectorsPerCylinder(),
+			fmt.getSides(),
+			fmt.getSectorsPerTrack(),
 			fmt.getSectorSize(),
 			0,			// kein Interleave
 			file.getPath(),
@@ -335,8 +334,8 @@ public class PlainDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-        EmuUtil.releaseSilent( fl );
-        EmuUtil.closeSilent( raf );
+        FileUtil.releaseSilent( fl );
+        EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -346,11 +345,11 @@ public class PlainDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void closeSilent()
+  public synchronized void closeSilently()
   {
-    EmuUtil.releaseSilent( this.fileLock );
-    EmuUtil.closeSilent( this.raf );
-    EmuUtil.closeSilent( this.rad );
+    FileUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilently( this.raf );
+    EmuUtil.closeSilently( this.rad );
   }
 
 
@@ -385,15 +384,15 @@ public class PlainDisk extends AbstractFloppyDisk
 		this.raf.seek( filePos );
 		this.raf.write( dataBuf );
 	      }
+	      if( physCyl >= getCylinders() ) {
+		setCylinders( physCyl + 1 );
+	      }
 	      int sides = ((physHead & 0x01) != 0 ? 2 : 1);
 	      if( sides > getSides() ) {
 		setSides( sides );
 	      }
-	      if( physCyl >= getCylinders() ) {
-		setCylinders( physCyl + 1 );
-	      }
-	      if( sectorIDs.length > getSectorsPerCylinder() ) {
-		setSectorsPerCylinder( sectorIDs.length );
+	      if( sectorIDs.length > getSectorsPerTrack() ) {
+		setSectorsPerTrack( sectorIDs.length );
 	      }
 	      if( getSectorSize() == 0 ) {
 		setSectorSize( dataBuf.length );
@@ -498,14 +497,14 @@ public class PlainDisk extends AbstractFloppyDisk
 			SectorData sector,
 			byte[]     dataBuf,
 			int        dataLen,
-			boolean    deleted )
+			boolean    dataDeleted )
   {
     boolean rv = false;
     if( !this.readOnly
 	&& ((this.rad != null) || (this.raf != null))
 	&& (sector != null)
 	&& (dataBuf != null)
-	&& !deleted )
+	&& !dataDeleted )
     {
       if( (sector.getDisk() == this) && (dataLen == getSectorSize()) ) {
 	int  sectorIdx = sector.getIndexOnCylinder();
@@ -540,9 +539,9 @@ public class PlainDisk extends AbstractFloppyDisk
 
   private PlainDisk(
 		Frame                       owner,
-		int                         sides,
 		int                         cyls,
-		int                         sectorsPerCyl,
+		int                         sides,
+		int                         sectorsPerTrack,
 		int                         sectorSize,
 		int                         interleave,
 		String                      fileName,
@@ -553,7 +552,7 @@ public class PlainDisk extends AbstractFloppyDisk
 		boolean                     readOnly,
 		boolean                     appendable )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize, interleave );
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize, interleave );
     this.fileName       = fileName;
     this.rad            = rad;
     this.raf            = raf;
@@ -561,7 +560,7 @@ public class PlainDisk extends AbstractFloppyDisk
     this.diskBytes      = diskBytes;
     this.readOnly       = readOnly;
     this.appendable     = appendable;
-    this.sectorSizeCode = SectorData.getSizeCode( sectorSize );
+    this.sectorSizeCode = SectorData.getSizeCodeBySize( sectorSize );
   }
 
 
@@ -572,17 +571,17 @@ public class PlainDisk extends AbstractFloppyDisk
     long rv         = -1;
     int  sectorSize = getSectorSize();
     if( (cyl >= 0) && (sectorIdx >= 0) ) {
-      int sides         = getSides();
-      int cyls          = getCylinders();
-      int sectorsPerCyl = getSectorsPerCylinder();
-      if( (head < sides)
-	  //&& (cyl < cyls)
-	  && (sectorIdx < sectorsPerCyl)
+      int cyls            = getCylinders();
+      int sides           = getSides();
+      int sectorsPerTrack = getSectorsPerTrack();
+      if( (cyl < cyls)
+	  && (head < sides)
+	  && (sectorIdx < sectorsPerTrack)
 	  && (sectorSize > 0) )
       {
-	int nSkipSectors = sides * sectorsPerCyl * cyl;
+	int nSkipSectors = sides * sectorsPerTrack * cyl;
 	if( head > 0 ) {
-	  nSkipSectors += sectorsPerCyl;
+	  nSkipSectors += sectorsPerTrack;
 	}
 	nSkipSectors += sectorIdx;
 	rv = (long) nSkipSectors * (long) sectorSize;
@@ -602,8 +601,8 @@ public class PlainDisk extends AbstractFloppyDisk
 	      if( head == 0 ) {
 		rv = sectorIdx * sectorSize;
 	      }
-	      else if( (head == 1) && (sectorsPerCyl > 0) ) {
-		rv = (sectorsPerCyl + sectorIdx) * sectorSize;
+	      else if( (head == 1) && (sectorsPerTrack > 0) ) {
+		rv = (sectorsPerTrack + sectorIdx) * sectorSize;
 	      }
 	    }
 	  }

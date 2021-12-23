@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@
 package jkcemu.audio;
 
 import java.io.IOException;
-import java.lang.*;
 
 
 public abstract class AbstractPCMDataReader implements PCMDataSource
@@ -23,7 +22,6 @@ public abstract class AbstractPCMDataReader implements PCMDataSource
   protected boolean dataSigned;
   protected boolean bigEndian;
   protected long    pcmDataOffs;  // Beginn PCM-Daten in der Datenquelle
-  protected long    pcmDataLen;   // Laenge PCM-Daten in der Datenquelle
   protected long    frameCount;
 
 
@@ -36,6 +34,16 @@ public abstract class AbstractPCMDataReader implements PCMDataSource
 			long    pcmDataOffs,
 			long    pcmDataLen ) throws IOException
   {
+    if( frameRate < 1 ) {
+      throw new IllegalArgumentException( "frameRate=" + frameRate );
+    }
+    if( sampleSizeInBits < 1 ) {
+      throw new IllegalArgumentException(
+				"sampleSizeInBits=" + sampleSizeInBits );
+    }
+    if( channels < 1 ) {
+      throw new IllegalArgumentException( "channels=" + channels );
+    }
     this.frameRate        = frameRate;
     this.sampleSizeInBits = sampleSizeInBits;
     this.bytesPerSample   = (sampleSizeInBits + 7) / 8;
@@ -44,7 +52,6 @@ public abstract class AbstractPCMDataReader implements PCMDataSource
     this.dataSigned       = dataSigned;
     this.bigEndian        = bigEndian;
     this.pcmDataOffs      = pcmDataOffs;
-    this.pcmDataLen       = pcmDataLen;
     this.frameCount       = pcmDataLen / this.bytesPerFrame;
     if( this.frameCount < 1 ) {
       throwNoAudioData();

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.emusys.z1013;
 
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.emusys.Z1013;
@@ -83,7 +82,7 @@ public class Z1013Keyboard
     this.z80pio.putInValuePortB(
 	~this.keyboardMatrix.getRowValues(
 		this.selectedCol,
-		(this.z80pio.fetchOutValuePortB( false ) & 0x10) != 0 ),
+		(this.z80pio.fetchOutValuePortB( 0xFF ) & 0x10) != 0 ),
 	0x1F );
   }
 

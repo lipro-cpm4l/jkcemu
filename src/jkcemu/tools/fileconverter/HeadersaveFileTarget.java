@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,10 +12,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import javax.swing.JComboBox;
 import jkcemu.base.EmuUtil;
 import jkcemu.base.UserInputException;
+import jkcemu.file.FileUtil;
 
 
 public class HeadersaveFileTarget extends AbstractConvertTarget
@@ -43,20 +43,20 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 				FileConvertFrm    fileConvertFrm )
   {
     combo.removeAllItems();
-    EmuUtil.addHeadersaveFileTypeItemsTo( combo );
+    FileUtil.addHeadersaveFileTypeItemsTo( combo );
     combo.setEnabled( true );
     int fileType = fileConvertFrm.getOrgFileTypeChar();
     if( (fileType > 0x20) && (fileType < 0x7F) ) {
-      if( !EmuUtil.setSelectedHeadersaveFileTypeItem( combo, fileType ) ) {
+      if( !FileUtil.setSelectedHeadersaveFileTypeItem( combo, fileType ) ) {
 	combo.setSelectedItem( Character.toString( (char) fileType ) );
       }
     } else {
       if( fileConvertFrm.getOrgIsBasicPrg() ) {
-	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'B' );
+	FileUtil.setSelectedHeadersaveFileTypeItem( combo, 'B' );
       } else if( fileConvertFrm.getOrgStartAddr() >= 0 ) {
-	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'C' );
+	FileUtil.setSelectedHeadersaveFileTypeItem( combo, 'C' );
       } else {
-	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'M' );
+	FileUtil.setSelectedHeadersaveFileTypeItem( combo, 'M' );
       }
     }
   }
@@ -67,7 +67,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getHeadersaveFileFilter();
+    return FileUtil.getHeadersaveFileFilter();
   }
 
 
@@ -81,7 +81,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".z80" );
+    return FileUtil.replaceExtension( srcFile, ".z80" );
   }
 
 
@@ -143,7 +143,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return null;
   }

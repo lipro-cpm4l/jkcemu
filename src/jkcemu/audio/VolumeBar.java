@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,10 +13,10 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.lang.*;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingConstants;
+import jkcemu.base.GUIFactory;
 
 
 public class VolumeBar extends JPanel
@@ -24,6 +24,7 @@ public class VolumeBar extends JPanel
   private static final int VOLUME_BAR_MAX = 1000;
 
   private javax.swing.Timer timer;
+  private Object            lockObj;
   private JProgressBar      progressBar;
   private int               minLimit;
   private int               maxLimit;
@@ -37,6 +38,7 @@ public class VolumeBar extends JPanel
     this.maxLimit  = 255;
     this.minValue  = this.maxLimit;
     this.maxValue  = this.minLimit;
+    this.lockObj   = new Object();
     this.timer     = new javax.swing.Timer(
 			100,
 			new ActionListener()
@@ -63,19 +65,24 @@ public class VolumeBar extends JPanel
       gbc.weighty = 0.0;
       gbc.fill    = GridBagConstraints.HORIZONTAL;
     }
-    this.progressBar = new JProgressBar( orientation, 0, VOLUME_BAR_MAX );
+    this.progressBar = GUIFactory.createProgressBar(
+						orientation,
+						0,
+						VOLUME_BAR_MAX );
     add( this.progressBar, gbc );
   }
 
 
-  public synchronized void setVolumeLimits( int minLimit, int maxLimit )
+  public void setVolumeLimits( int minLimit, int maxLimit )
   {
     if( minLimit < maxLimit ) {
-      this.minLimit = minLimit;
-      this.maxLimit = maxLimit;
-      this.maxValue = maxLimit;
-      this.minValue = minLimit;
-      this.progressBar.setValue( 0 );
+      synchronized( this.lockObj ) {
+	this.minLimit = minLimit;
+	this.maxLimit = maxLimit;
+	this.maxValue = maxLimit;
+	this.minValue = minLimit;
+	this.progressBar.setValue( 0 );
+      }
     }
   }
 
@@ -92,13 +99,15 @@ public class VolumeBar extends JPanel
   }
 
 
-  public synchronized void updVolume( int value )
+  public void updVolume( int value )
   {
-    if( value < this.minValue ) {
-      this.minValue = value;
-    }
-    if( value > this.maxValue ) {
-      this.maxValue = value;
+    synchronized( this.lockObj ) {
+      if( value < this.minValue ) {
+	this.minValue = value;
+      }
+      if( value > this.maxValue ) {
+	this.maxValue = value;
+      }
     }
   }
 
@@ -109,7 +118,7 @@ public class VolumeBar extends JPanel
   {
     int barValue = 0;
     int volume   = 0;
-    synchronized( this ) {
+    synchronized( this.lockObj ) {
       volume        = this.maxValue - this.minValue;
       this.minValue = this.maxLimit;
       this.maxValue = this.minLimit;
