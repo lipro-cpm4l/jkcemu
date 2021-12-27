@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
+import javax.imageio.IIOException;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -193,24 +194,27 @@ public class ImageLoader
 	  }
 	}
 	if( image == null ) {
-	  InputStream in = null;
+	  InputStream in      = null;
+	  int         bufSize = 0;
 	  try {
 	    if( fileBytes != null ) {
 	      exifData = ExifParser.parseFileBytes( fileBytes );
 	      in       = new ByteArrayInputStream( fileBytes );
+	      bufSize  = fileBytes.length;
 	    } else if( file != null ) {
 	      if( FileUtil.accept( file, "jpeg", "jpg" ) ) {
 		/*
-		 * Manche JPEG-Bilder, z.B. einige von HUAWEI-Handys,
-		 * bringen beim weiter unten angewendeten Lesen
-		 * direkt ueber einen ImageReader einen Fehler.
-		 * Diese lassen sich jedoch ueber ImageIO.read(...) lesen.
+		 * Manche Bilddateien enthalten Metadaten,
+		 * die der ImageReader nicht lesen kann
+		 * und eine Exception wirft.
+		 * Da die EXIF-Daten vorher geparst werden,
+		 * kann das Bild ohne Metadaten gelesen werden.
 		 */
 		try {
 		  in = new JPEGExifInputStream(
 				new BufferedInputStream(
 					new FileInputStream( file ) ) );
-		  image    = ImageIO.read( in );
+		  image    = readImageIgnoreMetadata( in );
 		  exifData = ((JPEGExifInputStream) in).getExifData();
 		}
 		finally {
@@ -218,7 +222,10 @@ public class ImageLoader
 		  in = null;
 		}
 	      } else {
-		in = new BufferedInputStream( new FileInputStream( file ) );
+		bufSize = 0x40000;
+		in      = new BufferedInputStream(
+				new FileInputStream( file ),
+				bufSize );
 	      }
 	    }
 	    if( in != null ) {
@@ -321,11 +328,19 @@ public class ImageLoader
 		}
 	      }
 	      if( image == null ) {
+		in.mark( bufSize );
 		/*
 		 * Datei mittels ImageReader lesen,
 		 * um auch die Meta-Daten lesen zu koennen.
+		 *
+		 * Manche Bilddateien enthalten Metadaten,
+		 * die der ImageReader nicht lesen kann
+		 * und eine Exception wirft.
+		 * Aus diesem Grund wird im Fall eines Fehlers
+		 * das Bild nochmal, aber ohne Metadaten gelesen.
 		 */
-		ImageInputStream imgIn = null;
+		boolean          imgFailed = false;
+		ImageInputStream imgIn     = null;
 		try {
 		  imgIn = ImageIO.createImageInputStream( in );
 		  Iterator<ImageReader> iter = ImageIO.getImageReaders(
@@ -333,40 +348,30 @@ public class ImageLoader
 		  if( iter.hasNext() ) {
 		    ImageReader reader = iter.next();
 		    try {
-		      reader.setInput( imgIn );
-		      IIOImage iioImg = reader.readAll( 0, null );
-		      if( iioImg != null ) {
-			RenderedImage rImg = iioImg.getRenderedImage();
-			if( rImg != null ) {
-			  if( rImg instanceof BufferedImage ) {
-			    image = (BufferedImage) rImg;
-			  } else {
-			    ColorModel cm = rImg.getColorModel();
-			    Raster     r  = rImg.getData();
-			    if( (cm != null) && (r != null) ) {
-			      WritableRaster wr = null;
-			      if( r instanceof WritableRaster ) {
-				wr = (WritableRaster) r;
-			      } else {
-				wr = r.createCompatibleWritableRaster();
-			      }
-			      image = new BufferedImage(
-						cm,
-						wr,
-						false,
-						new Hashtable() );
-			    }
-			  }
-			}
-			if( image != null ) {
-			  mode     = ImageUtil.probeMode( image );
-			  exifData = parseMetaData( iioImg.getMetadata() );
-			}
+		      reader.setInput( imgIn, true, false );
+		      image = reader.read( 0, reader.getDefaultReadParam() );
+		      if( image != null ) {
+			mode     = ImageUtil.probeMode( image );
+			exifData = parseMetaData(
+					reader.getImageMetadata( 0 ) );
 		      }
+		    }
+		    catch( IIOException ex ) {
+		      imgFailed = true;
 		    }
 		    finally {
 		      reader.dispose();
 		    }
+		  }
+
+		  /*
+		   * Im Fall eines Fehlers nochmal lesen,
+		   * aber ohne Metadaten,
+		   * jedoch bevor imgIn.close() aufgerufen wird
+		   */
+		  if( imgFailed ) {
+		    in.reset();
+		    image = readImageIgnoreMetadata( in );
 		  }
 		}
 		finally {
@@ -725,6 +730,32 @@ public class ImageLoader
       catch( IllegalArgumentException ex2 ) {}
     }
     return exifData;
+  }
+
+
+  private static BufferedImage readImageIgnoreMetadata(
+				 InputStream in ) throws IOException
+  {
+    BufferedImage    image = null;
+    ImageInputStream imgIn = null;
+    try {
+      imgIn = ImageIO.createImageInputStream( in );
+      Iterator<ImageReader> iter = ImageIO.getImageReaders( imgIn );
+      if( iter.hasNext() ) {
+	ImageReader reader = iter.next();
+	try {
+	  reader.setInput( imgIn, true, true );
+	  image = reader.read( 0, reader.getDefaultReadParam() );
+	}
+	finally {
+	  reader.dispose();
+	}
+      }
+    }
+    finally {
+      EmuUtil.closeSilently( imgIn );
+    }
+    return image;
   }
 
 
