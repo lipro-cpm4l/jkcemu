@@ -1641,9 +1641,11 @@ public class ScreenFrm
       props.setProperty(
 		PROP_STATUSBAR_ENABLED,
 		String.valueOf( this.mnuStatusBar.isSelected() ) );
-      props.setProperty(
+      if( this.mnuStatusMsgInSysTray != null ) {
+	props.setProperty(
 		PROP_STATUSMSG_IN_SYSTRAY,
 		String.valueOf( this.mnuStatusMsgInSysTray.isSelected() ) );
+      }
       props.setProperty(
 		PROP_TOOLBAR_ENABLED,
 		String.valueOf( this.mnuToolBar.isSelected() ) );
@@ -1783,9 +1785,11 @@ public class ScreenFrm
 
   private void doViewStatusMsgInSysTray()
   {
-    Main.setProperty(
+    if( this.mnuStatusMsgInSysTray != null ) {
+      Main.setProperty(
 		PROP_STATUSMSG_IN_SYSTRAY,
 		String.valueOf( this.mnuStatusMsgInSysTray.isSelected() ) );
+    }
     checkUpdTrayIcon();
   }
 
@@ -2759,7 +2763,9 @@ public class ScreenFrm
   private void updStatusBar( boolean updWindowSize )
   {
     boolean state = (this.mnuStatusBar.isSelected() && !this.fullScreenMode);
-    this.mnuStatusMsgInSysTray.setEnabled( !state );
+    if( this.mnuStatusMsgInSysTray != null ) {
+      this.mnuStatusMsgInSysTray.setEnabled( !state );
+    }
     if( state != this.labelStatus.isVisible() ) {
       this.labelStatus.setVisible( state );
       if( state ) {
