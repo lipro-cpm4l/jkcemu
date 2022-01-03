@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2020 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,6 +18,7 @@
 package jkcemu.tools.filebrowser;
 
 import java.awt.Component;
+import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.util.Stack;
@@ -48,17 +49,24 @@ public class ImageCard extends Component
   public void setImage( Image image )
   {
     synchronized( this.forFlushing ) {
-      if( this.orgImage != null ) {
-	if( image != this.orgImage ) {
-	  /*
-	   * Image.flush() nur im Event-Thread aufrufen,
-	   * d.h. in der paint-Methode
-	   */
-	  this.forFlushing.push( this.orgImage );
-	  if( this.scaledImage != null ) {
-	    this.forFlushing.push( this.scaledImage );
-	  }
+      if( (this.orgImage != null) && (image != this.orgImage) ) {
+	/*
+	 * Image.flush() nur im Event-Thread aufrufen,
+	 * d.h. in der paint-Methode
+	 */
+	this.forFlushing.push( this.orgImage );
+	if( this.scaledImage != null ) {
+	  this.forFlushing.push( this.scaledImage );
 	}
+	EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    flushImages();
+			  }
+			} );
       }
       this.orgImage    = image;
       this.scaledImage = null;
@@ -72,11 +80,6 @@ public class ImageCard extends Component
   @Override
   public void paint( Graphics g )
   {
-    synchronized( this.forFlushing ) {
-      while( !this.forFlushing.empty() ) {
-	this.forFlushing.pop().flush();
-      }
-    }
     Image image = this.orgImage;
     if( image != null ) {
       int   w     = getWidth();
@@ -101,7 +104,7 @@ public class ImageCard extends Component
 	    if( (this.scaledImage == null) && (wImg > 0) && (hImg > 0) ) {
 	      this.scaledW     = wImg;
 	      this.scaledH     = hImg;
-	      this.scaledImage = this.orgImage.getScaledInstance(
+	      this.scaledImage = image.getScaledInstance(
 						wImg,
 						hImg,
 						Image.SCALE_SMOOTH );
@@ -112,6 +115,18 @@ public class ImageCard extends Component
 	  }
 	}
 	g.drawImage( image, 0, 0, this );
+      }
+    }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void flushImages()
+  {
+    synchronized( this.forFlushing ) {
+      while( !this.forFlushing.empty() ) {
+	this.forFlushing.pop().flush();
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2021 Jens Mueller
+ * (c) 2009-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,9 +30,9 @@ public class D004 extends AbstractKC85Module
 
   private static final String TEXT_D004_ROM_FILE = "D004-ROM-Datei";
 
-  private static byte[] romD004_20    = null;
-  private static byte[] romD004_331_2 = null;
-  private static byte[] romD004_331_4 = null;
+  private static byte[] romD004_20   = null;
+  private static byte[] romD004_35_2 = null;
+  private static byte[] romD004_35_4 = null;
 
   private volatile boolean connected;
   private boolean          cpuEnableValue;
@@ -175,15 +175,15 @@ public class D004 extends AbstractKC85Module
     if( romBytes == null ) {
       if( this.romProp.equals( KC85.VALUE_ROM_20 ) ) {
 	romBytes = getROMBytes20();
-      } else if( this.romProp.equals( KC85.VALUE_ROM_33 ) ) {
+      } else if( this.romProp.equals( KC85.VALUE_ROM_35 ) ) {
 	if( kc85.getKCTypeNum() >= 4 ) {
-	  romBytes = getROMBytes331_4();
+	  romBytes = getROMBytes35_4();
 	} else {
-	  romBytes = getROMBytes331_2();
+	  romBytes = getROMBytes35_2();
 	}
       } else {
 	if( kc85.getKCTypeNum() >= 4 ) {
-	  romBytes = getROMBytes331_4();
+	  romBytes = getROMBytes35_4();
 	} else {
 	  romBytes = getROMBytes20();
 	}
@@ -247,10 +247,16 @@ public class D004 extends AbstractKC85Module
   public int readMemByte( int addr )
   {
     int rv = -1;
-    if( this.enabled && (this.romBytes != null) ) {
-      int idx = addr - this.romAddr;
-      if( (idx >= 0) && (idx < this.romBytes.length) ) {
-	rv = (int) this.romBytes[ idx ] & 0xFF;
+    if( this.enabled
+	&& (addr >= this.romAddr)
+	&& (addr < (this.romAddr + 0x2000)) )
+    {
+      rv = 0xFF;
+      if( this.romBytes != null ) {
+	int idx = addr - this.romAddr;
+	if( (idx >= 0) && (idx < this.romBytes.length) ) {
+	  rv = (int) this.romBytes[ idx ] & 0xFF;
+	}
       }
     }
     return rv;
@@ -389,24 +395,24 @@ public class D004 extends AbstractKC85Module
   }
 
 
-  private byte[] getROMBytes331_2()
+  private byte[] getROMBytes35_2()
   {
-    if( romD004_331_2 == null ) {
-      romD004_331_2 = EmuUtil.readResource(
+    if( romD004_35_2 == null ) {
+      romD004_35_2 = EmuUtil.readResource(
 				this.kc85.getScreenFrm(),
-				"/rom/kc85/d004_331_2.bin" );
+				"/rom/kc85/d004_35_2.bin" );
     }
-    return romD004_331_2;
+    return romD004_35_2;
   }
 
 
-  private byte[] getROMBytes331_4()
+  private byte[] getROMBytes35_4()
   {
-    if( romD004_331_4 == null ) {
-      romD004_331_4 = EmuUtil.readResource(
+    if( romD004_35_4 == null ) {
+      romD004_35_4 = EmuUtil.readResource(
 				this.kc85.getScreenFrm(),
-				"/rom/kc85/d004_331_4.bin" );
+				"/rom/kc85/d004_35_4.bin" );
     }
-    return romD004_331_4;
+    return romD004_35_4;
   }
 }

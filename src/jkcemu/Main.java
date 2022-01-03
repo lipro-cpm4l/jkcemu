@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2021 Jens Mueller
+ * (c) 2008-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -65,9 +65,9 @@ import jkcemu.tools.hexedit.HexEditFrm;
 public class Main
 {
   public static final String APPNAME   = "JKCEMU";
-  public static final String VERSION   = "0.9.8.1";
+  public static final String VERSION   = "0.9.8.2";
   public static final String APPINFO   = APPNAME + " Version " + VERSION;
-  public static final String COPYRIGHT = "(c) 2008-2021 Jens M\u00FCller";
+  public static final String COPYRIGHT = "(c) 2008-2022 Jens M\u00FCller";
 
   public static final String FILE_GROUP_AUDIO       = "audio";
   public static final String FILE_GROUP_DEBUG_BREAK = "debug.breakpoints";

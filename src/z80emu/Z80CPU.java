@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2021 Jens Mueller
+ * (c) 2008-2022 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -138,7 +138,7 @@ public class Z80CPU implements Runnable
     this.pcListener            = null;
     this.addrListener          = null;
     this.tStatesListeners      = null;
-    this.interruptSources      = new Z80InterruptSource[ 0 ];
+    this.interruptSources      = null;
     this.haltStateListeners    = new ArrayList<>();
     this.maxSpeedListeners     = new ArrayList<>();
     this.statusListeners       = new ArrayList<>();
@@ -1183,7 +1183,7 @@ public class Z80CPU implements Runnable
 	    if( this.lastInstWasEIorDI ) {
 	      this.lastInstWasEIorDI = false;
 	    } else {
-	      if( this.iff1 ) {
+	      if( this.iff1 && (this.interruptSources != null) ) {
 		for( Z80InterruptSource iSource : this.interruptSources ) {
 		  if( iSource.isInterruptAccepted() ) {
 		    break;
@@ -3204,9 +3204,11 @@ public class Z80CPU implements Runnable
 	break;
       case 0x4D:				// RETI
 	doInstRETN();
-	for( Z80InterruptSource iSource : this.interruptSources ) {
-	  if( iSource.interruptFinish( this.instBegPC ) ) {
-	    break;
+	if( this.interruptSources != null ) {
+	  for( Z80InterruptSource iSource : this.interruptSources ) {
+	    if( iSource.interruptFinish( this.instBegPC ) ) {
+	      break;
+	    }
 	  }
 	}
 	this.instTStates += 14;

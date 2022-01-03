@@ -1,5 +1,5 @@
 /*
- * (c) 2018-2021 Jens Mueller
+ * (c) 2018-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -132,10 +132,16 @@ public class D008 extends D004
   public int readMemByte( int addr )
   {
     int rv = -1;
-    if( this.enabled && (this.romBytes != null) ) {
-      int idx = (this.romBank * 0x2000) + addr - this.romAddr;
-      if( (idx >= 0) && (idx < this.romBytes.length) ) {
-	rv = (int) this.romBytes[ idx ] & 0xFF;
+    if( this.enabled
+	&& (addr >= this.romAddr)
+	&& (addr < (this.romAddr + 0x2000)) )
+    {
+      rv = 0xFF;
+      if( this.romBytes != null ) {
+	int idx = (this.romBank * 0x2000) + addr - this.romAddr;
+	if( (idx >= 0) && (idx < this.romBytes.length) ) {
+	  rv = (int) this.romBytes[ idx ] & 0xFF;
+	}
       }
     }
     return rv;

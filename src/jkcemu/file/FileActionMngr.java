@@ -52,6 +52,7 @@ import jkcemu.emusys.z1013.Z1013AudioCreator;
 import jkcemu.image.ImageFrm;
 import jkcemu.text.TextEditFrm;
 import jkcemu.tools.FileChecksumFrm;
+import jkcemu.tools.filebrowser.FileBrowserFrm;
 import jkcemu.tools.fileconverter.FileConvertFrm;
 import jkcemu.tools.findfiles.FindFilesFrm;
 import jkcemu.tools.hexdiff.HexDiffFrm;
@@ -414,14 +415,12 @@ public class FileActionMngr
 		menu );
     addSeparator( popup, menu );
 
-    if( DesktopHelper.isOpenSupported() ) {
-      addJMenuItem(
+    addJMenuItem(
 		"Mit zugeh\u00F6rigem Programm \u00F6ffnen...",
 		ACTION_OPEN_EXTERNAL,
 		popup,
 		menu );
-      addSeparator( popup, menu );
-    }
+    addSeparator( popup, menu );
 
     addJMenuItem(
 		"Pr\u00FCfsumme/Hashwert berechnen...",
@@ -633,6 +632,7 @@ public class FileActionMngr
 	  }
 	  if( !done && DesktopHelper.isOpenSupported() ) {
 	    openExternal( file );
+	    done = true;
 	  }
 	}
       }
@@ -966,6 +966,11 @@ public class FileActionMngr
   {
     java.util.List<Path> paths = getPaths( files );
     if( !paths.isEmpty() ) {
+      /*
+       * Detailansicht des Datei-Browsers leeren,
+       * um eventuelle Dateisperren aufzuheben.
+       */
+      FileBrowserFrm.clearPreview();
       FileRemover.startRemove(
 			this.owner,
 			paths,
@@ -1012,13 +1017,13 @@ public class FileActionMngr
   private void doFileOpenExternal(
 		java.util.List<FileActionMngr.FileObject> files )
   {
+    boolean done = false;
     if( DesktopHelper.isOpenSupported() ) {
-      File file = getFile( files, false );
-      if( file != null ) {
-	if( file.isFile() || file.isDirectory() ) {
-	  openExternal( file );
-	}
-      }
+      openExternal( getFile( files, false ) );
+    } else {
+      BaseDlg.showErrorDlg(
+		this.owner,
+		"Funktion auf diesem System nicht unterst\u00FCtzt." );
     }
   }
 
@@ -1874,17 +1879,17 @@ public class FileActionMngr
 
   private void openExternal( File file )
   {
-    if( file.canRead() ) {
+    if( file != null ) {
       try {
+	if( !file.canRead() ) {
+	  throw new IOException( 
+		"Datei/Verzeichnis kann nicht gelesen werden." );
+	}
 	DesktopHelper.open( file );
       }
       catch( IOException ex ) {
 	BaseDlg.showErrorDlg( this.owner, ex );
       }
-    } else {
-      BaseDlg.showErrorDlg(
-		this.owner,
-		"Datei/Verzeichnis kann nicht gelesen werden." );
     }
   }
 
