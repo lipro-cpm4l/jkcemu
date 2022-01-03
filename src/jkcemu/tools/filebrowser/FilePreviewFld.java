@@ -259,6 +259,7 @@ public class FilePreviewFld extends JPanel
 	  }
 	}
 	if( fileChanged && (this.thread != null) ) {
+	  this.imageCard.setImage( null );
 	  String cardName = null;
 
 	  // Datei auswerten

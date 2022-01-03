@@ -220,6 +220,13 @@ public class FileBrowserFrm
   private boolean                     pasteState;
 
 
+  public static void clearPreview()
+  {
+    if( instance != null )
+      instance.setPreviewedFileNode( null );
+  }
+
+
   public static FileBrowserFrm open( ScreenFrm screenFrm )
   {
     if( instance != null ) {

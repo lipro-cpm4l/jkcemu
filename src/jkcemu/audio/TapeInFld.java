@@ -403,20 +403,26 @@ public class TapeInFld
   public void openFile( File file, byte[] fileBytes, int offs )
   {
     if( (file != null) || (fileBytes != null) ) {
-      EmuSys emuSys = this.emuThread.getEmuSys();
-      if( (emuSys != null) && (getTapeIn() == null) ) {
-	if( emuSys.supportsTapeIn() ) {
-	  int speedKHz = this.audioFrm.getAndCheckSpeed();
-	  if( speedKHz > 0 ) {
-	    this.rbFromFile.setSelected( true );
-	    try {
+      try {
+	if( getTapeIn() != null ) {
+	  throw new IOException( "Die Audiofunktion \'Eingang Kassette\'"
+		+ " ist bereits aktiv.\n"
+		+ "Diese m\u00FCssen Sie zuerst deaktivieren,\n"
+		+ "bevor Sie eine neue Datei \u00F6ffnen k\u00F6nnen." );
+	}
+	EmuSys emuSys = this.emuThread.getEmuSys();
+	if( emuSys != null ) {
+	  if( emuSys.supportsTapeIn() ) {
+	    int speedKHz = this.audioFrm.getAndCheckSpeed();
+	    if( speedKHz > 0 ) {
+	      this.rbFromFile.setSelected( true );
 	      enableFile( speedKHz, file, fileBytes, offs );
-	    }
-	    catch( IOException ex ) {
-	      BaseDlg.showErrorDlg( this, ex );
 	    }
 	  }
 	}
+      }
+      catch( IOException ex ) {
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -748,12 +754,13 @@ public class TapeInFld
     boolean pause      = false;
     boolean progress   = false;
     String  formatText = null;
+    AudioIn audioIn    = null;
     File    file       = this.fldFile.getFile();
     EmuSys  emuSys     = this.emuThread.getEmuSys();
     if( emuSys != null ) {
+      audioIn   = emuSys.getTapeIn();
       supported = emuSys.supportsTapeIn();
     }
-    AudioIn audioIn = getTapeIn();
     if( audioIn != null ) {
       running  = true;
       fromLine = (audioIn instanceof AudioInLine);
@@ -928,7 +935,8 @@ public class TapeInFld
 
   private AudioIn getTapeIn()
   {
-    return emuThread.getEmuSys().getTapeIn();
+    EmuSys emuSys = this.emuThread.getEmuSys();
+    return emuSys != null ? emuSys.getTapeIn() : null;
   }
 
 

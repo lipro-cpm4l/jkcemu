@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2021 Jens Mueller
+ * (c) 2008-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -128,7 +128,7 @@ public class KC85 extends EmuSys implements
   public static final String VALUE_D004   = "D004";
   public static final String VALUE_D008   = "D008";
   public static final String VALUE_ROM_20 = "2.0";
-  public static final String VALUE_ROM_33 = "3.3";
+  public static final String VALUE_ROM_35 = "3.5";
 
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE              = true;
   public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX_2 = 5000;

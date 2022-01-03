@@ -201,7 +201,11 @@ public class AudioFrm extends BaseFrm implements ComponentListener
 
   public void openFile( File file, byte[] fileBytes, int offs )
   {
-    this.tabTapeIn.openFile( file, fileBytes, offs );
+    int idx = this.tabbedPane.indexOfComponent( this.tabTapeIn );
+    if( idx >= 0 ) {
+      fireSelectTab( idx );
+      this.tabTapeIn.openFile( file, fileBytes, offs );
+    }
   }
 
 
@@ -358,18 +362,7 @@ public class AudioFrm extends BaseFrm implements ComponentListener
       // Fenstergroesse anpassen oder Fenster schliessen
       if( nTabs > 0 ) {
 	pack();
-	if( idxToSelect >= 0 ) {
-	  final int idx = idxToSelect;
-	  EventQueue.invokeLater(
-			new Runnable()
-			{
-			  @Override
-			  public void run()
-			  {
-			    selectTab( idx );
-			  }
-			} );
-	}
+	fireSelectTab( idxToSelect );
       } else {
 	doClose();
       }
@@ -405,6 +398,22 @@ public class AudioFrm extends BaseFrm implements ComponentListener
       }
     }
     catch( IndexOutOfBoundsException ex ) {}
+  }
+
+
+  private void fireSelectTab( final int idx )
+  {
+    if( idx >= 0 ) {
+      EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    selectTab( idx );
+			  }
+			} );
+    }
   }
 
 

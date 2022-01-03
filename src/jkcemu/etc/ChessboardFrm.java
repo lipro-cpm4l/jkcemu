@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2020 Jens Mueller
+ * (c) 2009-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -161,9 +161,9 @@ public class ChessboardFrm extends BaseFrm
 
 
     // Fenstergroesse
+    pack();
     setResizable( false );
     if( !applySettings( Main.getProperties() ) ) {
-      pack();
       setLocationByPlatform( true );
     }
   }

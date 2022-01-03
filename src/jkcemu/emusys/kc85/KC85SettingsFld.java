@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2021 Jens Mueller
+ * (c) 2010-2022 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -186,7 +186,7 @@ public class KC85SettingsFld
   private JButton              btnModuleDown;
   private JRadioButton         rbDiskStationNone;
   private JRadioButton         rbDiskStationD004_20;
-  private JRadioButton         rbDiskStationD004_33;
+  private JRadioButton         rbDiskStationD004_35;
   private JRadioButton         rbDiskStationD008;
   private JLabel               labelDiskStationRom;
   private JLabel               labelDiskStationSpeed;
@@ -403,14 +403,14 @@ public class KC85SettingsFld
     gbcDiskStation.gridy++;
     this.tabDiskStation.add( this.rbDiskStationD004_20, gbcDiskStation );
 
-    this.rbDiskStationD004_33 = GUIFactory.createRadioButton(
-		"Floppy-Disk-Erweiterung D004 mit ROM-Version 3.31"
+    this.rbDiskStationD004_35 = GUIFactory.createRadioButton(
+		"Floppy-Disk-Erweiterung D004 mit ROM-Version 3.5"
 					+ " (optional mit GIDE)" );
-    grpDiskStation.add( this.rbDiskStationD004_33 );
-    this.rbDiskStationD004_33.addActionListener( this );
+    grpDiskStation.add( this.rbDiskStationD004_35 );
+    this.rbDiskStationD004_35.addActionListener( this );
     gbcDiskStation.insets.top = 0;
     gbcDiskStation.gridy++;
-    this.tabDiskStation.add( this.rbDiskStationD004_33, gbcDiskStation );
+    this.tabDiskStation.add( this.rbDiskStationD004_35, gbcDiskStation );
 
     this.rbDiskStationD008 = GUIFactory.createRadioButton(
 		"Floppy-Disk-Erweiterung D008 (immer mit GIDE)" );
@@ -806,9 +806,9 @@ public class KC85SettingsFld
       if( this.rbDiskStationD004_20.isSelected() ) {
 	diskStation    = KC85.VALUE_D004;
 	diskStationRom = KC85.VALUE_ROM_20;
-      } else if( this.rbDiskStationD004_33.isSelected() ) {
+      } else if( this.rbDiskStationD004_35.isSelected() ) {
 	diskStation    = KC85.VALUE_D004;
-	diskStationRom = KC85.VALUE_ROM_33;
+	diskStationRom = KC85.VALUE_ROM_35;
       } else if( this.rbDiskStationD008.isSelected() ) {
 	diskStation = KC85.VALUE_D008;
       }
@@ -917,7 +917,7 @@ public class KC85SettingsFld
 	doModuleIntoDiskStation();
       } else if( (src == this.rbDiskStationNone)
 	       || (src == this.rbDiskStationD004_20)
-	       || (src == this.rbDiskStationD004_33)
+	       || (src == this.rbDiskStationD004_35)
 	       || (src == this.rbDiskStationD008)
 	       || (src == this.rbDiskStationSpeedDefault)
 	       || (src == this.rbDiskStationSpeed8MHz)
@@ -1100,7 +1100,7 @@ public class KC85SettingsFld
 	if( diskStationRom20 ) {
 	  this.rbDiskStationD004_20.setSelected( true );
 	} else {
-	  this.rbDiskStationD004_33.setSelected( true );
+	  this.rbDiskStationD004_35.setSelected( true );
 	}
 	break;
       case KC85.VALUE_D008:
@@ -1548,7 +1548,7 @@ public class KC85SettingsFld
   private boolean isDiskStationEnabled()
   {
     return this.rbDiskStationD004_20.isSelected()
-			|| this.rbDiskStationD004_33.isSelected()
+			|| this.rbDiskStationD004_35.isSelected()
 			|| this.rbDiskStationD008.isSelected();
   }
 
@@ -1646,7 +1646,7 @@ public class KC85SettingsFld
   private void updDiskStationFieldsEnabled()
   {
     boolean d4_20 = this.rbDiskStationD004_20.isSelected();
-    boolean d4_33 = this.rbDiskStationD004_33.isSelected();
+    boolean d4_33 = this.rbDiskStationD004_35.isSelected();
     boolean state = (d4_20 || d4_33 || this.rbDiskStationD008.isSelected());
     this.tabGIDE.setEnabledEx( state, d4_20 || d4_33 );
     this.labelDiskStationRom.setEnabled( state );
