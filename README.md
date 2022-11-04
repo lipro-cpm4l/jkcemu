@@ -1,5 +1,4 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/mkgj9ab635dp7hfo/branch/master?svg=true)](https://ci.appveyor.com/project/rexut/jkcemu/branch/master)
-[![Build Status](https://travis-ci.org/lipro-cpm4l/jkcemu.svg?branch=master)](https://travis-ci.org/lipro-cpm4l/jkcemu)
 
 JKCEMU - Java KC Emulator
 =========================
