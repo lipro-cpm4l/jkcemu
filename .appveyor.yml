@@ -1,8 +1,7 @@
-version: '{build}'
-os: Windows Server 2012
+version: '{branch}-{build}'
+image: Visual Studio 2017
 
 environment:
-  ANT_HOME: C:\ant\apache-ant-1.10.7
   matrix:
   - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
   - JAVA_HOME: C:\Program Files\Java\jdk9
@@ -12,19 +11,11 @@ environment:
   - JAVA_HOME: C:\Program Files\Java\jdk13
 
 install:
-  - ps: |
-      Add-Type -AssemblyName System.IO.Compression.FileSystem
-      if (!(Test-Path -Path "C:\ant\apache-ant-1.10.7" )) {
-        (new-object System.Net.WebClient).DownloadFile(
-        'https://www-eu.apache.org/dist//ant/binaries/apache-ant-1.10.7-bin.zip',
-          'C:\ant-bin.zip'
-        )
-        [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\ant-bin.zip", "C:\ant")
-      }
-  - cmd: SET PATH=C:\ant\apache-ant-1.10.7\bin;%JAVA_HOME%\bin;%PATH%
-  - cmd: set ANT_OPTS=-Dfile.encoding=UTF-8
-  - cmd: java -version
-  - cmd: ant -version
+  - ps: choco install ant --ignore-dependencies --version 1.10.12 -y
+  - ps: $env:Path="$($env:JAVA_HOME)\bin;$($env:Path);C:\ProgramData\chocolatey\lib\ant"
+  - ps: $env:ANT_OPTS="-Dfile.encoding=UTF-8"
+  - java -version
+  - ant -version
 
 init:
   - git config --global core.autocrlf input
@@ -35,7 +26,9 @@ build_script:
 test: false
 
 cache:
-  - C:\ant
+  - C:\Users\appveyor\.ant
+  - C:\ProgramData\chocolatey\bin
+  - C:\ProgramData\chocolatey\lib
 
 artifacts:
   - path: jkcemu.jar
