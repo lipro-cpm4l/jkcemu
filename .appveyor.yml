@@ -9,9 +9,6 @@ environment:
 
     - job_type: Linux
       APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
-      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
-    - job_type: Linux
-      APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
       JAVA_HOME: /usr/lib/jvm/java-9-openjdk-amd64
     - job_type: Linux
       APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
@@ -46,9 +43,6 @@ environment:
 # ======================================
 
     - job_type: Windows
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      JAVA_HOME: C:\Program Files\Java\jdk8
-    - job_type: Windows
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       JAVA_HOME: C:\Program Files\Java\jdk9
     - job_type: Windows
@@ -82,32 +76,22 @@ environment:
 
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
-      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home
-
-    - job_type: macOS
-      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-9.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-10.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-12.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-13.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-14.jdk/Contents/Home
-
     - job_type: macOS
       APPVEYOR_BUILD_WORKER_IMAGE: macos-monterey
       JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-15.jdk/Contents/Home
