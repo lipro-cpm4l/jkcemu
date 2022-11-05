@@ -1,5 +1,11 @@
 version: '{branch}-{build}'
 
+matrix:
+  allow_failures:
+    - job_type: macOS
+      # macOS has an ressource problem on Appveyor:
+      # overloaded and not always available
+
 environment:
   matrix:
 
