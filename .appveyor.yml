@@ -76,6 +76,42 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       JAVA_HOME: C:\Program Files\Java\jdk17
 
+# ======================================
+#      macOS
+# ======================================
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-9.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-10.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-catalina
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-12.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-13.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-14.jdk/Contents/Home
+
+    - job_type: macOS
+      APPVEYOR_BUILD_WORKER_IMAGE: macos-monterey
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-15.jdk/Contents/Home
+
 for:
 
 # ======================================
@@ -107,6 +143,19 @@ for:
       - C:\Users\appveyor\.ant
       - C:\ProgramData\chocolatey\bin
       - C:\ProgramData\chocolatey\lib
+
+# ======================================
+#      macOS
+# ======================================
+
+  - matrix:
+      only:
+        - job_type: macOS
+    install:
+      - sh: HOMEBREW_NO_AUTO_UPDATE=1 brew install ant
+      - sh: PATH="${JAVA_HOME}/bin:${PATH}"
+      - sh: java -version
+      - sh: ant -version
 
 init:
   - git config --global core.autocrlf input
